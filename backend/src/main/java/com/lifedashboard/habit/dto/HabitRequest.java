@@ -27,6 +27,6 @@ public record HabitRequest(
         @NotNull LocalDate startDate,
         LocalDate endDate,
         @NotNull HabitStatus status,
-        Set<@Min(1) @Max(7) Integer> scheduleDays
+        Set<@NotNull @Min(1) @Max(7) Integer> scheduleDays
 ) {
 }

@@ -7,6 +7,7 @@ import com.lifedashboard.journal.dto.JournalEntryResponse;
 import com.lifedashboard.journal.dto.TagResponse;
 import com.lifedashboard.user.User;
 import com.lifedashboard.user.UserRepository;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -131,7 +132,8 @@ public class JournalService {
 
     private JournalEntryResponse toResponse(JournalEntry entry) {
         List<TagResponse> tags = entry.getTags().stream()
-                .sorted(Comparator.comparing(Tag::getName).thenComparing(Tag::getId))
+                .sorted(Comparator.comparing((@NonNull Tag tag) -> tag.getName())
+                        .thenComparing((@NonNull Tag tag) -> tag.getId()))
                 .map(tag -> new TagResponse(tag.getId(), tag.getName(), tag.getSlug()))
                 .toList();
         return new JournalEntryResponse(entry.getId(), entry.getEntryDate(), entry.getTitle(), entry.getContent(),

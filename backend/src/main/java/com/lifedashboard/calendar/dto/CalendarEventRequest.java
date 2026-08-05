@@ -25,6 +25,6 @@ public record CalendarEventRequest(
         boolean allDay,
         @Size(max = 500) String location,
         @NotNull CalendarEventStatus status,
-        Set<@Min(1) @Max(7) Integer> scheduleDays
+        Set<@NotNull @Min(1) @Max(7) Integer> scheduleDays
 ) {
 }
