@@ -1,8 +1,6 @@
-package com.lifedashboard.anime;
+package com.lifedashboard.content;
 
-import com.lifedashboard.anime.dto.*;
 import com.lifedashboard.common.error.*;
-import com.lifedashboard.content.*;
 import com.lifedashboard.content.dto.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;

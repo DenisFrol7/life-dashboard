@@ -1,4 +1,4 @@
-package com.lifedashboard.anime.dto;
+package com.lifedashboard.content.dto;
 
 import com.lifedashboard.content.*;
 

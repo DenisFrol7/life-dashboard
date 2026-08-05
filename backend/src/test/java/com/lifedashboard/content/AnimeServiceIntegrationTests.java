@@ -1,8 +1,6 @@
-package com.lifedashboard.anime;
+package com.lifedashboard.content;
 
-import com.lifedashboard.anime.dto.AnimeRequest;
 import com.lifedashboard.common.error.ResourceNotFoundException;
-import com.lifedashboard.content.*;
 import com.lifedashboard.content.dto.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
