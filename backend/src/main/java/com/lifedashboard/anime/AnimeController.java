@@ -40,23 +40,24 @@ public class AnimeController {
     @DeleteMapping("/{id}/library") public ResponseEntity<Void> removeFromLibrary(@PathVariable Long id) {
         service.removeFromLibrary(id); return ResponseEntity.noContent().build();
     }
-    @PostMapping("/{id}/seasons") public AnimeDetailsResponse createSeason(@PathVariable Long id,
+    @PostMapping("/{id}/seasons") public ResponseEntity<AnimeDetailsResponse> createSeason(@PathVariable Long id,
             @Valid @RequestBody com.lifedashboard.content.dto.SeasonRequest request) {
         service.get(id);
-        viewingService.createSeason(id, request); return service.get(id);
+        viewingService.createSeason(id, request);
+        return ResponseEntity.status(201).body(service.get(id));
     }
-    @PostMapping("/seasons/{seasonId}/episodes") public AnimeDetailsResponse createEpisode(
+    @PostMapping("/seasons/{seasonId}/episodes") public ResponseEntity<AnimeDetailsResponse> createEpisode(
             @PathVariable Long seasonId, @Valid @RequestBody com.lifedashboard.content.dto.EpisodeRequest request) {
         long animeId = viewingService.contentIdForSeason(seasonId);
         service.get(animeId);
         viewingService.createEpisode(seasonId, request);
-        return service.get(animeId);
+        return ResponseEntity.status(201).body(service.get(animeId));
     }
-    @PostMapping("/episodes/{episodeId}/watches") public AnimeDetailsResponse watchEpisode(
+    @PostMapping("/episodes/{episodeId}/watches") public ResponseEntity<AnimeDetailsResponse> watchEpisode(
             @PathVariable Long episodeId, @RequestBody(required = false) com.lifedashboard.content.dto.WatchRequest request) {
         long animeId = viewingService.contentIdForEpisode(episodeId);
         service.get(animeId);
         viewingService.watchEpisode(episodeId, request);
-        return service.get(animeId);
+        return ResponseEntity.status(201).body(service.get(animeId));
     }
 }
