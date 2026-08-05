@@ -41,4 +41,13 @@ class OpenApiIntegrationTests {
         int status = mockMvc.perform(get("/swagger-ui.html")).andReturn().getResponse().getStatus();
         assertTrue(status >= 200 && status < 400);
     }
+
+    @Test
+    void returnsUnifiedApiErrorForMalformedParameters() throws Exception {
+        mockMvc.perform(get("/api/dashboard").param("date", "not-a-date"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Malformed request"))
+                .andExpect(jsonPath("$.path").value("/api/dashboard"));
+    }
 }
