@@ -8,6 +8,7 @@ import com.lifedashboard.common.error.InvalidRequestException;
 import com.lifedashboard.common.error.ResourceNotFoundException;
 import com.lifedashboard.user.User;
 import com.lifedashboard.user.UserRepository;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -111,7 +112,9 @@ public class CalendarEventService {
     private void apply(CalendarEvent event, CalendarEventRequest request) {
         Set<Short> days = new LinkedHashSet<>();
         if (request.scheduleDays() != null) {
-            request.scheduleDays().stream().sorted().map(Integer::shortValue).forEach(days::add);
+            request.scheduleDays().stream().sorted()
+                    .map((@NonNull Integer day) -> day.shortValue())
+                    .forEach((@NonNull Short day) -> days.add(day));
         }
         event.update(request.title().trim(), normalizeNullable(request.description()), request.eventType(),
                 request.scheduleType(), request.startDate(), request.repeatUntil(), request.startTime(),
@@ -143,7 +146,9 @@ public class CalendarEventService {
 
     private CalendarEventResponse toResponse(CalendarEvent event) {
         Set<Integer> days = new LinkedHashSet<>();
-        event.getScheduleDays().stream().sorted().map(Short::intValue).forEach(days::add);
+        event.getScheduleDays().stream().sorted()
+                .map((@NonNull Short day) -> day.intValue())
+                .forEach((@NonNull Integer day) -> days.add(day));
         return new CalendarEventResponse(event.getId(), event.getTitle(), event.getDescription(), event.getEventType(),
                 event.getScheduleType(), event.getStartDate(), event.getRepeatUntil(), event.getStartTime(),
                 event.getEndTime(), event.isAllDay(), event.getLocation(), event.getStatus(), days);

@@ -9,6 +9,7 @@ import com.lifedashboard.habit.dto.HabitResponse;
 import com.lifedashboard.user.User;
 import com.lifedashboard.user.UserRepository;
 import jakarta.persistence.EntityManager;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -138,7 +139,9 @@ public class HabitService {
     private void apply(Habit habit, HabitRequest request) {
         Set<Short> days = new LinkedHashSet<>();
         if (request.scheduleDays() != null) {
-            request.scheduleDays().stream().sorted().map(Integer::shortValue).forEach(days::add);
+            request.scheduleDays().stream().sorted()
+                    .map((@NonNull Integer day) -> day.shortValue())
+                    .forEach((@NonNull Short day) -> days.add(day));
         }
         habit.update(request.name().trim(), normalizeNullable(request.description()), request.trackingType(),
                 request.dataSource(), request.targetValue(), normalizeNullable(request.unit()), request.scheduleType(),
@@ -151,7 +154,9 @@ public class HabitService {
 
     private HabitResponse toResponse(Habit habit) {
         Set<Integer> days = new LinkedHashSet<>();
-        habit.getScheduleDays().stream().sorted().map(Short::intValue).forEach(days::add);
+        habit.getScheduleDays().stream().sorted()
+                .map((@NonNull Short day) -> day.intValue())
+                .forEach((@NonNull Integer day) -> days.add(day));
         return new HabitResponse(habit.getId(), habit.getName(), habit.getDescription(), habit.getTrackingType(),
                 habit.getDataSource(), habit.getTargetValue(), habit.getUnit(), habit.getScheduleType(),
                 habit.getStartDate(), habit.getEndDate(), habit.getStatus(), days);
