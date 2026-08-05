@@ -1,8 +1,6 @@
-package com.lifedashboard.anime;
+package com.lifedashboard.content;
 
-import com.lifedashboard.anime.dto.*;
-import com.lifedashboard.content.*;
-import com.lifedashboard.content.dto.LibraryEntryRequest;
+import com.lifedashboard.content.dto.*;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
