@@ -1,6 +1,7 @@
 package com.lifedashboard.content;
 import com.lifedashboard.content.dto.*; import jakarta.validation.Valid; import org.springframework.http.*; import org.springframework.web.bind.annotation.*; import java.util.*;
 @RestController @RequestMapping("/api/content")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Content")
 public class ViewingController {private final ViewingService service;public ViewingController(ViewingService s){service=s;}
  @PostMapping("/{id}/seasons") public ResponseEntity<SeasonResponse> season(@PathVariable Long id,@Valid @RequestBody SeasonRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.createSeason(id,r));}
  @GetMapping("/{id}/seasons") public List<SeasonResponse> seasons(@PathVariable Long id){return service.seasons(id);}

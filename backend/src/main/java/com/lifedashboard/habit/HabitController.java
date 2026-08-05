@@ -21,6 +21,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Habits")
 @RequestMapping("/api/habits")
 public class HabitController {
 

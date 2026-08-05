@@ -17,6 +17,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Activity")
 @RequestMapping("/api/daily-activity")
 public class DailyActivityController {
 

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Content")
 @RequestMapping("/api/library")
 public class LibraryController {
     private final ContentService service;

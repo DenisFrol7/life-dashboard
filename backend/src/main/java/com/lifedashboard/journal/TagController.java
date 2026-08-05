@@ -17,6 +17,7 @@ import java.net.URI;
 import java.util.List;
 
 @RestController
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Journal")
 @RequestMapping("/api/tags")
 public class TagController {
 

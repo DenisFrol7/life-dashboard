@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Games")
 @RequestMapping("/api/games/library/{libraryEntryId}/xbox-progress")
 public class XboxProgressController {
     private final XboxProgressService service;
