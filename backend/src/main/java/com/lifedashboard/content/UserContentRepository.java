@@ -7,4 +7,5 @@ public interface UserContentRepository extends JpaRepository<UserContent, Long> 
     Optional<UserContent> findByUserIdAndContentId(Long userId, Long contentId);
     List<UserContent> findAllByUserIdOrderByIdDesc(Long userId);
     List<UserContent> findAllByUserIdAndStatusOrderByIdDesc(Long userId, UserContentStatus status);
+    List<UserContent> findAllByContentId(Long contentId);
 }
