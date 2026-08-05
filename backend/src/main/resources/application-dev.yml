@@ -1,0 +1,9 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    com.lifedashboard: DEBUG
+    org.hibernate.SQL: DEBUG
