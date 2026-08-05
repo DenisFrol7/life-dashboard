@@ -1,0 +1,71 @@
+package com.lifedashboard.game;
+
+import com.lifedashboard.common.error.InvalidRequestException;
+import com.lifedashboard.content.*;
+import com.lifedashboard.content.dto.ContentItemRequest;
+import com.lifedashboard.game.dto.*;
+import org.junit.jupiter.api.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+@SpringBootTest
+class XboxProgressServiceIntegrationTests {
+    private static final String TITLE = "Xbox progress integration test";
+    @Autowired ContentService contentService;
+    @Autowired ContentItemRepository contentRepository;
+    @Autowired GameLibraryService gameLibraryService;
+    @Autowired XboxProgressService progressService;
+    @Autowired GamingPlatformRepository platforms;
+    @Autowired GameSourceRepository sources;
+
+    @BeforeEach void setUp() { cleanup(); }
+
+    @Test
+    void upsertsProgressAndCalculatesPercentages() {
+        try {
+            long entryId = createLibraryEntry("XBOX_SERIES");
+            var result = progressService.put(entryId, new XboxProgressRequest(50, 25, 1000, 333));
+            assertEquals(50.0, result.achievementPercent());
+            assertEquals(33.3, result.gamerscorePercent());
+            assertNotNull(result.lastUpdatedAt());
+
+            var updated = progressService.put(entryId, new XboxProgressRequest(50, 50, 1000, 1000));
+            assertEquals(result.id(), updated.id());
+            assertEquals(100.0, updated.achievementPercent());
+            assertEquals(100.0, updated.gamerscorePercent());
+            var loaded = progressService.get(entryId);
+            assertEquals(updated.id(), loaded.id());
+            assertEquals(updated.earnedGamerscore(), loaded.earnedGamerscore());
+            assertEquals(updated.gamerscorePercent(), loaded.gamerscorePercent());
+            assertEquals(updated.lastUpdatedAt().toEpochMilli(), loaded.lastUpdatedAt().toEpochMilli());
+        } finally { cleanup(); }
+    }
+
+    @Test
+    void rejectsInvalidTotalsAndNonXboxPlatform() {
+        try {
+            long xboxEntry = createLibraryEntry("XBOX_SERIES");
+            assertThrows(InvalidRequestException.class, () -> progressService.put(xboxEntry,
+                    new XboxProgressRequest(10, 11, 100, 50)));
+            cleanup();
+            long pcEntry = createLibraryEntry("PC");
+            assertThrows(InvalidRequestException.class, () -> progressService.put(pcEntry,
+                    new XboxProgressRequest(10, 5, 100, 50)));
+        } finally { cleanup(); }
+    }
+
+    private long createLibraryEntry(String platformCode) {
+        long contentId = contentService.create(new ContentItemRequest(TITLE, null, ContentType.GAME,
+                null, 2025, null, null, null, ReleaseStatus.RELEASED)).id();
+        long platform = platforms.findByCode(platformCode).orElseThrow().getId();
+        long source = sources.findByCode("XBOX_STORE").orElseThrow().getId();
+        return gameLibraryService.create(contentId, new GameLibraryRequest(platform, source,
+                GameAccessType.OWNED, null, null, null, UserContentStatus.IN_PROGRESS,
+                null, false, null, null, null)).id();
+    }
+    private void cleanup() {
+        contentRepository.findByTitle(TITLE).ifPresent(contentRepository::delete);
+    }
+}
