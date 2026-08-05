@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.util.List;
 
 @RestController
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Sleep")
 @RequestMapping("/api/sleep-sessions")
 public class SleepSessionController {
 

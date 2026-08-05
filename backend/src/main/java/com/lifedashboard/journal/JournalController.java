@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Journal")
 @RequestMapping("/api/journal")
 public class JournalController {
 

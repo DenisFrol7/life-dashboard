@@ -22,3 +22,12 @@ server:
 
 app:
   default-user-id: ${DEFAULT_USER_ID:1}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  show-actuator: false

@@ -10,6 +10,7 @@ import java.net.URI;
 import java.util.List;
 
 @RestController
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Anime")
 @RequestMapping("/api/anime")
 public class AnimeController {
     private final AnimeService service;

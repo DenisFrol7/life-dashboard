@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.List;
 
 @RestController
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Blog")
 @RequestMapping("/api/blog/posts")
 public class BlogPostController {
 
