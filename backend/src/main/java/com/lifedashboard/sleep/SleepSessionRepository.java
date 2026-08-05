@@ -24,4 +24,10 @@ public interface SleepSessionRepository extends JpaRepository<SleepSession, Long
             @Param("from") Instant from,
             @Param("to") Instant to
     );
+
+    List<SleepSession> findAllByUserIdAndEndedAtGreaterThanEqualAndEndedAtLessThan(
+            Long userId,
+            Instant from,
+            Instant to
+    );
 }

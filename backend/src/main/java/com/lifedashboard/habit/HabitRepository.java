@@ -10,4 +10,10 @@ public interface HabitRepository extends JpaRepository<Habit, Long> {
     List<Habit> findAllByUserIdOrderByStartDateAscIdAsc(Long userId);
 
     Optional<Habit> findByIdAndUserId(Long id, Long userId);
+
+    List<Habit> findAllByUserIdAndDataSourceAndStatusOrderByIdAsc(
+            Long userId,
+            HabitDataSource dataSource,
+            HabitStatus status
+    );
 }
