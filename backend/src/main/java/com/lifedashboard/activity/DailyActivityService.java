@@ -4,6 +4,7 @@ import com.lifedashboard.activity.dto.DailyActivityRequest;
 import com.lifedashboard.activity.dto.DailyActivityResponse;
 import com.lifedashboard.common.error.InvalidRequestException;
 import com.lifedashboard.common.error.ResourceNotFoundException;
+import com.lifedashboard.habit.HabitAutomationService;
 import com.lifedashboard.user.User;
 import com.lifedashboard.user.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,12 +20,15 @@ public class DailyActivityService {
 
     private final DailyActivityRepository activityRepository;
     private final UserRepository userRepository;
+    private final HabitAutomationService habitAutomationService;
     private final long defaultUserId;
 
     public DailyActivityService(DailyActivityRepository activityRepository, UserRepository userRepository,
+                                HabitAutomationService habitAutomationService,
                                 @Value("${app.default-user-id}") long defaultUserId) {
         this.activityRepository = activityRepository;
         this.userRepository = userRepository;
+        this.habitAutomationService = habitAutomationService;
         this.defaultUserId = defaultUserId;
     }
 
@@ -33,7 +37,9 @@ public class DailyActivityService {
         DailyActivity activity = activityRepository.findByUserIdAndActivityDate(defaultUserId, date)
                 .orElseGet(() -> new DailyActivity(findDefaultUser(), date));
         activity.update(request.steps(), request.distanceMeters(), normalizeNullable(request.note()));
-        return toResponse(activityRepository.save(activity));
+        activityRepository.saveAndFlush(activity);
+        habitAutomationService.syncDailyActivity(defaultUserId, date, request.steps(), request.distanceMeters());
+        return toResponse(activity);
     }
 
     public DailyActivityResponse getByDate(LocalDate date) {
@@ -53,6 +59,7 @@ public class DailyActivityService {
     @Transactional
     public void delete(LocalDate date) {
         activityRepository.delete(findByDate(date));
+        habitAutomationService.syncDailyActivity(defaultUserId, date, null, null);
     }
 
     private DailyActivity findByDate(LocalDate date) {

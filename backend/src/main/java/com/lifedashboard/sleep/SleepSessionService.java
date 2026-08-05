@@ -2,6 +2,7 @@ package com.lifedashboard.sleep;
 
 import com.lifedashboard.common.error.InvalidRequestException;
 import com.lifedashboard.common.error.ResourceNotFoundException;
+import com.lifedashboard.habit.HabitAutomationService;
 import com.lifedashboard.sleep.dto.SleepSessionRequest;
 import com.lifedashboard.sleep.dto.SleepSessionResponse;
 import com.lifedashboard.user.User;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -19,12 +21,15 @@ public class SleepSessionService {
 
     private final SleepSessionRepository sessionRepository;
     private final UserRepository userRepository;
+    private final HabitAutomationService habitAutomationService;
     private final long defaultUserId;
 
     public SleepSessionService(SleepSessionRepository sessionRepository, UserRepository userRepository,
+                               HabitAutomationService habitAutomationService,
                                @Value("${app.default-user-id}") long defaultUserId) {
         this.sessionRepository = sessionRepository;
         this.userRepository = userRepository;
+        this.habitAutomationService = habitAutomationService;
         this.defaultUserId = defaultUserId;
     }
 
@@ -35,7 +40,9 @@ public class SleepSessionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Default user with id " + defaultUserId + " was not found"));
         SleepSession session = new SleepSession(user);
         apply(session, request);
-        return toResponse(sessionRepository.save(session));
+        sessionRepository.saveAndFlush(session);
+        habitAutomationService.syncSleepDuration(defaultUserId, habitAutomationService.sleepDate(session));
+        return toResponse(session);
     }
 
     public SleepSessionResponse getById(Long id) {
@@ -55,13 +62,24 @@ public class SleepSessionService {
     public SleepSessionResponse update(Long id, SleepSessionRequest request) {
         validateSession(request);
         SleepSession session = findSession(id);
+        LocalDate previousDate = habitAutomationService.sleepDate(session);
         apply(session, request);
-        return toResponse(sessionRepository.save(session));
+        sessionRepository.saveAndFlush(session);
+        LocalDate currentDate = habitAutomationService.sleepDate(session);
+        habitAutomationService.syncSleepDuration(defaultUserId, previousDate);
+        if (!currentDate.equals(previousDate)) {
+            habitAutomationService.syncSleepDuration(defaultUserId, currentDate);
+        }
+        return toResponse(session);
     }
 
     @Transactional
     public void delete(Long id) {
-        sessionRepository.delete(findSession(id));
+        SleepSession session = findSession(id);
+        LocalDate date = habitAutomationService.sleepDate(session);
+        sessionRepository.delete(session);
+        sessionRepository.flush();
+        habitAutomationService.syncSleepDuration(defaultUserId, date);
     }
 
     private SleepSession findSession(Long id) {
