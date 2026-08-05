@@ -24,6 +24,8 @@ public class ViewingService {
  @Transactional public WatchResponse watchMovie(Long id,WatchRequest r){ContentItem c=item(id);if(c.getItemType()!=ContentType.MOVIE)throw new InvalidRequestException("Movie watch history is only available for MOVIE");User u=user();UserContent l=ensureLibrary(c,u);
   MovieWatch w=movieWatches.save(new MovieWatch(u,c,time(r),movieWatches.maxNumber(id,userId)+1));l.changeStatus(UserContentStatus.COMPLETED,w.getWatchedAt());return new WatchResponse(w.getId(),id,w.getWatchedAt(),w.getWatchNumber());}
  public List<WatchResponse> movieHistory(Long id){item(id);return movieWatches.findAllByContentIdAndUserIdOrderByWatchNumber(id,userId).stream().map(w->new WatchResponse(w.getId(),id,w.getWatchedAt(),w.getWatchNumber())).toList();}
+ public Long contentIdForSeason(Long id){return season(id).getContent().getId();}
+ public Long contentIdForEpisode(Long id){return episode(id).getSeason().getContent().getId();}
  private void refresh(ContentItem c){long total=episodes.countByContent(c.getId()),watched=episodeWatches.watchedCount(userId,c.getId());UserContent l=library.findByUserIdAndContentId(userId,c.getId()).orElseThrow();
   if(total>0&&watched==total){if(c.getReleaseStatus()==ReleaseStatus.ONGOING||c.getReleaseStatus()==ReleaseStatus.ANNOUNCED)l.changeStatus(UserContentStatus.PAUSED,null);else l.changeStatus(UserContentStatus.COMPLETED,Instant.now());}else l.changeStatus(UserContentStatus.IN_PROGRESS,null);}
  private UserContent ensureLibrary(ContentItem c,User u){return library.findByUserIdAndContentId(userId,c.getId()).orElseGet(()->{UserContent x=new UserContent(u,c);x.update(UserContentStatus.IN_PROGRESS,null,false,Instant.now(),null,null);return library.save(x);});}
