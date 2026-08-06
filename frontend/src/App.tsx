@@ -4,6 +4,8 @@ import { HabitsPage } from './pages/HabitsPage'
 import { ActivityPage } from './pages/ActivityPage'
 import { SleepPage } from './pages/SleepPage'
 import { CalendarPage } from './pages/CalendarPage'
+import { BlogPage } from './pages/JournalPage'
+import { TimelinePage } from './pages/TimelinePage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import './App.css'
 
@@ -15,8 +17,8 @@ const navigation: NavItem[] = [
   { path: '/activity', label: 'Активность', short: '↗', description: 'Шаги и пройденная дистанция' },
   { path: '/sleep', label: 'Сон', short: '☾', description: 'История и качество сна' },
   { path: '/calendar', label: 'Календарь', short: '□', description: 'События, задачи и напоминания' },
-  { path: '/journal', label: 'Журнал', short: '✎', description: 'Личные записи и теги' },
-  { path: '/blog', label: 'Блог', short: '◫', description: 'Публикации из журнала' },
+  { path: '/journal', label: 'Журнал активности', short: '≋', description: 'Хронология событий дня' },
+  { path: '/blog', label: 'Блог', short: '✎', description: 'Мысли, заметки и теги' },
   { path: '/movies', label: 'Фильмы', short: '▶', description: 'Фильмы и история просмотров' },
   { path: '/series', label: 'Сериалы', short: '▤', description: 'Сезоны, эпизоды и прогресс' },
   { path: '/anime', label: 'Аниме', short: '◇', description: 'Многосерийное аниме' },
@@ -70,7 +72,9 @@ function App() {
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/sleep" element={<SleepPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
-          {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep', '/calendar'].includes(item.path)).map((item) => (
+          <Route path="/journal" element={<TimelinePage />} />
+          <Route path="/blog" element={<BlogPage />} />
+          {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog'].includes(item.path)).map((item) => (
             <Route
               key={item.path}
               path={item.path}
