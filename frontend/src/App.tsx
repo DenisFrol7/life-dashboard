@@ -3,6 +3,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { HabitsPage } from './pages/HabitsPage'
 import { ActivityPage } from './pages/ActivityPage'
 import { SleepPage } from './pages/SleepPage'
+import { CalendarPage } from './pages/CalendarPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import './App.css'
 
@@ -68,7 +69,8 @@ function App() {
           <Route path="/habits" element={<HabitsPage />} />
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/sleep" element={<SleepPage />} />
-          {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep'].includes(item.path)).map((item) => (
+          <Route path="/calendar" element={<CalendarPage />} />
+          {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep', '/calendar'].includes(item.path)).map((item) => (
             <Route
               key={item.path}
               path={item.path}
