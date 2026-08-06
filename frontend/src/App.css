@@ -135,10 +135,63 @@
 .form-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; padding-top: 17px; border-top: 1px solid #e8e7e0; }
 .form-error { margin-bottom: 14px; padding: 10px 12px; border-radius: 8px; color: #7d493f; background: #f9e7e3; font-size: 11px; }
 
+.activity-page { display: grid; gap: 16px; max-width: 1280px; margin: 0 auto; }
+.activity-summary { display: grid; grid-template-columns: auto minmax(180px, 1fr) 1.5fr; align-items: center; gap: 28px; padding: 25px 28px; border: 1px solid #ccdbe7; border-radius: 20px; background: linear-gradient(135deg, #eef4f8, #fffefa); }
+.activity-summary strong, .activity-summary span { display: block; }
+.activity-summary strong { color: #334f68; font-family: Georgia, serif; font-size: 34px; line-height: 1; }
+.activity-summary > div:first-child > span { margin-top: 5px; color: var(--muted); font-size: 10px; }
+.activity-progress { position: relative; height: 9px; overflow: hidden; border-radius: 999px; background: #d9e3e9; }
+.activity-progress span { width: var(--activity-progress); height: 100%; border-radius: inherit; background: linear-gradient(90deg, #7fa1bd, #496985); transition: width .3s ease; }
+.activity-summary dl { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; }
+.activity-summary dl div { padding: 3px 18px; border-left: 1px solid #d9e0e4; }
+.activity-summary dt { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }
+.activity-summary dd { margin: 5px 0 0; color: #354451; font-family: Georgia, serif; font-size: 16px; font-weight: 700; }
+.activity-error { max-width: none; margin: 0; }
+.activity-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .65fr); gap: 14px; }
+.activity-panel { padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: 0 8px 28px #25322708; }
+.period-switch { display: flex; padding: 3px; border-radius: 9px; background: #ebece9; }
+.period-switch button { padding: 6px 9px; border: 0; border-radius: 7px; color: #747c78; background: transparent; cursor: pointer; font-size: 9px; font-weight: 700; }
+.period-switch button.active { color: #3d5870; background: #fff; box-shadow: 0 2px 7px #24384712; }
+.step-chart { display: flex; align-items: stretch; gap: 8px; height: 220px; padding: 24px 5px 0; border-bottom: 1px solid #dfe2df; background: repeating-linear-gradient(to bottom, transparent 0, transparent 54px, #eceeea 55px); }
+.step-chart button { position: relative; display: flex; flex: 1; align-items: center; justify-content: flex-end; flex-direction: column; min-width: 0; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.step-chart i { width: min(30px, 66%); min-height: 3px; border-radius: 6px 6px 2px 2px; background: #9db7cf; transition: height .25s, background .2s; }
+.step-chart button:hover i, .step-chart button.selected i { background: #496985; }
+.step-chart button.selected::after { position: absolute; bottom: -5px; width: 5px; height: 5px; border-radius: 50%; background: #496985; content: ''; }
+.step-chart small { margin: 7px 0 8px; color: #838a86; font-size: 8px; text-transform: capitalize; }
+.bar-value { position: absolute; top: -17px; color: #52616c; font-size: 8px; opacity: 0; transition: opacity .2s; }
+.step-chart button:hover .bar-value, .step-chart button.selected .bar-value { opacity: 1; }
+.period-30 { gap: 2px; }
+.period-30 i { width: 70%; }
+.period-30 small { font-size: 7px; }
+.chart-goal { display: flex; align-items: center; gap: 7px; margin-top: 13px; color: var(--muted); font-size: 9px; }
+.chart-goal span { width: 17px; height: 3px; border-radius: 2px; background: #496985; }
+.activity-form { display: flex; flex-direction: column; }
+.activity-form .panel-heading input { width: 125px; padding: 7px; border: 1px solid #dbdcd7; border-radius: 8px; color: #5a656e; background: #fff; font-size: 9px; }
+.activity-form > label { display: grid; gap: 6px; margin-bottom: 13px; color: #68716b; font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.input-with-unit { position: relative; }
+.activity-form input, .activity-form textarea { width: 100%; padding: 11px; border: 1px solid #d9d9d1; border-radius: 9px; outline: none; color: var(--ink); background: #fff; font-size: 12px; }
+.activity-form textarea { resize: vertical; }
+.input-with-unit input { padding-right: 58px; }
+.input-with-unit span { position: absolute; top: 12px; right: 11px; color: #939a95; font-size: 9px; font-weight: 500; text-transform: none; }
+.activity-form input:focus, .activity-form textarea:focus { border-color: #789ab6; box-shadow: 0 0 0 3px #789ab618; }
+.activity-form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: auto; padding-top: 9px; }
+.danger-button { padding: 10px 13px; border: 0; border-radius: 10px; color: #a15245; background: #f8eae7; cursor: pointer; font-size: 10px; font-weight: 700; }
+.history-panel .panel-heading > strong { color: #597185; font-size: 10px; }
+.activity-table-head, .activity-table > button { display: grid; grid-template-columns: 1.1fr .7fr .8fr 1.5fr; align-items: center; gap: 15px; width: 100%; text-align: left; }
+.activity-table-head { padding: 8px 13px; color: #8a908c; font-size: 8px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.activity-table > button { padding: 11px 13px; border: 0; border-top: 1px solid #ecebe5; color: #69716c; background: transparent; cursor: pointer; font-size: 10px; }
+.activity-table > button:hover { background: #f4f7f8; }
+.activity-table > button strong { color: #3d5060; font-size: 11px; }
+.activity-table > button span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.table-empty { margin: 0; padding: 30px; border-top: 1px solid #ecebe5; color: var(--muted); text-align: center; font-size: 11px; }
+
 @media (max-width: 1100px) {
   .metrics-grid { grid-template-columns: repeat(2, 1fr); }
   .content-grid { grid-template-columns: 1fr 1fr; }
   .compact-panel { grid-column: 1 / -1; min-height: 190px; }
+  .activity-summary { grid-template-columns: auto 1fr; }
+  .activity-summary dl { grid-column: 1 / -1; }
+  .activity-summary dl div:first-child { border-left: 0; padding-left: 0; }
 }
 @media (max-width: 760px) {
   .sidebar { position: static; width: auto; padding: 16px; }
@@ -152,6 +205,7 @@
   .progress-ring { width: 88px; height: 88px; }
   .content-grid { grid-template-columns: 1fr; }
   .habit-list { grid-template-columns: 1fr; }
+  .activity-grid { grid-template-columns: 1fr; }
   .compact-panel { grid-column: auto; }
 }
 @media (max-width: 500px) {
@@ -167,4 +221,10 @@
   .filter-tabs button { flex: 1; white-space: nowrap; }
   .form-grid { grid-template-columns: 1fr; }
   .habit-form { padding: 20px; }
+  .activity-summary { grid-template-columns: 1fr; gap: 16px; }
+  .activity-summary dl { grid-column: auto; }
+  .activity-summary dl div { padding: 3px 9px; }
+  .activity-table-head, .activity-table > button { grid-template-columns: 1fr .7fr .8fr; }
+  .activity-table-head span:last-child, .activity-table > button span:last-child { display: none; }
+  .step-chart { gap: 3px; height: 180px; }
 }
