@@ -1,7 +1,7 @@
 package com.lifedashboard.blog.dto;
 
 import com.lifedashboard.blog.BlogPostStatus;
-import com.lifedashboard.journal.dto.TagResponse;
+import com.lifedashboard.tag.dto.TagResponse;
 
 import java.time.Instant;
 import java.util.List;

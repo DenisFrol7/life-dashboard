@@ -1,7 +1,7 @@
 package com.lifedashboard.blog;
 
 import com.lifedashboard.journal.JournalEntryRepository;
-import com.lifedashboard.journal.TagRepository;
+import com.lifedashboard.tag.TagRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

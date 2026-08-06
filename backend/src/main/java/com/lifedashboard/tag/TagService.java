@@ -1,9 +1,9 @@
-package com.lifedashboard.journal;
+package com.lifedashboard.tag;
 
 import com.lifedashboard.common.error.DuplicateResourceException;
 import com.lifedashboard.common.error.ResourceNotFoundException;
-import com.lifedashboard.journal.dto.TagRequest;
-import com.lifedashboard.journal.dto.TagResponse;
+import com.lifedashboard.tag.dto.TagRequest;
+import com.lifedashboard.tag.dto.TagResponse;
 import com.lifedashboard.user.User;
 import com.lifedashboard.user.UserRepository;
 import org.springframework.beans.factory.annotation.Value;

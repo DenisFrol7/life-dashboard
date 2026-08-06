@@ -1,6 +1,7 @@
 package com.lifedashboard.journal;
 
 import com.lifedashboard.user.User;
+import com.lifedashboard.tag.Tag;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

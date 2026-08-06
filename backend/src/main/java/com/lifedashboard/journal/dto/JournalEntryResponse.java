@@ -1,5 +1,7 @@
 package com.lifedashboard.journal.dto;
 
+import com.lifedashboard.tag.dto.TagResponse;
+
 import java.time.LocalDate;
 import java.util.List;
 

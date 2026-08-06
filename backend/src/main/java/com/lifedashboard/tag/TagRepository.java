@@ -1,4 +1,4 @@
-package com.lifedashboard.journal;
+package com.lifedashboard.tag;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
