@@ -6,6 +6,7 @@ import { SleepPage } from './pages/SleepPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { BlogPage } from './pages/JournalPage'
 import { TimelinePage } from './pages/TimelinePage'
+import { MoviesPage } from './pages/MoviesPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import './App.css'
 
@@ -74,7 +75,8 @@ function App() {
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/journal" element={<TimelinePage />} />
           <Route path="/blog" element={<BlogPage />} />
-          {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog'].includes(item.path)).map((item) => (
+          <Route path="/movies" element={<MoviesPage />} />
+          {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies'].includes(item.path)).map((item) => (
             <Route
               key={item.path}
               path={item.path}
