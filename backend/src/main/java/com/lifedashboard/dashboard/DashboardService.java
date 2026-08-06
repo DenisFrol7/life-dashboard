@@ -5,6 +5,7 @@ import com.lifedashboard.calendar.*;
 import com.lifedashboard.content.*;
 import com.lifedashboard.dashboard.dto.DashboardResponse;
 import com.lifedashboard.habit.*;
+import com.lifedashboard.game.*;
 import com.lifedashboard.journal.JournalEntryRepository;
 import com.lifedashboard.sleep.*;
 import com.lifedashboard.user.*;
@@ -24,16 +25,18 @@ public class DashboardService {
     private final HabitRepository habits; private final HabitEntryRepository habitEntries;
     private final CalendarEventRepository events; private final CalendarEventOccurrenceRepository occurrences;
     private final JournalEntryRepository journal; private final UserContentRepository library;
+    private final GameSessionRepository gameSessions;
     private final UserRepository users; private final long userId;
 
     public DashboardService(DailyActivityRepository activities, SleepSessionRepository sleepSessions,
             HabitRepository habits, HabitEntryRepository habitEntries, CalendarEventRepository events,
             CalendarEventOccurrenceRepository occurrences, JournalEntryRepository journal,
-            UserContentRepository library, UserRepository users,
+            UserContentRepository library, GameSessionRepository gameSessions, UserRepository users,
             @Value("${app.default-user-id}") long userId) {
         this.activities=activities; this.sleepSessions=sleepSessions; this.habits=habits;
         this.habitEntries=habitEntries; this.events=events; this.occurrences=occurrences;
-        this.journal=journal; this.library=library; this.users=users; this.userId=userId;
+        this.journal=journal; this.library=library; this.gameSessions=gameSessions;
+        this.users=users; this.userId=userId;
     }
 
     public DashboardResponse get(LocalDate date) {
@@ -41,7 +44,12 @@ public class DashboardService {
         ZoneId zone = ZoneId.of(user.getTimezone());
         if (date == null) date = LocalDate.now(zone);
         return new DashboardResponse(date, activity(date), sleep(date, zone), habit(date), calendar(date),
-                journal.countByUserIdAndEntryDate(userId, date), media());
+                journal.countByUserIdAndEntryDate(userId, date), gaming(date, zone), media());
+    }
+    private DashboardResponse.GamingSummary gaming(LocalDate date, ZoneId zone) {
+        Instant from=date.atStartOfDay(zone).toInstant(), to=date.plusDays(1).atStartOfDay(zone).toInstant();
+        List<GameSession> sessions=gameSessions.findAllByLibraryEntryUserContentUserIdAndStartedAtGreaterThanEqualAndStartedAtLessThanOrderByStartedAtDesc(userId,from,to);
+        return new DashboardResponse.GamingSummary(sessions.stream().mapToLong(GameSession::getDurationMinutes).sum(),sessions.size());
     }
     private DashboardResponse.ActivitySummary activity(LocalDate date) {
         return activities.findByUserIdAndActivityDate(userId, date)

@@ -23,6 +23,8 @@ public class ContentItem {
     private String coverUrl;
     @Column(name = "duration_minutes")
     private Integer durationMinutes;
+    @Column(length = 100)
+    private String genre;
     @Enumerated(EnumType.STRING) @Column(name = "release_status", nullable = false, length = 20)
     private ReleaseStatus releaseStatus;
 
@@ -30,10 +32,10 @@ public class ContentItem {
     public ContentItem(String title) { this.title = title; }
     public void update(String title, String originalTitle, ContentType itemType, ContentFormat format,
                        Integer releaseYear, String description, String coverUrl, Integer durationMinutes,
-                       ReleaseStatus releaseStatus) {
+                       ReleaseStatus releaseStatus, String genre) {
         this.title = title; this.originalTitle = originalTitle; this.itemType = itemType; this.format = format;
         this.releaseYear = releaseYear; this.description = description; this.coverUrl = coverUrl;
-        this.durationMinutes = durationMinutes; this.releaseStatus = releaseStatus;
+        this.durationMinutes = durationMinutes; this.releaseStatus = releaseStatus; this.genre = genre;
     }
     public Long getId() { return id; }
     public String getTitle() { return title; }
@@ -44,5 +46,6 @@ public class ContentItem {
     public String getDescription() { return description; }
     public String getCoverUrl() { return coverUrl; }
     public Integer getDurationMinutes() { return durationMinutes; }
+    public String getGenre() { return genre; }
     public ReleaseStatus getReleaseStatus() { return releaseStatus; }
 }

@@ -34,6 +34,7 @@ export function DashboardPage() {
         <Metric icon="☾" tone="violet" label="Сон" value={formatSleep(data.sleep.durationMinutes)} note={data.sleep.qualityRating ? `Качество ${data.sleep.qualityRating}/10` : 'Нет оценки'} />
         <Metric icon="✓" tone="amber" label="Привычки" value={`${data.habits.completed} / ${data.habits.scheduled}`} note={data.habits.skipped ? `Пропущено: ${data.habits.skipped}` : 'Без пропусков'} />
         <Metric icon="□" tone="blue" label="Планы" value={String(data.calendar.scheduled)} note={`Задач: ${data.calendar.pendingTasks}`} />
+        <Metric icon="◆" tone="violet" label="Игровое время" value={formatSleep(data.gaming.durationMinutes)} note={`Сессий: ${data.gaming.sessions}`} />
       </section>
 
       <section className="content-grid">

@@ -7,6 +7,7 @@ export type Dashboard = {
   habits: { scheduled: number; completed: number; skipped: number; completionPercent: number }
   calendar: { scheduled: number; events: number; reminders: number; completedTasks: number; pendingTasks: number }
   journalEntries: number
+  gaming: { durationMinutes: number; sessions: number }
   media: {
     currentMovies: number
     currentSeries: number

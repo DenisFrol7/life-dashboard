@@ -1,7 +1,7 @@
 import { apiRequest, ApiClientError } from './client'
 import type { LibraryStatus, ReleaseStatus } from './movies'
 
-export type Game = { id: number; title: string; originalTitle: string | null; itemType: 'GAME'; format: null; releaseYear: number | null; description: string | null; coverUrl: string | null; durationMinutes: null; releaseStatus: ReleaseStatus }
+export type Game = { id: number; title: string; originalTitle: string | null; itemType: 'GAME'; format: null; releaseYear: number | null; description: string | null; coverUrl: string | null; durationMinutes: null; releaseStatus: ReleaseStatus; genre: string | null }
 export type GameInput = Omit<Game, 'id'>
 export type Reference = { id: number; code: string; name: string; type: 'DIGITAL_STORE' | 'PHYSICAL' | 'SUBSCRIPTION' | null }
 export type AccessType = 'OWNED' | 'SUBSCRIPTION'
@@ -9,6 +9,8 @@ export type GameLibrary = { id: number; contentId: number; title: string; platfo
 export type GameLibraryInput = Omit<GameLibrary, 'id' | 'contentId' | 'title' | 'platform' | 'source'> & { platformId: number; sourceId: number }
 export type XboxProgress = { id: number; libraryEntryId: number; totalAchievements: number; unlockedAchievements: number; achievementPercent: number; totalGamerscore: number; earnedGamerscore: number; gamerscorePercent: number; lastUpdatedAt: string }
 export type XboxProgressInput = Pick<XboxProgress, 'totalAchievements' | 'unlockedAchievements' | 'totalGamerscore' | 'earnedGamerscore'>
+export type GameSession = { id: number; libraryEntryId: number; contentId: number; title: string; startedAt: string; durationMinutes: number; note: string | null; unlockedAchievements: number; earnedGamerscore: number }
+export type GameSessionInput = Pick<GameSession, 'startedAt' | 'durationMinutes' | 'note' | 'unlockedAchievements' | 'earnedGamerscore'>
 
 export const getGameCatalog = () => apiRequest<Game[]>('/api/content?type=GAME')
 export const createGame = (input: GameInput) => apiRequest<Game>('/api/content', { method: 'POST', body: JSON.stringify(input) })
@@ -22,3 +24,7 @@ export const updateGameLibrary = (id: number, input: GameLibraryInput) => apiReq
 export const deleteGameLibrary = (id: number) => apiRequest<void>(`/api/games/library/${id}`, { method: 'DELETE' })
 export const getXboxProgress = async (libraryId: number) => { try { return await apiRequest<XboxProgress>(`/api/games/library/${libraryId}/xbox-progress`) } catch (error) { if (error instanceof ApiClientError && error.payload.status === 404) return null; throw error } }
 export const putXboxProgress = (libraryId: number, input: XboxProgressInput) => apiRequest<XboxProgress>(`/api/games/library/${libraryId}/xbox-progress`, { method: 'PUT', body: JSON.stringify(input) })
+export const getGameSessions = (from?: string, to?: string) => { const query = new URLSearchParams(); if (from) query.set('from', from); if (to) query.set('to', to); return apiRequest<GameSession[]>(`/api/games/sessions${query.size ? `?${query}` : ''}`) }
+export const createGameSession = (libraryId: number, input: GameSessionInput) => apiRequest<GameSession>(`/api/games/library/${libraryId}/sessions`, { method: 'POST', body: JSON.stringify(input) })
+export const updateGameSession = (id: number, input: GameSessionInput) => apiRequest<GameSession>(`/api/games/sessions/${id}`, { method: 'PUT', body: JSON.stringify(input) })
+export const deleteGameSession = (id: number) => apiRequest<void>(`/api/games/sessions/${id}`, { method: 'DELETE' })
