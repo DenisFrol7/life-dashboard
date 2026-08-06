@@ -8,6 +8,7 @@ import { BlogPage } from './pages/JournalPage'
 import { TimelinePage } from './pages/TimelinePage'
 import { MoviesPage } from './pages/MoviesPage'
 import { SeriesPage } from './pages/SeriesPage'
+import { AnimePage } from './pages/AnimePage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import './App.css'
 
@@ -78,7 +79,8 @@ function App() {
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/movies" element={<MoviesPage />} />
           <Route path="/series" element={<SeriesPage />} />
-          {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies', '/series'].includes(item.path)).map((item) => (
+          <Route path="/anime" element={<AnimePage />} />
+          {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies', '/series', '/anime'].includes(item.path)).map((item) => (
             <Route
               key={item.path}
               path={item.path}

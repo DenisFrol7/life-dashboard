@@ -446,6 +446,10 @@
 .structure-forms input, .structure-forms select { min-width: 0; width: 75px; padding: 7px; border: 1px solid #d7d9d5; border-radius: 7px; background: #fff; font-size: 8px; }
 .structure-forms form:last-child input:last-of-type { width: 130px; }
 .structure-forms button { padding: 7px 8px; border: 0; border-radius: 7px; color: #fff; background: #56748a; cursor: pointer; font-size: 8px; font-weight: 700; }
+.anime-poster { background: linear-gradient(145deg, #55455f, #292238); }
+.anime-progress span { background: #8e75a3; }
+.anime-rule { margin: 0 0 14px; padding: 10px 12px; border-left: 3px solid #9279a7; border-radius: 4px 9px 9px 4px; color: #6e6474; background: #f0eaf3; font-size: 9px; line-height: 1.5; }
+.anime-empty > span { color: #9279a7; }
 
 @media (max-width: 1100px) {
   .sleep-hero { grid-template-columns: auto 90px 1fr; }
