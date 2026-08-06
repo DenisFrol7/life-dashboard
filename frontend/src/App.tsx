@@ -2,6 +2,7 @@ import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router'
 import { DashboardPage } from './pages/DashboardPage'
 import { HabitsPage } from './pages/HabitsPage'
 import { ActivityPage } from './pages/ActivityPage'
+import { SleepPage } from './pages/SleepPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import './App.css'
 
@@ -66,7 +67,8 @@ function App() {
           <Route index element={<DashboardPage />} />
           <Route path="/habits" element={<HabitsPage />} />
           <Route path="/activity" element={<ActivityPage />} />
-          {navigation.slice(1).filter((item) => item.path !== '/habits' && item.path !== '/activity').map((item) => (
+          <Route path="/sleep" element={<SleepPage />} />
+          {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep'].includes(item.path)).map((item) => (
             <Route
               key={item.path}
               path={item.path}
