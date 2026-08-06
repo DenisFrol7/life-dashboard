@@ -1,7 +1,7 @@
 package com.lifedashboard.blog;
 
 import com.lifedashboard.journal.JournalEntry;
-import com.lifedashboard.journal.Tag;
+import com.lifedashboard.tag.Tag;
 import com.lifedashboard.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

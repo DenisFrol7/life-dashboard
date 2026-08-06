@@ -1,4 +1,4 @@
-package com.lifedashboard.journal.dto;
+package com.lifedashboard.tag.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

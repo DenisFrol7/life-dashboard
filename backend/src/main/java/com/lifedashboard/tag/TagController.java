@@ -1,7 +1,7 @@
-package com.lifedashboard.journal;
+package com.lifedashboard.tag;
 
-import com.lifedashboard.journal.dto.TagRequest;
-import com.lifedashboard.journal.dto.TagResponse;
+import com.lifedashboard.tag.dto.TagRequest;
+import com.lifedashboard.tag.dto.TagResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,7 +17,7 @@ import java.net.URI;
 import java.util.List;
 
 @RestController
-@io.swagger.v3.oas.annotations.tags.Tag(name = "Journal")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Tags")
 @RequestMapping("/api/tags")
 public class TagController {
 

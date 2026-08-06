@@ -1,4 +1,4 @@
-package com.lifedashboard.journal;
+package com.lifedashboard.tag;
 
 import com.lifedashboard.user.User;
 import jakarta.persistence.Column;
