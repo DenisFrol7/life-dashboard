@@ -9,8 +9,8 @@
   --muted: #777d77;
   --line: #e2e1da;
   --paper: #fffefa;
-  --accent: #9bd5a5;
-  --accent-dark: #234c35;
+  --accent: #9db7cf;
+  --accent-dark: #334f68;
 }
 
 * { box-sizing: border-box; }
@@ -20,7 +20,7 @@ button, input, textarea, select { font: inherit; }
 a { color: inherit; }
 h1, h2, h3, p { margin-top: 0; }
 
-::selection { color: #fff; background: #315e43; }
+::selection { color: #fff; background: #496985; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
