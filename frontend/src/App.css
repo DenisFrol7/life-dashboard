@@ -277,6 +277,104 @@
 .calendar-form .all-day-check { display: flex; align-items: center; grid-template-columns: auto 1fr; gap: 8px; margin: 15px 0; padding: 9px; border-radius: 8px; background: #f0f2f2; }
 .calendar-form .all-day-check input { width: auto; }
 
+.journal-page { display: grid; gap: 14px; max-width: 1280px; margin: 0 auto; }
+.journal-toolbar { display: flex; justify-content: space-between; gap: 15px; }
+.journal-search { position: relative; width: min(420px, 100%); }
+.journal-search span { position: absolute; top: 8px; left: 12px; color: #7e8b94; font-size: 19px; }
+.journal-search input { width: 100%; padding: 11px 12px 11px 38px; border: 1px solid var(--line); border-radius: 11px; outline: none; background: var(--paper); font-size: 11px; }
+.journal-search input:focus { border-color: #789ab6; box-shadow: 0 0 0 3px #789ab618; }
+.journal-filters { display: flex; align-items: flex-end; gap: 9px; padding: 12px; border: 1px solid var(--line); border-radius: 13px; background: #f8f8f4; }
+.journal-filters label { display: grid; gap: 4px; color: #7b827e; font-size: 8px; font-weight: 800; text-transform: uppercase; }
+.journal-filters input, .journal-filters select { padding: 7px 9px; border: 1px solid #dcdcd5; border-radius: 7px; color: #58636a; background: #fff; font-size: 9px; }
+.journal-filters .pinned-filter { display: flex; align-items: center; flex-direction: row; gap: 6px; height: 30px; padding: 0 9px; border-radius: 7px; background: #edf1f3; white-space: nowrap; }
+.journal-filters .pinned-filter input { width: auto; }
+.journal-filters > button { margin-left: auto; padding: 7px; border: 0; color: #6a7c89; background: transparent; cursor: pointer; font-size: 9px; }
+.journal-error { max-width: none; margin: 0; }
+.journal-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); min-height: 620px; overflow: hidden; border: 1px solid var(--line); border-radius: 20px; background: var(--paper); box-shadow: 0 8px 28px #25322708; }
+.journal-list { max-height: 720px; overflow-y: auto; border-right: 1px solid var(--line); background: #fafaf7; }
+.journal-list-heading { padding: 13px 16px; border-bottom: 1px solid var(--line); color: #818782; font-size: 9px; }
+.journal-list > button { display: block; width: 100%; padding: 15px 17px; border: 0; border-bottom: 1px solid #e8e8e2; background: transparent; cursor: pointer; text-align: left; }
+.journal-list > button:hover, .journal-list > button.active { background: #edf3f7; }
+.journal-list > button.active { box-shadow: inset 3px 0 #789ab6; }
+.journal-list > button > div:first-child { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.journal-list time { color: #8a908c; font-size: 8px; }
+.journal-list > button > div:first-child span { color: #66839a; font-size: 9px; }
+.journal-list > button > strong { display: block; margin-bottom: 5px; color: #39464e; font-family: Georgia, serif; font-size: 14px; }
+.journal-list > button > p { margin: 0 0 8px; color: #757d78; font-size: 9px; line-height: 1.5; }
+.entry-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.entry-tags i, .reader-tags span { padding: 3px 6px; border-radius: 5px; color: #587287; background: #e5edf3; font-size: 7px; font-style: normal; }
+.journal-empty { padding: 35px 18px; color: var(--muted); text-align: center; font-size: 10px; }
+.journal-reader { min-width: 0; padding: clamp(28px, 5vw, 62px); }
+.journal-reader header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding-bottom: 20px; border-bottom: 1px solid #e8e7e0; }
+.journal-reader h2 { margin: 0; font-family: Georgia, serif; font-size: clamp(28px, 4vw, 43px); line-height: 1.1; }
+.journal-reader header > div:last-child { display: flex; gap: 6px; }
+.journal-reader header button { padding: 7px 9px; border: 0; border-radius: 7px; color: #68767f; background: #eef1f2; cursor: pointer; font-size: 8px; }
+.journal-reader header button:last-child { color: #9b594e; background: #f8ebe8; }
+.reader-tags { display: flex; flex-wrap: wrap; gap: 5px; margin: 17px 0; }
+.journal-content { max-width: 760px; padding-top: 8px; color: #4b5350; font-family: Georgia, serif; font-size: 14px; line-height: 1.85; }
+.journal-content p { margin-bottom: 16px; }
+.reader-empty { display: grid; place-items: center; align-content: center; min-height: 450px; color: var(--muted); text-align: center; }
+.reader-empty > span { font-size: 35px; color: #7891a3; }
+.reader-empty h2 { margin: 12px 0 5px; color: #414b51; }
+.reader-empty p { font-size: 10px; }
+.journal-form { width: min(800px, 100%); max-height: calc(100vh - 40px); padding: 27px; overflow-y: auto; border-radius: 21px; background: var(--paper); box-shadow: 0 30px 90px #07111a70; }
+.journal-form-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.journal-form-meta > input { padding: 8px; border: 1px solid #d9d9d1; border-radius: 8px; font-size: 10px; }
+.journal-form-meta label { display: flex; align-items: center; gap: 6px; color: #68716b; font-size: 9px; font-weight: 700; }
+.journal-title-input { width: 100%; padding: 10px 0; border: 0; border-bottom: 1px solid #e4e3dc; outline: none; color: #333d43; background: transparent; font-family: Georgia, serif; font-size: 28px; }
+.journal-editor { width: 100%; min-height: 260px; padding: 18px 0; border: 0; outline: none; resize: vertical; color: #444d49; background: transparent; font-family: Georgia, serif; font-size: 14px; line-height: 1.75; }
+.tag-picker { margin: 8px 0 0; padding: 13px; border: 1px solid #dfdfd8; border-radius: 10px; }
+.tag-picker legend { padding: 0 5px; color: #747d77; font-size: 9px; font-weight: 800; }
+.tag-picker > div:first-of-type { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-picker label { display: flex; align-items: center; gap: 4px; padding: 5px 7px; border-radius: 6px; color: #5e7280; background: #e9eff3; font-size: 8px; }
+.tag-picker input { width: auto; }
+.new-tag { display: flex; gap: 6px; margin-top: 10px; }
+.new-tag input { flex: 1; min-width: 0; padding: 8px; border: 1px solid #dcdcd5; border-radius: 7px; font-size: 9px; }
+.new-tag button { padding: 7px 9px; border: 0; border-radius: 7px; color: #496985; background: #e4edf4; cursor: pointer; font-size: 8px; font-weight: 800; }
+
+.timeline-page { display: grid; gap: 14px; max-width: 1120px; margin: 0 auto; }
+.timeline-toolbar { display: flex; align-items: center; justify-content: space-between; }
+.timeline-toolbar > div { display: flex; align-items: center; gap: 5px; }
+.timeline-toolbar button { height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; color: #536a79; background: var(--paper); cursor: pointer; }
+.timeline-toolbar button:disabled { cursor: default; opacity: .35; }
+.timeline-toolbar input { height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; color: #4d5d67; background: var(--paper); font-size: 10px; }
+.timeline-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.timeline-filters button { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; color: #717a75; background: var(--paper); cursor: pointer; font-size: 9px; font-weight: 700; }
+.timeline-filters button span { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #edf1f2; }
+.timeline-filters button.active { color: #3e586b; border-color: #9cb4c6; background: #eaf1f5; }
+.timeline-error { max-width: none; margin: 0; }
+.timeline-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 18px; align-items: start; }
+.day-summary { position: sticky; top: 25px; padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: 0 8px 28px #25322708; }
+.day-summary > strong { display: block; color: #496985; font-family: Georgia, serif; font-size: 46px; line-height: 1; }
+.day-summary > span { color: var(--muted); font-size: 9px; }
+.day-summary dl { margin: 20px 0 0; }
+.day-summary dl div { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid #ecebe5; }
+.day-summary dt { color: #707975; font-size: 9px; }
+.day-summary dd { margin: 0; color: #465761; font-size: 10px; font-weight: 800; }
+.games-later { display: flex; gap: 9px; margin-top: 17px; padding: 12px; border-radius: 10px; color: #6f7773; background: #f0f1ed; }
+.games-later > span { font-size: 18px; }
+.games-later p { margin: 0; font-size: 8px; line-height: 1.5; }
+.games-later strong { display: block; color: #536069; }
+.timeline-feed { position: relative; display: grid; gap: 10px; min-height: 430px; }
+.timeline-feed::before { position: absolute; top: 20px; bottom: 20px; left: 75px; width: 1px; background: #d9ddda; content: ''; }
+.timeline-feed article { position: relative; display: grid; grid-template-columns: 54px 40px 1fr auto auto; align-items: center; gap: 12px; padding: 16px 18px 16px 8px; border: 1px solid var(--line); border-radius: 15px; background: var(--paper); box-shadow: 0 5px 20px #25322707; }
+.timeline-time { color: #77817c; text-align: right; font-size: 8px; font-weight: 700; }
+.timeline-icon { z-index: 1; display: grid; place-items: center; width: 34px; height: 34px; border: 4px solid #f4f2ec; border-radius: 50%; color: #496985; background: #dfeaf2; font-size: 14px; }
+.timeline-feed article.sleep .timeline-icon { color: #665f8b; background: #ebe8f4; }
+.timeline-feed article.habit .timeline-icon { color: #58714e; background: #e5eee1; }
+.timeline-feed article.calendar .timeline-icon { color: #856637; background: #f4ead8; }
+.timeline-feed article.media .timeline-icon { color: #86584d; background: #f3e5e1; }
+.timeline-feed article.blog .timeline-icon { color: #765b82; background: #eee5f1; }
+.timeline-copy small { display: block; margin-bottom: 3px; color: #88908c; font-size: 7px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.timeline-copy h3 { margin: 0 0 4px; color: #3c484e; font-family: Georgia, serif; font-size: 15px; }
+.timeline-copy p { margin: 0; color: #707975; font-size: 9px; line-height: 1.45; }
+.timeline-value { max-width: 150px; color: #536b7c; font-size: 9px; text-align: right; }
+.timeline-done { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #fff; background: #78956d; font-size: 10px; }
+.timeline-empty { display: grid; place-items: center; align-content: center; min-height: 430px; border: 1px dashed #cdd3cf; border-radius: 18px; color: var(--muted); text-align: center; }
+.timeline-empty > span { color: #93a9b8; font-size: 38px; }
+.timeline-empty h2 { margin: 10px 0 4px; color: #46545c; font-family: Georgia, serif; }
+.timeline-empty p { font-size: 10px; }
+
 @media (max-width: 1100px) {
   .sleep-hero { grid-template-columns: auto 90px 1fr; }
   .sleep-hero > .primary-button { grid-column: 1 / -1; justify-self: end; }
@@ -314,6 +412,13 @@
   .month-grid > button { min-height: 69px; padding: 4px; }
   .month-grid i { width: 6px; height: 6px; padding: 0; border-radius: 50%; color: transparent !important; }
   .calendar-toolbar h2 { min-width: 140px; font-size: 18px; }
+  .journal-layout { grid-template-columns: 1fr; }
+  .journal-list { max-height: 330px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .journal-reader { min-height: 430px; }
+  .journal-filters { flex-wrap: wrap; }
+  .timeline-layout { grid-template-columns: 1fr; }
+  .day-summary { position: static; }
+  .day-summary dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 12px; }
   .compact-panel { grid-column: auto; }
 }
 @media (max-width: 500px) {
@@ -346,4 +451,18 @@
   .calendar-toolbar > .primary-button { align-self: flex-end; }
   .month-grid > button { min-height: 54px; }
   .weekday-row span { padding: 5px 2px; }
+  .journal-toolbar { align-items: stretch; flex-direction: column; }
+  .journal-toolbar .primary-button { align-self: flex-end; }
+  .journal-filters label:not(.pinned-filter) { width: calc(50% - 5px); }
+  .journal-filters input, .journal-filters select { width: 100%; }
+  .journal-reader { padding: 28px 20px; }
+  .journal-reader header { flex-direction: column; }
+  .journal-form { padding: 20px; }
+  .timeline-feed::before { left: 17px; }
+  .timeline-feed article { grid-template-columns: 38px 1fr auto; padding-left: 0; }
+  .timeline-time { grid-column: 2; grid-row: 1; text-align: left; }
+  .timeline-icon { grid-column: 1; grid-row: 1 / span 2; }
+  .timeline-copy { grid-column: 2; }
+  .timeline-value, .timeline-done { grid-column: 3; grid-row: 2; }
+  .day-summary dl { grid-template-columns: repeat(2, 1fr); }
 }
