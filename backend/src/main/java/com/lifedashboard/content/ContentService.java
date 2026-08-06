@@ -77,7 +77,8 @@ public class ContentService {
     }
     private void apply(ContentItem item, ContentItemRequest r) {
         item.update(r.title().trim(), normalize(r.originalTitle()), r.itemType(), r.format(), r.releaseYear(),
-                normalize(r.description()), normalize(r.coverUrl()), r.durationMinutes(), r.releaseStatus());
+                normalize(r.description()), normalize(r.coverUrl()), r.durationMinutes(), r.releaseStatus(),
+                normalize(r.genre()));
     }
     private ContentItem findContent(Long id) { return contentRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Content with id " + id + " was not found")); }
@@ -86,7 +87,7 @@ public class ContentService {
     private String normalize(String value) { return value == null || value.isBlank() ? null : value.trim(); }
     private ContentItemResponse toResponse(ContentItem i) { return new ContentItemResponse(i.getId(), i.getTitle(),
             i.getOriginalTitle(), i.getItemType(), i.getFormat(), i.getReleaseYear(), i.getDescription(),
-            i.getCoverUrl(), i.getDurationMinutes(), i.getReleaseStatus()); }
+            i.getCoverUrl(), i.getDurationMinutes(), i.getReleaseStatus(), i.getGenre()); }
     private LibraryEntryResponse toResponse(UserContent e) { return new LibraryEntryResponse(e.getId(),
             toResponse(e.getContent()), e.getStatus(), e.getRating(), e.isFavorite(), e.getStartedAt(),
             e.getCompletedAt(), e.getPersonalNote()); }

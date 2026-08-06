@@ -12,4 +12,12 @@ public record ContentItemRequest(
         String description,
         String coverUrl,
         @Positive Integer durationMinutes,
-        @NotNull ReleaseStatus releaseStatus) {}
+        @NotNull ReleaseStatus releaseStatus,
+        @Size(max = 100) String genre) {
+    public ContentItemRequest(String title, String originalTitle, ContentType itemType, ContentFormat format,
+            Integer releaseYear, String description, String coverUrl, Integer durationMinutes,
+            ReleaseStatus releaseStatus) {
+        this(title, originalTitle, itemType, format, releaseYear, description, coverUrl, durationMinutes,
+                releaseStatus, null);
+    }
+}

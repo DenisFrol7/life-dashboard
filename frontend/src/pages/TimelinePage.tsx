@@ -5,12 +5,13 @@ import { getHabits, getHabitEntries } from '../api/habits'
 import { getJournalEntries } from '../api/journal'
 import { getMediaTimeline } from '../api/mediaTimeline'
 import { getSleepSessions } from '../api/sleep'
+import { getGameSessions } from '../api/games'
 
-type Kind = 'activity' | 'sleep' | 'habit' | 'calendar' | 'media' | 'blog'
-type Item = { id: string; kind: Kind; time: string | null; title: string; detail: string; value?: string; completed?: boolean }
+type Kind = 'activity' | 'sleep' | 'habit' | 'calendar' | 'media' | 'game' | 'blog'
+type Item = { id: string; kind: Kind; time: string | null; title: string; detail: string; value?: string; durationMinutes?: number; completed?: boolean }
 const today = new Date().toLocaleDateString('en-CA')
-const labels: Record<Kind, string> = { activity: 'Активность', sleep: 'Сон', habit: 'Привычка', calendar: 'Календарь', media: 'Просмотр', blog: 'Блог' }
-const icons: Record<Kind, string> = { activity: '↗', sleep: '☾', habit: '✓', calendar: '□', media: '▶', blog: '✎' }
+const labels: Record<Kind, string> = { activity: 'Активность', sleep: 'Сон', habit: 'Привычка', calendar: 'Календарь', media: 'Просмотр', game: 'Игра', blog: 'Блог' }
+const icons: Record<Kind, string> = { activity: '↗', sleep: '☾', habit: '✓', calendar: '□', media: '▶', game: '◆', blog: '✎' }
 const calendarLabels = { EVENT: 'Событие', TASK: 'Задача', REMINDER: 'Напоминание' }
 const asDate = (value: string) => new Date(`${value}T12:00:00`)
 const occursOn = (event: CalendarEvent, date: string) => {
@@ -35,9 +36,10 @@ export function TimelinePage() {
     setLoading(true); setError(null)
     try {
       const range = dayRange(date)
-      const [activity, sleep, habits, calendar, blog, media] = await Promise.all([
+      const [activity, sleep, habits, calendar, blog, media, gameSessions] = await Promise.all([
         getActivityRange(date, date), getSleepSessions(range.from, range.to), getHabits('ACTIVE'),
         getCalendarEvents(), getJournalEntries({ from: date, to: date }), getMediaTimeline(date),
+        getGameSessions(range.from, range.to),
       ])
       const habitData = await Promise.all(habits.map(async (habit) => ({ habit, entries: await getHabitEntries(habit.id) })))
       const calendarData = await Promise.all(calendar.map(async (event) => ({ event, occurrences: await getOccurrences(event.id) })))
@@ -47,6 +49,7 @@ export function TimelinePage() {
       habitData.forEach(({ habit, entries }) => { const entry = entries.find((item) => item.entryDate === date); if (entry) result.push({ id: `habit-${entry.id}`, kind: 'habit', time: null, title: habit.name, detail: entry.skipped ? 'Пропущено' : habit.trackingType === 'BOOLEAN' ? 'Выполнено' : `${entry.value ?? 0} ${habit.unit ?? ''}`, completed: !entry.skipped }) })
       calendarData.forEach(({ event, occurrences }) => { if (!occursOn(event, date)) return; const occurrence = occurrences.find((item) => item.occurrenceDate === date); if (occurrence?.status === 'CANCELLED' || occurrence?.status === 'SKIPPED') return; result.push({ id: `calendar-${event.id}`, kind: 'calendar', time: event.startTime?.slice(0, 5) ?? null, title: event.title, detail: `${calendarLabels[event.eventType]}${event.location ? ` · ${event.location}` : ''}`, completed: occurrence?.status === 'COMPLETED' }) })
       media.forEach((entry) => result.push({ id: entry.id, kind: 'media', time: new Date(entry.occurredAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }), title: entry.title, detail: entry.detail, value: entry.durationMinutes ? duration(entry.durationMinutes) : undefined }))
+      gameSessions.forEach((session) => { const progress = [session.unlockedAchievements ? `${session.unlockedAchievements} достиж.` : '', session.earnedGamerscore ? `${session.earnedGamerscore} G` : ''].filter(Boolean).join(' · '); result.push({ id: `game-${session.id}`, kind: 'game', time: new Date(session.startedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }), title: session.title, detail: [progress, session.note].filter(Boolean).join(' · ') || 'Игровая сессия', value: duration(session.durationMinutes), durationMinutes: session.durationMinutes }) })
       blog.forEach((entry) => result.push({ id: `blog-${entry.id}`, kind: 'blog', time: null, title: entry.title ?? 'Запись без заголовка', detail: entry.content.length > 100 ? `${entry.content.slice(0, 100)}…` : entry.content }))
       result.sort((a, b) => (a.time ?? '23:59').localeCompare(b.time ?? '23:59'))
       setItems(result)
@@ -62,7 +65,7 @@ export function TimelinePage() {
     <section className="timeline-toolbar"><div><button onClick={() => shift(-1)}>‹</button><input max={today} type="date" value={date} onChange={(event) => setDate(event.target.value)} /><button disabled={date >= today} onClick={() => shift(1)}>›</button></div>{date !== today && <button className="today-button" onClick={() => setDate(today)}>Сегодня</button>}</section>
     <section className="timeline-filters">{(Object.keys(labels) as Kind[]).map((kind) => <button className={filters.includes(kind) ? `active ${kind}` : kind} key={kind} onClick={() => toggle(kind)}><span>{icons[kind]}</span>{labels[kind]}</button>)}</section>
     {error && <div className="notice error timeline-error"><strong>Ошибка</strong><span>{error}</span></div>}
-    <section className="timeline-layout"><aside className="day-summary"><p className="eyebrow">Итоги дня</p><strong>{items.length}</strong><span>событий в ленте</span><dl>{(Object.keys(labels) as Kind[]).map((kind) => <div key={kind}><dt>{labels[kind]}</dt><dd>{items.filter((item) => item.kind === kind).length}</dd></div>)}</dl><div className="games-later"><span>＋</span><p><strong>Игровое время</strong> появится после добавления игровых сессий.</p></div></aside>
+    <section className="timeline-layout"><aside className="day-summary"><p className="eyebrow">Итоги дня</p><strong>{items.length}</strong><span>событий в ленте</span><dl>{(Object.keys(labels) as Kind[]).map((kind) => <div key={kind}><dt>{labels[kind]}</dt><dd>{items.filter((item) => item.kind === kind).length}</dd></div>)}</dl><div className="games-later"><span>◆</span><p><strong>Игровое время</strong>{duration(items.reduce((sum, item) => sum + (item.kind === 'game' ? item.durationMinutes ?? 0 : 0), 0))}</p></div></aside>
       <div className="timeline-feed">{loading ? <div className="loading"><span />Собираем события дня…</div> : visible.length === 0 ? <div className="timeline-empty"><span>○</span><h2>Спокойный день</h2><p>За выбранную дату событий не найдено.</p></div> : visible.map((item) => <article className={item.kind} key={item.id}><div className="timeline-time">{item.time ?? 'За день'}</div><span className="timeline-icon">{icons[item.kind]}</span><div className="timeline-copy"><small>{labels[item.kind]}</small><h3>{item.title}</h3><p>{item.detail}</p></div>{item.value && <strong className="timeline-value">{item.value}</strong>}{item.completed && <span className="timeline-done">✓</span>}</article>)}</div>
     </section>
   </div>

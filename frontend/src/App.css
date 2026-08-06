@@ -364,6 +364,7 @@
 .timeline-feed article.habit .timeline-icon { color: #58714e; background: #e5eee1; }
 .timeline-feed article.calendar .timeline-icon { color: #856637; background: #f4ead8; }
 .timeline-feed article.media .timeline-icon { color: #86584d; background: #f3e5e1; }
+.timeline-feed article.game .timeline-icon { color: #536b7c; background: #e3ebf1; }
 .timeline-feed article.blog .timeline-icon { color: #765b82; background: #eee5f1; }
 .timeline-copy small { display: block; margin-bottom: 3px; color: #88908c; font-size: 7px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
 .timeline-copy h3 { margin: 0 0 4px; color: #3c484e; font-family: Georgia, serif; font-size: 15px; }
@@ -453,11 +454,17 @@
 .game-poster { background: linear-gradient(145deg, #31534f, #172d2d); }
 .xbox-progress span { background: #5b9a67; }
 .game-source { margin-top: 7px; overflow: hidden; color: #7d8580; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
+.game-genre { margin-top: 5px; overflow: hidden; color: #6f7773; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
 .game-form { width: min(760px, 100%); }
+.game-sessions-panel { margin-bottom: 20px; padding: 18px; border: 1px solid #e1e5e2; border-radius: 14px; background: #fff; }
+.game-sessions-panel h2 { margin: 2px 0 0; font-size: 18px; }
+.game-session-list { display: grid; gap: 7px; margin-top: 14px; }
+.game-session-list > button { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 11px 13px; border: 0; border-radius: 10px; color: inherit; text-align: left; background: #f5f7f6; cursor: pointer; }
+.game-session-list span { display: grid; gap: 3px; }
+.game-session-list small { color: #78807c; }
+.game-session-list b { color: #536b7c; font-size: 12px; }
+.session-form { width: min(560px, 100%); }
 .game-form > label:nth-of-type(2) { display: none; }
-.game-form > label:nth-of-type(2) + .form-grid { grid-template-columns: 1fr; }
-.game-form > label:nth-of-type(2) + .form-grid > label:nth-child(2),
-.games-page .movie-meta > span:nth-child(2) { display: none; }
 .game-library-flags { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 12px; }
 .game-library-flags .favorite-check { display: flex; align-items: center; gap: 7px; margin: 0; }
 .game-access-type { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border-radius: 7px; background: #edf1f2; }

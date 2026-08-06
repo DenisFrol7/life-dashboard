@@ -4,4 +4,4 @@ import com.lifedashboard.content.*;
 
 public record ContentItemResponse(Long id, String title, String originalTitle, ContentType itemType,
         ContentFormat format, Integer releaseYear, String description, String coverUrl,
-        Integer durationMinutes, ReleaseStatus releaseStatus) {}
+        Integer durationMinutes, ReleaseStatus releaseStatus, String genre) {}
