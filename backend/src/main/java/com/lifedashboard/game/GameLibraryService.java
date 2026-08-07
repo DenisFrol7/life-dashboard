@@ -18,13 +18,17 @@ public class GameLibraryService {
     private final ContentItemRepository contentItems;
     private final UserContentRepository userContent;
     private final ContentService contentService;
+    private final GamePlaythroughRepository playthroughs;
+    private final GameSessionRepository sessions;
     private final long userId;
 
     public GameLibraryService(GamingPlatformRepository platforms, GameSourceRepository sources,
             UserGameRepository games, ContentItemRepository contentItems, UserContentRepository userContent,
-            ContentService contentService, @Value("${app.default-user-id}") long userId) {
+            ContentService contentService, GamePlaythroughRepository playthroughs, GameSessionRepository sessions,
+            @Value("${app.default-user-id}") long userId) {
         this.platforms = platforms; this.sources = sources; this.games = games; this.contentItems = contentItems;
-        this.userContent = userContent; this.contentService = contentService; this.userId = userId;
+        this.userContent = userContent; this.contentService = contentService; this.playthroughs = playthroughs;
+        this.sessions = sessions; this.userId = userId;
     }
 
     public List<ReferenceResponse> platforms() {
@@ -42,7 +46,9 @@ public class GameLibraryService {
         contentService.putInLibrary(contentId, libraryRequest(request));
         UserGame game = new UserGame(userContent.findByUserIdAndContentId(userId, contentId).orElseThrow());
         apply(game, request);
-        return response(games.save(game));
+        UserGame saved = games.save(game);
+        syncFirstPlaythrough(saved, request);
+        return response(saved);
     }
     public List<GameLibraryResponse> getAll(UserContentStatus status, Long platformId) {
         return games.findLibrary(userId, status, platformId).stream().map(this::response).toList();
@@ -54,6 +60,7 @@ public class GameLibraryService {
         UserGame game = findGame(id);
         contentService.putInLibrary(game.getUserContent().getContent().getId(), libraryRequest(request));
         apply(game, request);
+        syncFirstPlaythrough(game, request);
         return response(game);
     }
     @Transactional public void delete(Long id) { games.delete(findGame(id)); }
@@ -82,6 +89,13 @@ public class GameLibraryService {
     private LibraryEntryRequest libraryRequest(GameLibraryRequest r) { return new LibraryEntryRequest(r.status(),
             r.rating(), r.favorite(), r.startedAt(), r.completedAt(), r.personalNote()); }
     private String normalize(String value) { return value == null || value.isBlank() ? null : value.trim(); }
+    private void syncFirstPlaythrough(UserGame game, GameLibraryRequest request) {
+        if (request.status() != UserContentStatus.COMPLETED || request.completedAt() == null) return;
+        playthroughs.findByLibraryEntryIdAndPlaythroughNumber(game.getId(), 1).ifPresentOrElse(
+                item -> item.updateCompletedAt(request.completedAt()),
+                () -> playthroughs.save(new GamePlaythrough(game, 1, request.completedAt(),
+                        sessions.totalMinutes(game.getId(), userId), null)));
+    }
     private GameLibraryResponse response(UserGame g) {
         UserContent u = g.getUserContent();
         return new GameLibraryResponse(g.getId(), u.getContent().getId(), u.getContent().getTitle(),

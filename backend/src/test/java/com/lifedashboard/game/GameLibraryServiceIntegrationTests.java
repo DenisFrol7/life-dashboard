@@ -55,6 +55,29 @@ class GameLibraryServiceIntegrationTests {
         } finally { cleanup(); }
     }
 
+    @Test
+    void keepsMultipleLibraryCopiesForOneGame() {
+        try {
+            long contentId = create(GAME, ContentType.GAME, null);
+            long pcId = platforms.findByCode("PC").orElseThrow().getId();
+            long xbox360Id = platforms.findByCode("XBOX_360").orElseThrow().getId();
+            long steamId = sources.findByCode("STEAM").orElseThrow().getId();
+            long xboxStoreId = sources.findByCode("XBOX_STORE").orElseThrow().getId();
+
+            var steam = gameService.create(contentId,
+                    request(pcId, steamId, GameAccessType.OWNED, UserContentStatus.IN_PROGRESS));
+            var xbox = gameService.create(contentId,
+                    request(xbox360Id, xboxStoreId, GameAccessType.OWNED, UserContentStatus.IN_PROGRESS));
+
+            var copies = gameService.getAll(null, null).stream()
+                    .filter(entry -> entry.contentId().equals(contentId)).toList();
+            assertEquals(2, copies.size());
+            assertNotEquals(steam.id(), xbox.id());
+            assertTrue(copies.stream().anyMatch(entry -> entry.source().code().equals("STEAM")));
+            assertTrue(copies.stream().anyMatch(entry -> entry.source().code().equals("XBOX_STORE")));
+        } finally { cleanup(); }
+    }
+
     private long create(String title, ContentType type, ContentFormat format) {
         return contentService.create(new ContentItemRequest(title, null, type, format, 2025,
                 null, null, null, ReleaseStatus.RELEASED)).id();

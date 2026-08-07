@@ -14,12 +14,14 @@ import java.util.List;
 public class GameSessionService {
     private final GameSessionRepository sessions;
     private final UserGameRepository games;
-    private final XboxGameProgressRepository xboxProgress;
+    private final XboxAchievementGroupRepository achievementGroups;
+    private final XboxAchievementGroupService achievementGroupService;
     private final long userId;
     public GameSessionService(GameSessionRepository sessions, UserGameRepository games,
-            XboxGameProgressRepository xboxProgress,
+            XboxAchievementGroupRepository achievementGroups, XboxAchievementGroupService achievementGroupService,
             @Value("${app.default-user-id}") long userId) {
-        this.sessions = sessions; this.games = games; this.xboxProgress = xboxProgress; this.userId = userId;
+        this.sessions = sessions; this.games = games; this.achievementGroups = achievementGroups;
+        this.achievementGroupService = achievementGroupService; this.userId = userId;
     }
     public List<GameSessionResponse> getAll(Instant from, Instant to) {
         List<GameSession> result;
@@ -34,48 +36,66 @@ public class GameSessionService {
         UserGame game = games.findByIdAndUserContentUserId(libraryId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Game library entry with id " + libraryId + " was not found"));
         GameSession session = new GameSession(game);
-        apply(session, request);
-        adjustXboxProgress(game, request.unlockedAchievements(), request.earnedGamerscore());
+        XboxAchievementGroup group = resolveGroup(game, request);
+        apply(session, request, group);
+        adjustGroup(game, group, request.unlockedAchievements(), request.earnedGamerscore());
         return response(sessions.save(session));
     }
     @Transactional
     public GameSessionResponse update(Long id, GameSessionRequest request) {
         GameSession session = find(id);
-        int achievementDelta = request.unlockedAchievements() - session.getUnlockedAchievements();
-        int gamerscoreDelta = request.earnedGamerscore() - session.getEarnedGamerscore();
-        adjustXboxProgress(session.getLibraryEntry(), achievementDelta, gamerscoreDelta);
-        apply(session, request); return response(session);
+        UserGame game = session.getLibraryEntry(); XboxAchievementGroup oldGroup = session.getAchievementGroup();
+        XboxAchievementGroup newGroup = resolveGroup(game, request);
+        if (oldGroup != null && newGroup != null && oldGroup.getId().equals(newGroup.getId())) {
+            adjustGroup(game, newGroup, request.unlockedAchievements() - session.getUnlockedAchievements(),
+                    request.earnedGamerscore() - session.getEarnedGamerscore());
+        } else {
+            adjustGroup(game, oldGroup, -session.getUnlockedAchievements(), -session.getEarnedGamerscore());
+            adjustGroup(game, newGroup, request.unlockedAchievements(), request.earnedGamerscore());
+        }
+        apply(session, request, newGroup); return response(session);
     }
     @Transactional public void delete(Long id) {
         GameSession session = find(id);
-        adjustXboxProgress(session.getLibraryEntry(), -session.getUnlockedAchievements(), -session.getEarnedGamerscore());
+        adjustGroup(session.getLibraryEntry(), session.getAchievementGroup(),
+                -session.getUnlockedAchievements(), -session.getEarnedGamerscore());
         sessions.delete(session);
     }
     private GameSession find(Long id) { return sessions.findByIdAndLibraryEntryUserContentUserId(id, userId)
             .orElseThrow(() -> new ResourceNotFoundException("Game session with id " + id + " was not found")); }
-    private void apply(GameSession session, GameSessionRequest request) {
+    private void apply(GameSession session, GameSessionRequest request, XboxAchievementGroup group) {
         String note = request.note() == null || request.note().isBlank() ? null : request.note().trim();
         validateXboxFields(session.getLibraryEntry(), request.unlockedAchievements(), request.earnedGamerscore());
         session.update(request.startedAt(), request.durationMinutes(), note,
-                request.unlockedAchievements(), request.earnedGamerscore());
+                request.unlockedAchievements(), request.earnedGamerscore(), group);
     }
     private void validateXboxFields(UserGame game, int achievements, int gamerscore) {
         if ((achievements > 0 || gamerscore > 0) && !isXbox(game))
             throw new InvalidRequestException("Achievements can only be added to Xbox game sessions");
     }
-    private void adjustXboxProgress(UserGame game, int achievementDelta, int gamerscoreDelta) {
-        if (achievementDelta == 0 && gamerscoreDelta == 0) return;
-        if (!isXbox(game)) throw new InvalidRequestException("Achievements can only be added to Xbox game sessions");
-        XboxGameProgress progress = xboxProgress.findByLibraryEntryId(game.getId())
+    private XboxAchievementGroup resolveGroup(UserGame game, GameSessionRequest request) {
+        if (request.achievementGroupId() != null) {
+            XboxAchievementGroup group = achievementGroups.findById(request.achievementGroupId())
+                    .filter(value -> value.getLibraryEntry().getId().equals(game.getId()))
+                    .orElseThrow(() -> new InvalidRequestException("Achievement group does not belong to the selected game"));
+            return group;
+        }
+        if (request.unlockedAchievements() == 0 && request.earnedGamerscore() == 0) return null;
+        return achievementGroups.findByLibraryEntryIdAndGroupType(game.getId(), XboxAchievementGroupType.BASE_GAME)
                 .orElseThrow(() -> new InvalidRequestException("Set the initial Xbox progress before adding achievements"));
-        int achievements = progress.getUnlockedAchievements() + achievementDelta;
-        int gamerscore = progress.getEarnedGamerscore() + gamerscoreDelta;
-        if (achievements < 0 || achievements > progress.getTotalAchievements())
+    }
+    private void adjustGroup(UserGame game, XboxAchievementGroup group, int achievementDelta, int gamerscoreDelta) {
+        if (achievementDelta == 0 && gamerscoreDelta == 0) return;
+        if (!isXbox(game) || group == null) throw new InvalidRequestException("Select an Xbox achievement group");
+        int achievements = group.getUnlockedAchievements() + achievementDelta;
+        int gamerscore = group.getEarnedGamerscore() + gamerscoreDelta;
+        if (achievements < 0 || achievements > group.getTotalAchievements())
             throw new InvalidRequestException("Session achievements exceed the Xbox progress limits");
-        if (gamerscore < 0 || gamerscore > progress.getTotalGamerscore())
+        if (gamerscore < 0 || gamerscore > group.getTotalGamerscore())
             throw new InvalidRequestException("Session gamerscore exceeds the Xbox progress limits");
-        progress.update(progress.getTotalAchievements(), achievements, progress.getTotalGamerscore(),
-                gamerscore, Instant.now());
+        group.update(group.getName(), group.getTotalAchievements(), achievements,
+                group.getTotalGamerscore(), gamerscore);
+        achievementGroupService.recalculate(game);
     }
     private boolean isXbox(UserGame game) {
         String code = game.getPlatform().getCode();
@@ -86,6 +106,7 @@ public class GameSessionService {
         return new GameSessionResponse(session.getId(), game.getId(), game.getUserContent().getContent().getId(),
                 game.getUserContent().getContent().getTitle(), session.getStartedAt(),
                 session.getDurationMinutes(), session.getNote(), session.getUnlockedAchievements(),
-                session.getEarnedGamerscore());
+                session.getEarnedGamerscore(), session.getAchievementGroup() == null ? null : session.getAchievementGroup().getId(),
+                session.getAchievementGroup() == null ? null : session.getAchievementGroup().getName());
     }
 }

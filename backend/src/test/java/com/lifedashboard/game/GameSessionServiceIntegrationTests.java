@@ -17,6 +17,7 @@ class GameSessionServiceIntegrationTests {
     @Autowired ContentItemRepository contentRepository;
     @Autowired GameLibraryService gameLibrary;
     @Autowired GameSessionService sessions;
+    @Autowired GamePlaythroughService playthroughs;
     @Autowired XboxProgressService xboxProgress;
     @Autowired GamingPlatformRepository platforms;
     @Autowired GameSourceRepository sources;
@@ -47,6 +48,19 @@ class GameSessionServiceIntegrationTests {
             assertEquals(120, updated.durationMinutes());
             assertEquals(13, xboxProgress.get(libraryId).unlockedAchievements());
             assertEquals(270, xboxProgress.get(libraryId).earnedGamerscore());
+            Instant completedAt = startedAt.plusSeconds(10_000);
+            gameLibrary.update(libraryId, new GameLibraryRequest(platformId, sourceId, GameAccessType.OWNED,
+                    null, null, null, UserContentStatus.COMPLETED, null, false, null, completedAt, null));
+            assertEquals(1, playthroughs.getAll(libraryId).size());
+            assertEquals(completedAt, playthroughs.getAll(libraryId).getFirst().completedAt());
+            Instant correctedAt = completedAt.plusSeconds(86_400);
+            gameLibrary.update(libraryId, new GameLibraryRequest(platformId, sourceId, GameAccessType.OWNED,
+                    null, null, null, UserContentStatus.COMPLETED, null, false, null, correctedAt, null));
+            assertEquals(1, playthroughs.getAll(libraryId).size());
+            assertEquals(correctedAt, playthroughs.getAll(libraryId).getFirst().completedAt());
+            var playthrough = playthroughs.create(libraryId, new GamePlaythroughRequest(startedAt, "Completed"));
+            assertEquals(2, playthrough.playthroughNumber());
+            assertEquals(120, playthrough.playtimeMinutes());
             sessions.delete(created.id());
             assertTrue(sessions.getAll(startedAt.minusSeconds(1), startedAt.plusSeconds(1)).isEmpty());
             assertEquals(10, xboxProgress.get(libraryId).unlockedAchievements());

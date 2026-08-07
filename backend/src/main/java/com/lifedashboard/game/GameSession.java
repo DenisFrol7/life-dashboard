@@ -21,13 +21,17 @@ public class GameSession {
     private Integer unlockedAchievements = 0;
     @Column(name = "earned_gamerscore", nullable = false)
     private Integer earnedGamerscore = 0;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "achievement_group_id")
+    private XboxAchievementGroup achievementGroup;
 
     protected GameSession() {}
     public GameSession(UserGame libraryEntry) { this.libraryEntry = libraryEntry; }
     public void update(Instant startedAt, Integer durationMinutes, String note,
-            int unlockedAchievements, int earnedGamerscore) {
+            int unlockedAchievements, int earnedGamerscore, XboxAchievementGroup achievementGroup) {
         this.startedAt = startedAt; this.durationMinutes = durationMinutes; this.note = note;
         this.unlockedAchievements = unlockedAchievements; this.earnedGamerscore = earnedGamerscore;
+        this.achievementGroup = achievementGroup;
     }
     public Long getId() { return id; }
     public UserGame getLibraryEntry() { return libraryEntry; }
@@ -36,4 +40,5 @@ public class GameSession {
     public String getNote() { return note; }
     public Integer getUnlockedAchievements() { return unlockedAchievements; }
     public Integer getEarnedGamerscore() { return earnedGamerscore; }
+    public XboxAchievementGroup getAchievementGroup() { return achievementGroup; }
 }

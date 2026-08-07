@@ -17,6 +17,7 @@ class XboxProgressServiceIntegrationTests {
     @Autowired ContentItemRepository contentRepository;
     @Autowired GameLibraryService gameLibraryService;
     @Autowired XboxProgressService progressService;
+    @Autowired XboxAchievementGroupService groupService;
     @Autowired GamingPlatformRepository platforms;
     @Autowired GameSourceRepository sources;
 
@@ -53,6 +54,29 @@ class XboxProgressServiceIntegrationTests {
             long pcEntry = createLibraryEntry("PC");
             assertThrows(InvalidRequestException.class, () -> progressService.put(pcEntry,
                     new XboxProgressRequest(10, 5, 100, 50)));
+        } finally { cleanup(); }
+    }
+
+    @Test
+    void aggregatesBaseGameAndDlcProgress() {
+        try {
+            long entryId = createLibraryEntry("XBOX_SERIES");
+            progressService.put(entryId, new XboxProgressRequest(50, 25, 1000, 300));
+            var dlc = groupService.createDlc(entryId,
+                    new XboxAchievementGroupRequest("Expansion", 10, 2, 500, 100));
+
+            var aggregate = progressService.get(entryId);
+            assertEquals(60, aggregate.totalAchievements());
+            assertEquals(27, aggregate.unlockedAchievements());
+            assertEquals(1500, aggregate.totalGamerscore());
+            assertEquals(400, aggregate.earnedGamerscore());
+
+            groupService.update(dlc.id(), new XboxAchievementGroupRequest("Expansion", 10, 5, 500, 200));
+            assertEquals(30, progressService.get(entryId).unlockedAchievements());
+            assertEquals(500, progressService.get(entryId).earnedGamerscore());
+            groupService.delete(dlc.id());
+            assertEquals(50, progressService.get(entryId).totalAchievements());
+            assertEquals(1000, progressService.get(entryId).totalGamerscore());
         } finally { cleanup(); }
     }
 

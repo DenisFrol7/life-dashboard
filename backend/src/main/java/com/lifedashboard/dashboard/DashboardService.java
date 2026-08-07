@@ -49,7 +49,8 @@ public class DashboardService {
     private DashboardResponse.GamingSummary gaming(LocalDate date, ZoneId zone) {
         Instant from=date.atStartOfDay(zone).toInstant(), to=date.plusDays(1).atStartOfDay(zone).toInstant();
         List<GameSession> sessions=gameSessions.findAllByLibraryEntryUserContentUserIdAndStartedAtGreaterThanEqualAndStartedAtLessThanOrderByStartedAtDesc(userId,from,to);
-        return new DashboardResponse.GamingSummary(sessions.stream().mapToLong(GameSession::getDurationMinutes).sum(),sessions.size());
+        return new DashboardResponse.GamingSummary(sessions.stream()
+                .mapToLong((@NonNull GameSession session) -> session.getDurationMinutes()).sum(),sessions.size());
     }
     private DashboardResponse.ActivitySummary activity(LocalDate date) {
         return activities.findByUserIdAndActivityDate(userId, date)
