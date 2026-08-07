@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { createAnime, createAnimeEpisode, createAnimeSeason, deleteAnime, getAnime, getAnimeDetails, putAnimeLibrary, removeAnimeLibrary, updateAnime, watchAnimeEpisode, type AnimeDetails, type AnimeInput, type AnimeSummary } from '../api/anime'
 import type { LibraryInput, LibraryStatus, ReleaseStatus } from '../api/movies'
 
-const statusLabels: Record<LibraryStatus, string> = { PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
+const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
 const releaseLabels: Record<ReleaseStatus, string> = { ANNOUNCED: 'Анонсировано', ONGOING: 'Выходит', RELEASED: 'Вышло', ENDED: 'Завершено', CANCELLED: 'Отменено' }
 const emptyAnime: AnimeInput = { title: '', originalTitle: null, releaseYear: null, description: null, coverUrl: null, releaseStatus: 'ONGOING' }
 const emptyLibrary: LibraryInput = { status: 'PLANNED', rating: null, favorite: false, startedAt: null, completedAt: null, personalNote: null }

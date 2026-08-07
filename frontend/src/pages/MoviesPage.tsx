@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { createMovie, deleteMovie, getLibrary, getMovies, getMovieWatches, putInLibrary, removeFromLibrary, updateMovie, watchMovie, type ContentFormat, type LibraryEntry, type LibraryInput, type LibraryStatus, type Movie, type MovieInput, type Watch } from '../api/movies'
 
-const statusLabels: Record<LibraryStatus, string> = { PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
+const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
 const movieStatuses: LibraryStatus[] = ['PLANNED', 'COMPLETED']
 const emptyMovie: MovieInput = { title: '', originalTitle: null, itemType: 'MOVIE', format: 'LIVE_ACTION', releaseYear: null, description: null, coverUrl: null, durationMinutes: null, releaseStatus: 'RELEASED' }
 const emptyLibrary: LibraryInput = { status: 'PLANNED', rating: null, favorite: false, startedAt: null, completedAt: null, personalNote: null }
