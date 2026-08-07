@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { createEpisode, createSeason, createSeries, deleteSeries, getEpisodeWatches, getEpisodes, getSeasons, getSeries, getSeriesLibrary, putSeriesLibrary, removeSeriesLibrary, updateSeries, watchEpisode, type Episode, type Season, type Series, type SeriesFormat, type SeriesInput, type SeriesLibraryEntry } from '../api/series'
 import type { LibraryInput, LibraryStatus, ReleaseStatus, Watch } from '../api/movies'
 
-const statusLabels: Record<LibraryStatus, string> = { PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
+const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
 const releaseLabels: Record<ReleaseStatus, string> = { ANNOUNCED: 'Анонсирован', ONGOING: 'Выходит', RELEASED: 'Вышел', ENDED: 'Завершён', CANCELLED: 'Отменён' }
 const emptySeries: SeriesInput = { title: '', originalTitle: null, itemType: 'SERIES', format: 'LIVE_ACTION', releaseYear: null, description: null, coverUrl: null, durationMinutes: null, releaseStatus: 'ONGOING' }
 const emptyLibrary: LibraryInput = { status: 'PLANNED', rating: null, favorite: false, startedAt: null, completedAt: null, personalNote: null }

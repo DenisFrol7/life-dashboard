@@ -399,6 +399,7 @@
 .movie-meta span + span::before { margin-right: 6px; content: '·'; }
 .media-status { display: inline-block; padding: 4px 7px; border-radius: 6px; font-size: 7px; font-weight: 800; }
 .media-status.planned { color: #506d82; background: #e3edf4; }
+.media-status.not_started { color: #66737c; background: #edf0f2; }
 .media-status.in_progress { color: #75613c; background: #f4ead7; }
 .media-status.completed { color: #536e4a; background: #e4eee1; }
 .media-status.paused { color: #715d83; background: #ece5f1; }
@@ -455,6 +456,12 @@
 .xbox-progress span { background: #5b9a67; }
 .game-source { margin-top: 7px; overflow: hidden; color: #7d8580; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
 .game-genre { margin-top: 5px; overflow: hidden; color: #6f7773; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.games-page .movie-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.game-list-card .movie-info { padding: 10px 11px 12px; }
+.game-list-card .movie-info h3 { font-size: 12px; }
+.game-card-details { display: grid; gap: 5px; margin-top: 8px; color: #737e84; font-size: 8px; }
+.game-card-details span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-card-details span:last-child { color: #536d80; font-weight: 700; }
 .game-form { width: min(760px, 100%); }
 .game-sessions-panel { margin-bottom: 20px; padding: 18px; border: 1px solid #e1e5e2; border-radius: 14px; background: #fff; }
 .game-sessions-panel h2 { margin: 2px 0 0; font-size: 18px; }
@@ -483,6 +490,7 @@
 .game-main-info { padding-left: 12px; }
 .game-main-info h1 { margin: 5px 0 12px; color: #23323c; font-size: 29px; }
 .platform-badge { display: inline-flex; padding: 7px 11px; border-radius: 8px; font-size: 12px; font-weight: 700; }
+.platform-badges { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .platform-badge.xbox { color: #2e6f24; background: #e1f1dc; }
 .platform-badge.pc { color: #425f73; background: #e4edf3; }
 .game-main-info dl { display: grid; gap: 15px; margin: 23px 0 0; }
@@ -574,6 +582,7 @@
   .sleep-hero > .primary-button { grid-column: 1 / -1; justify-self: end; }
   .calendar-layout { grid-template-columns: 1fr; }
   .movie-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .games-page .movie-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .day-agenda { min-height: 260px; border-top: 1px solid var(--line); border-left: 0; }
   .game-hero-card { grid-template-columns: 180px 1fr; }
   .game-personal-info { grid-column: 1 / -1; grid-template-columns: repeat(3, 1fr); border-top: 1px solid #e2e7ea; border-left: 0; padding: 18px 0 0; }
@@ -623,6 +632,7 @@
   .media-filters { flex-wrap: wrap; }
   .media-filters .primary-button { margin-left: auto; }
   .movie-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .games-page .movie-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .structure-forms { grid-template-columns: 1fr; }
   .compact-panel { grid-column: auto; }
   .game-hero-card { grid-template-columns: 120px 1fr; gap: 15px; }
@@ -683,6 +693,7 @@
   .day-summary dl { grid-template-columns: repeat(2, 1fr); }
   .media-stats { grid-template-columns: repeat(2, 1fr); }
   .movie-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+  .games-page .movie-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .movie-info { padding: 10px; }
   .media-filters select { flex: 1; }
   .movie-details-grid { grid-template-columns: 1fr; }

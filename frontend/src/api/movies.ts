@@ -2,7 +2,7 @@ import { apiRequest } from './client'
 
 export type ContentFormat = 'LIVE_ACTION' | 'ANIMATION'
 export type ReleaseStatus = 'ANNOUNCED' | 'ONGOING' | 'RELEASED' | 'ENDED' | 'CANCELLED'
-export type LibraryStatus = 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'PAUSED' | 'DROPPED'
+export type LibraryStatus = 'NOT_STARTED' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'PAUSED' | 'DROPPED'
 export type Movie = { id: number; title: string; originalTitle: string | null; itemType: 'MOVIE'; format: ContentFormat; releaseYear: number | null; description: string | null; coverUrl: string | null; durationMinutes: number | null; releaseStatus: ReleaseStatus }
 export type MovieInput = Omit<Movie, 'id'>
 export type LibraryEntry = { id: number; content: Movie; status: LibraryStatus; rating: number | null; favorite: boolean; startedAt: string | null; completedAt: string | null; personalNote: string | null }
