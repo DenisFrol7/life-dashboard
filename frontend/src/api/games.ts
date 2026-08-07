@@ -1,7 +1,7 @@
 import { apiRequest, ApiClientError } from './client'
 import type { LibraryStatus, ReleaseStatus } from './movies'
 
-export type Game = { id: number; title: string; originalTitle: string | null; itemType: 'GAME'; format: null; releaseYear: number | null; description: string | null; coverUrl: string | null; durationMinutes: null; releaseStatus: ReleaseStatus; genre: string | null }
+export type Game = { id: number; title: string; originalTitle: string | null; itemType: 'GAME'; format: null; releaseYear: number | null; description: string | null; coverUrl: string | null; durationMinutes: null; releaseStatus: ReleaseStatus; genre: string | null; developer: string | null; releaseDate: string | null; xboxPlayAnywhere: boolean }
 export type GameInput = Omit<Game, 'id'>
 export type Reference = { id: number; code: string; name: string; type: 'DIGITAL_STORE' | 'PHYSICAL' | 'SUBSCRIPTION' | null }
 export type AccessType = 'OWNED' | 'SUBSCRIPTION'
@@ -9,8 +9,11 @@ export type GameLibrary = { id: number; contentId: number; title: string; platfo
 export type GameLibraryInput = Omit<GameLibrary, 'id' | 'contentId' | 'title' | 'platform' | 'source'> & { platformId: number; sourceId: number }
 export type XboxProgress = { id: number; libraryEntryId: number; totalAchievements: number; unlockedAchievements: number; achievementPercent: number; totalGamerscore: number; earnedGamerscore: number; gamerscorePercent: number; lastUpdatedAt: string }
 export type XboxProgressInput = Pick<XboxProgress, 'totalAchievements' | 'unlockedAchievements' | 'totalGamerscore' | 'earnedGamerscore'>
-export type GameSession = { id: number; libraryEntryId: number; contentId: number; title: string; startedAt: string; durationMinutes: number; note: string | null; unlockedAchievements: number; earnedGamerscore: number }
-export type GameSessionInput = Pick<GameSession, 'startedAt' | 'durationMinutes' | 'note' | 'unlockedAchievements' | 'earnedGamerscore'>
+export type GameSession = { id: number; libraryEntryId: number; contentId: number; title: string; startedAt: string; durationMinutes: number; note: string | null; unlockedAchievements: number; earnedGamerscore: number; achievementGroupId: number | null; achievementGroupName: string | null }
+export type GameSessionInput = Pick<GameSession, 'startedAt' | 'durationMinutes' | 'note' | 'unlockedAchievements' | 'earnedGamerscore' | 'achievementGroupId'>
+export type GamePlaythrough = { id: number; libraryEntryId: number; playthroughNumber: number; completedAt: string; playtimeMinutes: number; note: string | null }
+export type XboxAchievementGroup = { id: number; libraryEntryId: number; name: string; groupType: 'BASE_GAME' | 'DLC'; totalAchievements: number; unlockedAchievements: number; achievementPercent: number; totalGamerscore: number; earnedGamerscore: number; gamerscorePercent: number }
+export type XboxAchievementGroupInput = Pick<XboxAchievementGroup, 'name' | 'totalAchievements' | 'unlockedAchievements' | 'totalGamerscore' | 'earnedGamerscore'>
 
 export const getGameCatalog = () => apiRequest<Game[]>('/api/content?type=GAME')
 export const createGame = (input: GameInput) => apiRequest<Game>('/api/content', { method: 'POST', body: JSON.stringify(input) })
@@ -28,3 +31,10 @@ export const getGameSessions = (from?: string, to?: string) => { const query = n
 export const createGameSession = (libraryId: number, input: GameSessionInput) => apiRequest<GameSession>(`/api/games/library/${libraryId}/sessions`, { method: 'POST', body: JSON.stringify(input) })
 export const updateGameSession = (id: number, input: GameSessionInput) => apiRequest<GameSession>(`/api/games/sessions/${id}`, { method: 'PUT', body: JSON.stringify(input) })
 export const deleteGameSession = (id: number) => apiRequest<void>(`/api/games/sessions/${id}`, { method: 'DELETE' })
+export const getGamePlaythroughs = (libraryId: number) => apiRequest<GamePlaythrough[]>(`/api/games/library/${libraryId}/playthroughs`)
+export const createGamePlaythrough = (libraryId: number, note?: string) => apiRequest<GamePlaythrough>(`/api/games/library/${libraryId}/playthroughs`, { method: 'POST', body: JSON.stringify({ completedAt: new Date().toISOString(), note: note || null }) })
+export const deleteGamePlaythrough = (id: number) => apiRequest<void>(`/api/games/playthroughs/${id}`, { method: 'DELETE' })
+export const getXboxAchievementGroups = (libraryId: number) => apiRequest<XboxAchievementGroup[]>(`/api/games/library/${libraryId}/achievement-groups`)
+export const createXboxAchievementGroup = (libraryId: number, input: XboxAchievementGroupInput) => apiRequest<XboxAchievementGroup>(`/api/games/library/${libraryId}/achievement-groups`, { method: 'POST', body: JSON.stringify(input) })
+export const updateXboxAchievementGroup = (id: number, input: XboxAchievementGroupInput) => apiRequest<XboxAchievementGroup>(`/api/games/achievement-groups/${id}`, { method: 'PUT', body: JSON.stringify(input) })
+export const deleteXboxAchievementGroup = (id: number) => apiRequest<void>(`/api/games/achievement-groups/${id}`, { method: 'DELETE' })

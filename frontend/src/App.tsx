@@ -10,6 +10,7 @@ import { MoviesPage } from './pages/MoviesPage'
 import { SeriesPage } from './pages/SeriesPage'
 import { AnimePage } from './pages/AnimePage'
 import { GamesPage } from './pages/GamesPage'
+import { GameDetailsPage } from './pages/GameDetailsPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import './App.css'
 
@@ -31,7 +32,9 @@ const navigation: NavItem[] = [
 
 function App() {
   const { pathname } = useLocation()
-  const current = navigation.find((item) => item.path === pathname) ?? navigation[0]
+  const current = navigation.find((item) => item.path === pathname)
+    ?? (pathname.startsWith('/games/') ? navigation.find((item) => item.path === '/games') : undefined)
+    ?? navigation[0]
 
   return (
     <div className="app-shell">
@@ -82,6 +85,7 @@ function App() {
           <Route path="/series" element={<SeriesPage />} />
           <Route path="/anime" element={<AnimePage />} />
           <Route path="/games" element={<GamesPage />} />
+          <Route path="/games/:id" element={<GameDetailsPage />} />
           {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies', '/series', '/anime', '/games'].includes(item.path)).map((item) => (
             <Route
               key={item.path}

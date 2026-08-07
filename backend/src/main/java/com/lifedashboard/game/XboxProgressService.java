@@ -12,22 +12,22 @@ import java.time.Instant;
 public class XboxProgressService {
     private final XboxGameProgressRepository progressRepository;
     private final UserGameRepository gameRepository;
+    private final XboxAchievementGroupService achievementGroups;
     private final long userId;
 
     public XboxProgressService(XboxGameProgressRepository progressRepository,
-            UserGameRepository gameRepository, @Value("${app.default-user-id}") long userId) {
-        this.progressRepository = progressRepository; this.gameRepository = gameRepository; this.userId = userId;
+            UserGameRepository gameRepository, XboxAchievementGroupService achievementGroups,
+            @Value("${app.default-user-id}") long userId) {
+        this.progressRepository = progressRepository; this.gameRepository = gameRepository;
+        this.achievementGroups = achievementGroups; this.userId = userId;
     }
 
     @Transactional
     public XboxProgressResponse put(Long libraryEntryId, XboxProgressRequest request) {
         validate(request);
         UserGame game = findXboxGame(libraryEntryId);
-        XboxGameProgress progress = progressRepository.findByLibraryEntryId(libraryEntryId)
-                .orElseGet(() -> new XboxGameProgress(game));
-        progress.update(request.totalAchievements(), request.unlockedAchievements(), request.totalGamerscore(),
-                request.earnedGamerscore(), Instant.now());
-        return response(progressRepository.save(progress));
+        achievementGroups.putBase(game, request);
+        return response(progressRepository.findByLibraryEntryId(libraryEntryId).orElseThrow());
     }
     public XboxProgressResponse get(Long libraryEntryId) {
         findXboxGame(libraryEntryId);

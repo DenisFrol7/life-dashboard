@@ -466,10 +466,104 @@
 .session-form { width: min(560px, 100%); }
 .game-form > label:nth-of-type(2) { display: none; }
 .game-library-flags { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 12px; }
-.game-library-flags .favorite-check { display: flex; align-items: center; gap: 7px; margin: 0; }
+.game-library-flags .favorite-check, .game-library-flags .play-anywhere-check { display: flex; align-items: center; gap: 7px; margin: 0; }
+.game-library-flags .favorite-check input, .game-library-flags .play-anywhere-check input { width: 16px; height: 16px; margin: 0; padding: 0; flex: 0 0 16px; }
 .game-access-type { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border-radius: 7px; background: #edf1f2; }
 .game-access-type span { color: #7c8580; font-size: 8px; text-transform: uppercase; }
 .game-access-type strong { color: #4e626f; font-size: 9px; }
+.game-access-type select { width: auto; min-width: 105px; padding: 6px 24px 6px 8px; border-radius: 7px; font-size: 10px; }
+
+.game-details-page { display: grid; gap: 14px; max-width: 1280px; margin: 0 auto; }
+.game-details-toolbar { display: flex; align-items: center; justify-content: space-between; }
+.game-details-toolbar a { color: #536b7c; font-size: 13px; text-decoration: none; }
+.game-hero-card, .detail-card { border: 1px solid #dde4e7; border-radius: 15px; background: #fff; box-shadow: 0 8px 24px rgba(42, 57, 67, .05); }
+.game-hero-card { display: grid; grid-template-columns: 210px minmax(0, 1fr) minmax(300px, 34%); gap: 14px; padding: 18px; }
+.game-detail-cover { display: grid; min-height: 290px; border-radius: 11px; color: #fff; font-size: 70px; font-weight: 800; place-items: center; background: linear-gradient(145deg, #526d7d, #263d4c) center/cover; }
+.game-detail-cover[style] > span { display: none; }
+.game-main-info { padding-left: 12px; }
+.game-main-info h1 { margin: 5px 0 12px; color: #23323c; font-size: 29px; }
+.platform-badge { display: inline-flex; padding: 7px 11px; border-radius: 8px; font-size: 12px; font-weight: 700; }
+.platform-badge.xbox { color: #2e6f24; background: #e1f1dc; }
+.platform-badge.pc { color: #425f73; background: #e4edf3; }
+.game-main-info dl { display: grid; gap: 15px; margin: 23px 0 0; }
+.game-main-info dl div, .game-personal-info > div { display: grid; gap: 4px; }
+.game-main-info dt, .game-personal-info small { color: #849098; font-size: 11px; }
+.game-main-info dd { margin: 0; color: #293944; font-size: 13px; }
+.game-personal-info { display: grid; align-content: start; gap: 21px; padding: 10px 6px 10px 25px; border-left: 1px solid #e2e7ea; }
+.game-personal-info > div + div { padding-top: 18px; border-top: 1px solid #edf0f2; }
+.detail-status { color: #315c72; font-size: 17px; }
+.game-personal-info span, .game-personal-info p { margin: 0; color: #68757d; font-size: 12px; line-height: 1.5; }
+.detail-rating { color: #273640; font-size: 24px; font-weight: 700; }
+.detail-rating span { color: #e6a819; letter-spacing: 2px; }
+.xbox-detail-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 34%); gap: 14px; }
+.detail-card { padding: 17px; }
+.detail-card h2 { margin: 0 0 15px; color: #293944; font-size: 15px; }
+.xbox-progress-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.detail-progress { position: relative; display: grid; gap: 7px; padding: 14px; border: 1px solid #e5eaec; border-radius: 10px; background: #f8fafb; }
+.detail-progress small { color: #74818a; }
+.detail-progress strong { color: #293944; font-size: 20px; }
+.detail-progress > div { height: 6px; overflow: hidden; border-radius: 5px; background: #e2e8eb; }
+.detail-progress > div span { display: block; height: 100%; border-radius: inherit; background: #607f95; }
+.detail-progress em { position: absolute; top: 47px; right: 14px; color: #53646f; font-size: 11px; font-style: normal; }
+.achievement-summary { display: grid; align-content: start; gap: 7px; }
+.achievement-summary h2 { margin-bottom: 8px; }
+.achievement-summary strong { color: #3b7c3b; font-size: 16px; }
+.achievement-summary span, .achievement-summary p { margin: 0; color: #74818a; font-size: 11px; }
+.achievement-compact-list { display: grid; gap: 5px; margin-bottom: 3px; }
+.achievement-compact-list > div { display: grid; grid-template-columns: 1fr auto auto; gap: 9px; padding: 6px 8px; border-radius: 7px; background: #f6f8f9; }
+.achievement-compact-list span, .achievement-compact-list b, .achievement-compact-list em { font-size: 9px; font-style: normal; }
+.achievement-compact-list b { color: #344750; }
+.achievement-details-button { margin-top: 4px; padding: 7px 10px; border: 0; border-radius: 7px; color: #536b7c; background: #edf2f5; cursor: pointer; }
+.achievement-groups-modal { width: min(760px, 100%); max-height: calc(100vh - 40px); padding: 24px; overflow-y: auto; border-radius: 17px; background: #fff; }
+.achievement-group-list { display: grid; gap: 8px; margin: 18px 0; }
+.achievement-group-list article { display: grid; grid-template-columns: minmax(130px, 1fr) 1fr 1fr auto auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e2e8eb; border-radius: 10px; }
+.achievement-group-list article > div { display: grid; gap: 3px; }
+.achievement-group-list h3 { margin: 0; font-size: 12px; }
+.achievement-group-list small, .achievement-group-list span { color: #7a878f; font-size: 9px; }
+.achievement-group-list b { color: #344750; font-size: 11px; }
+.achievement-group-list button { padding: 7px 9px; border: 0; border-radius: 7px; color: #536b7c; background: #edf2f5; cursor: pointer; }
+.achievement-group-list .group-delete { color: #a04d4d; background: #f8ebeb; }
+.add-dlc-button { width: 100%; }
+.achievement-group-form { display: grid; gap: 12px; padding-top: 16px; border-top: 1px solid #e4e9eb; }
+.achievement-group-form label { display: grid; gap: 5px; color: #5f675f; font-size: 10px; font-weight: 700; }
+.achievement-group-form input { width: 100%; padding: 9px; border: 1px solid #d9dfe2; border-radius: 8px; }
+.achievement-group-form > div:not(.form-buttons) { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.game-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr) minmax(300px, 34%); gap: 14px; }
+.library-detail-list { display: grid; gap: 0; margin: 0; }
+.library-detail-list > div { display: grid; grid-template-columns: 115px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid #edf0f2; }
+.library-detail-list > div:last-child { border: 0; }
+.library-detail-list dt { color: #7b878f; font-size: 11px; }
+.library-detail-list dd { display: flex; justify-content: flex-end; margin: 0; color: #33434d; font-size: 11px; text-align: right; }
+.library-detail-list b { color: #536b7c; }
+.library-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.library-card-heading h2 { margin: 0; }
+.library-card-heading button { border: 0; background: transparent; color: #536f83; cursor: pointer; font-weight: 700; }
+.library-copy-list { display: grid; gap: 8px; margin-top: 14px; }
+.library-copy-list > button { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; width: 100%; padding: 11px; border: 1px solid #e3e8eb; border-radius: 10px; background: #f8fafb; color: inherit; text-align: left; cursor: pointer; }
+.library-copy-list > button.active { border-color: #7893a6; background: #f0f5f8; box-shadow: inset 3px 0 #7893a6; }
+.library-copy-list span { display: grid; gap: 3px; min-width: 0; }
+.library-copy-list strong, .library-copy-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.library-copy-list small { color: #7b878f; }
+.library-copy-list em { color: #536b7c; font-size: 11px; font-style: normal; font-weight: 700; }
+.library-copy-list i { padding: 6px; color: #657985; font-style: normal; }
+.library-entry-form { width: min(620px, calc(100vw - 32px)); }
+.total-playtime { display: grid; align-content: start; gap: 8px; }
+.total-playtime > strong { color: #263640; font-size: 25px; }
+.total-playtime small { margin-top: 17px; color: #849098; }
+.total-playtime span { color: #455963; font-size: 12px; }
+.playthrough-list { display: grid; gap: 6px; }
+.playthrough-list > div { display: grid; grid-template-columns: 25px 1fr auto; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 8px; background: #f6f8f9; }
+.playthrough-list > div > b { display: grid; width: 23px; height: 23px; border-radius: 50%; color: #fff; font-size: 11px; place-items: center; background: #607f95; }
+.playthrough-list span { display: grid; gap: 2px; }
+.playthrough-list span strong { font-size: 11px; }
+.playthrough-list small, .playthrough-list em { color: #7a878e; font-size: 9px; font-style: normal; }
+.playthrough-button { width: 100%; margin-top: 10px; }
+.sessions-table-card { overflow: hidden; }
+.sessions-table { min-width: 780px; overflow-x: auto; }
+.sessions-table > div { display: grid; grid-template-columns: 1fr .7fr 1fr .8fr .8fr 1.8fr; gap: 10px; padding: 9px 11px; border-bottom: 1px solid #edf0f2; color: #465761; font-size: 10px; }
+.sessions-table .sessions-head { color: #7a878f; background: #f5f8f9; }
+.sessions-table .positive { color: #38843d; font-weight: 700; }
+.all-sessions-link { display: block; margin-top: 12px; padding: 9px; border-radius: 8px; color: #536b7c; text-align: center; text-decoration: none; background: #f2f5f7; }
 .xbox-fields { margin-top: 13px; padding: 13px; border: 1px solid #cfded0; border-radius: 10px; background: #f3f8f2; }
 .xbox-fields legend { padding: 0 5px; color: #55725b; font-size: 9px; font-weight: 800; }
 .xbox-fields label { display: grid; gap: 6px; color: #607068; font-size: 9px; font-weight: 800; }
@@ -481,6 +575,11 @@
   .calendar-layout { grid-template-columns: 1fr; }
   .movie-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .day-agenda { min-height: 260px; border-top: 1px solid var(--line); border-left: 0; }
+  .game-hero-card { grid-template-columns: 180px 1fr; }
+  .game-personal-info { grid-column: 1 / -1; grid-template-columns: repeat(3, 1fr); border-top: 1px solid #e2e7ea; border-left: 0; padding: 18px 0 0; }
+  .game-personal-info > div + div { padding-top: 0; padding-left: 18px; border-top: 0; border-left: 1px solid #edf0f2; }
+  .game-detail-grid { grid-template-columns: 1fr 1fr; }
+  .game-detail-grid > article:last-child { grid-column: 1 / -1; }
 }
 
 @media (max-width: 1100px) {
@@ -526,6 +625,17 @@
   .movie-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .structure-forms { grid-template-columns: 1fr; }
   .compact-panel { grid-column: auto; }
+  .game-hero-card { grid-template-columns: 120px 1fr; gap: 15px; }
+  .game-detail-cover { min-height: 180px; }
+  .game-main-info h1 { font-size: 23px; }
+  .game-personal-info { grid-template-columns: 1fr; }
+  .game-personal-info > div + div { padding-top: 13px; padding-left: 0; border-top: 1px solid #edf0f2; border-left: 0; }
+  .xbox-detail-row, .game-detail-grid { grid-template-columns: 1fr; }
+  .game-detail-grid > article:last-child { grid-column: auto; }
+  .xbox-progress-columns { grid-template-columns: 1fr; }
+  .sessions-table-card { overflow-x: auto; }
+  .achievement-group-list article { grid-template-columns: 1fr 1fr; }
+  .achievement-group-list article > div:first-child { grid-column: 1 / -1; }
 }
 @media (max-width: 500px) {
   .sidebar nav { grid-template-columns: repeat(6, 50px); justify-content: start; }
@@ -580,4 +690,5 @@
   .series-structure section > div { grid-template-columns: 25px 1fr auto; }
   .series-structure section > div > small { display: none; }
   .structure-forms form { flex-wrap: wrap; }
+  .achievement-group-form > div:not(.form-buttons) { grid-template-columns: 1fr; }
 }

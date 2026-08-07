@@ -5,8 +5,13 @@ import java.time.Instant;
 
 public record GameSessionRequest(@NotNull Instant startedAt,
         @NotNull @Min(1) Integer durationMinutes, @Size(max = 5000) String note,
-        @Min(0) int unlockedAchievements, @Min(0) int earnedGamerscore) {
+        @Min(0) int unlockedAchievements, @Min(0) int earnedGamerscore,
+        Long achievementGroupId) {
     public GameSessionRequest(Instant startedAt, Integer durationMinutes, String note) {
-        this(startedAt, durationMinutes, note, 0, 0);
+        this(startedAt, durationMinutes, note, 0, 0, null);
+    }
+    public GameSessionRequest(Instant startedAt, Integer durationMinutes, String note,
+            int unlockedAchievements, int earnedGamerscore) {
+        this(startedAt, durationMinutes, note, unlockedAchievements, earnedGamerscore, null);
     }
 }
