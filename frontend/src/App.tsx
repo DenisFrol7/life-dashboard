@@ -11,6 +11,7 @@ import { SeriesPage } from './pages/SeriesPage'
 import { AnimePage } from './pages/AnimePage'
 import { GamesPage } from './pages/GamesPage'
 import { GameDetailsPage } from './pages/GameDetailsPage'
+import { BooksPage } from './pages/BooksPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import './App.css'
 
@@ -28,6 +29,7 @@ const navigation: NavItem[] = [
   { path: '/series', label: 'Сериалы', short: '▤', description: 'Сезоны, эпизоды и прогресс' },
   { path: '/anime', label: 'Аниме', short: '◇', description: 'Многосерийное аниме' },
   { path: '/games', label: 'Игры', short: '＋', description: 'Игровая библиотека и Xbox' },
+  { path: '/books', label: 'Книги', short: '▥', description: 'Книжная библиотека и прогресс чтения' },
 ]
 
 function App() {
@@ -86,7 +88,8 @@ function App() {
           <Route path="/anime" element={<AnimePage />} />
           <Route path="/games" element={<GamesPage />} />
           <Route path="/games/:id" element={<GameDetailsPage />} />
-          {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies', '/series', '/anime', '/games'].includes(item.path)).map((item) => (
+          <Route path="/books" element={<BooksPage />} />
+          {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies', '/series', '/anime', '/games', '/books'].includes(item.path)).map((item) => (
             <Route
               key={item.path}
               path={item.path}

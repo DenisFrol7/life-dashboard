@@ -5,6 +5,7 @@ import com.lifedashboard.game.dto.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.jspecify.annotations.NonNull;
 import java.time.Instant;
 import java.util.List;
 
@@ -22,7 +23,8 @@ public class XboxAchievementGroupService {
     }
     public List<XboxAchievementGroupResponse> getAll(Long libraryId) {
         findXboxGame(libraryId);
-        return groups.findAllByLibraryEntryIdOrderByGroupTypeAscIdAsc(libraryId).stream().map(this::response).toList();
+        return groups.findAllByLibraryEntryIdOrderByGroupTypeAscIdAsc(libraryId).stream()
+                .map((@NonNull XboxAchievementGroup group) -> response(group)).toList();
     }
     @Transactional
     public XboxAchievementGroupResponse createDlc(Long libraryId, XboxAchievementGroupRequest request) {
@@ -57,10 +59,14 @@ public class XboxAchievementGroupService {
     @Transactional
     public void recalculate(UserGame game) {
         List<XboxAchievementGroup> values = groups.findAllByLibraryEntryIdOrderByGroupTypeAscIdAsc(game.getId());
-        int totalAchievements = values.stream().mapToInt(XboxAchievementGroup::getTotalAchievements).sum();
-        int unlockedAchievements = values.stream().mapToInt(XboxAchievementGroup::getUnlockedAchievements).sum();
-        int totalGamerscore = values.stream().mapToInt(XboxAchievementGroup::getTotalGamerscore).sum();
-        int earnedGamerscore = values.stream().mapToInt(XboxAchievementGroup::getEarnedGamerscore).sum();
+        int totalAchievements = values.stream()
+                .mapToInt((@NonNull XboxAchievementGroup group) -> group.getTotalAchievements()).sum();
+        int unlockedAchievements = values.stream()
+                .mapToInt((@NonNull XboxAchievementGroup group) -> group.getUnlockedAchievements()).sum();
+        int totalGamerscore = values.stream()
+                .mapToInt((@NonNull XboxAchievementGroup group) -> group.getTotalGamerscore()).sum();
+        int earnedGamerscore = values.stream()
+                .mapToInt((@NonNull XboxAchievementGroup group) -> group.getEarnedGamerscore()).sum();
         XboxGameProgress aggregate = progress.findByLibraryEntryId(game.getId()).orElseGet(() -> new XboxGameProgress(game));
         aggregate.update(totalAchievements, unlockedAchievements, totalGamerscore, earnedGamerscore, Instant.now());
         progress.save(aggregate);

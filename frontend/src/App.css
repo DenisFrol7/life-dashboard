@@ -462,6 +462,23 @@
 .game-card-details { display: grid; gap: 5px; margin-top: 8px; color: #737e84; font-size: 8px; }
 .game-card-details span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .game-card-details span:last-child { color: #536d80; font-weight: 700; }
+.book-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 14px; }
+.book-card { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: 0 8px 28px #25322708; }
+.book-cover { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 2/3; border: 0; background: linear-gradient(145deg,#6c7f88,#344952); background-position: center; background-size: cover; cursor: pointer; }
+.book-cover>span { color: #ffffff30; font-family: Georgia,serif; font-size: 64px; font-weight: 800; }
+.book-cover>i { position: absolute; top: 9px; right: 9px; color: #d56e78; font-style: normal; }
+.book-cover>em { position: absolute; bottom: 9px; left: 9px; padding: 4px 7px; border-radius: 5px; color: #fff; background: #172633c7; font-size: 8px; font-style: normal; }
+.book-card-info { padding: 12px; }
+.book-card-info h3 { margin: 0; overflow: hidden; color: #38444b; font-family: Georgia,serif; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.book-card-info p { margin: 4px 0 8px; overflow: hidden; color: #65747c; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.book-card-info>small { color: #7d8580; font-size: 8px; }
+.book-progress { height: 5px; margin: 10px 0 5px; overflow: hidden; border-radius: 5px; background: #e5ebee; }
+.book-progress span { display: block; height: 100%; border-radius: inherit; background: #718fa3; }
+.book-actions { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; margin-top: 10px; }
+.book-actions button { padding: 7px 3px; border: 0; border-radius: 7px; color: #587084; background: #e7eef3; cursor: pointer; font-size: 7px; font-weight: 800; }
+.book-actions button:disabled { cursor: default; opacity: .4; }
+.book-form { width: min(720px,calc(100vw - 32px)); }
+.compact-book-form { width: min(520px,calc(100vw - 32px)); }
 .game-form { width: min(760px, 100%); }
 .game-sessions-panel { margin-bottom: 20px; padding: 18px; border: 1px solid #e1e5e2; border-radius: 14px; background: #fff; }
 .game-sessions-panel h2 { margin: 2px 0 0; font-size: 18px; }
@@ -582,6 +599,7 @@
   .sleep-hero > .primary-button { grid-column: 1 / -1; justify-self: end; }
   .calendar-layout { grid-template-columns: 1fr; }
   .movie-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .book-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
   .games-page .movie-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .day-agenda { min-height: 260px; border-top: 1px solid var(--line); border-left: 0; }
   .game-hero-card { grid-template-columns: 180px 1fr; }
@@ -632,6 +650,7 @@
   .media-filters { flex-wrap: wrap; }
   .media-filters .primary-button { margin-left: auto; }
   .movie-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .book-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
   .games-page .movie-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .structure-forms { grid-template-columns: 1fr; }
   .compact-panel { grid-column: auto; }
@@ -693,6 +712,7 @@
   .day-summary dl { grid-template-columns: repeat(2, 1fr); }
   .media-stats { grid-template-columns: repeat(2, 1fr); }
   .movie-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+  .book-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
   .games-page .movie-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .movie-info { padding: 10px; }
   .media-filters select { flex: 1; }
