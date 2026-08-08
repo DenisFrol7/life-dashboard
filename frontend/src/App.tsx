@@ -12,6 +12,7 @@ import { AnimePage } from './pages/AnimePage'
 import { GamesPage } from './pages/GamesPage'
 import { GameDetailsPage } from './pages/GameDetailsPage'
 import { BooksPage } from './pages/BooksPage'
+import { BookDetailsPage } from './pages/BookDetailsPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import './App.css'
 
@@ -36,6 +37,7 @@ function App() {
   const { pathname } = useLocation()
   const current = navigation.find((item) => item.path === pathname)
     ?? (pathname.startsWith('/games/') ? navigation.find((item) => item.path === '/games') : undefined)
+    ?? (pathname.startsWith('/books/') ? navigation.find((item) => item.path === '/books') : undefined)
     ?? navigation[0]
 
   return (
@@ -89,6 +91,7 @@ function App() {
           <Route path="/games" element={<GamesPage />} />
           <Route path="/games/:id" element={<GameDetailsPage />} />
           <Route path="/books" element={<BooksPage />} />
+          <Route path="/books/:id" element={<BookDetailsPage />} />
           {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies', '/series', '/anime', '/games', '/books'].includes(item.path)).map((item) => (
             <Route
               key={item.path}

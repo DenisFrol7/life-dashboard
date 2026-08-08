@@ -11,9 +11,10 @@ public class ReadingSession {
     @Column(name="started_at",nullable=false) private Instant startedAt;
     @Column(name="duration_minutes",nullable=false) private int durationMinutes;
     @Column(name="pages_read",nullable=false) private int pagesRead;
+    @Column(name="listened_minutes",nullable=false) private int listenedMinutes;
     @Column(columnDefinition="text") private String note;
     protected ReadingSession(){} public ReadingSession(UserContent userContent){this.userContent=userContent;}
-    public void update(Instant startedAt,int durationMinutes,int pagesRead,String note){this.startedAt=startedAt;this.durationMinutes=durationMinutes;this.pagesRead=pagesRead;this.note=note;}
+    public void update(Instant startedAt,int durationMinutes,int pagesRead,int listenedMinutes,String note){this.startedAt=startedAt;this.durationMinutes=durationMinutes;this.pagesRead=pagesRead;this.listenedMinutes=listenedMinutes;this.note=note;}
     public Long getId(){return id;} public UserContent getUserContent(){return userContent;} public Instant getStartedAt(){return startedAt;}
-    public int getDurationMinutes(){return durationMinutes;} public int getPagesRead(){return pagesRead;} public String getNote(){return note;}
+    public int getDurationMinutes(){return durationMinutes;} public int getPagesRead(){return pagesRead;} public int getListenedMinutes(){return listenedMinutes;} public String getNote(){return note;}
 }

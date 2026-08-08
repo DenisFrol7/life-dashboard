@@ -1,3 +1,3 @@
 package com.lifedashboard.book.dto;
 import jakarta.validation.constraints.PositiveOrZero;
-public record BookProgressRequest(@PositiveOrZero int currentPage){}
+public record BookProgressRequest(@PositiveOrZero Integer currentPage,@PositiveOrZero Integer currentMinute){}
