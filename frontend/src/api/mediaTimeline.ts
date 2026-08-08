@@ -1,6 +1,7 @@
 import { apiRequest } from './client'
+import { getBooks } from './books'
 
-type ContentItem = { id: number; title: string; itemType: 'MOVIE' | 'SERIES' | 'ANIME' | 'GAME'; durationMinutes: number | null }
+type ContentItem = { id: number; title: string; itemType: 'MOVIE' | 'SERIES' | 'ANIME' | 'GAME' | 'BOOK'; durationMinutes: number | null }
 type Season = { id: number; seasonNumber: number }
 type Episode = { id: number; episodeNumber: number; title: string | null; durationMinutes: number | null }
 type Watch = { id: number; watchedAt: string; watchNumber: number }
@@ -24,5 +25,9 @@ export async function getMediaTimeline(date: string): Promise<MediaTimelineItem[
       }))).flat()
     }))).flat()
   }))).flat()
-  return [...movieItems, ...episodeItems]
+  const books = await getBooks()
+  const bookItems = books.flatMap((book) => book.sessions.filter((session) => watchedOn(session.startedAt, date))
+    .map((session) => ({ id: `book-${session.id}`, occurredAt: session.startedAt, title: book.title,
+      detail: session.pagesRead ? `Прочитано ${session.pagesRead} стр.` : 'Сеанс чтения', durationMinutes: session.durationMinutes })))
+  return [...movieItems, ...episodeItems, ...bookItems]
 }

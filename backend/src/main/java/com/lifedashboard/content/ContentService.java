@@ -67,7 +67,7 @@ public class ContentService {
         boolean valid = switch (r.itemType()) {
             case MOVIE, SERIES -> r.format() == ContentFormat.LIVE_ACTION || r.format() == ContentFormat.ANIMATION;
             case ANIME -> r.format() == ContentFormat.ANIME;
-            case GAME -> r.format() == null;
+            case GAME, BOOK -> r.format() == null;
         };
         if (!valid) throw new InvalidRequestException("format is not valid for itemType " + r.itemType());
     }
