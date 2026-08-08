@@ -11,4 +11,6 @@ public class BookController{
  @DeleteMapping("/{id}/library") public BookResponse removeLibrary(@PathVariable Long id){return service.removeLibrary(id);}
  @PutMapping("/{id}/progress") public BookResponse progress(@PathVariable Long id,@Valid @RequestBody BookProgressRequest request){return service.putProgress(id,request);}
  @PostMapping("/{id}/sessions") public ResponseEntity<ReadingSessionResponse> session(@PathVariable Long id,@Valid @RequestBody ReadingSessionRequest request){ReadingSessionResponse result=service.addSession(id,request);return ResponseEntity.created(URI.create("/api/books/"+id+"/sessions/"+result.id())).body(result);}
+ @PutMapping("/sessions/{id}") public ReadingSessionResponse updateSession(@PathVariable Long id,@Valid @RequestBody ReadingSessionRequest request){return service.updateSession(id,request);}
+ @DeleteMapping("/sessions/{id}") public ResponseEntity<Void> deleteSession(@PathVariable Long id){service.deleteSession(id);return ResponseEntity.noContent().build();}
 }

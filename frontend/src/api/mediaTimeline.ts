@@ -28,6 +28,7 @@ export async function getMediaTimeline(date: string): Promise<MediaTimelineItem[
   const books = await getBooks()
   const bookItems = books.flatMap((book) => book.sessions.filter((session) => watchedOn(session.startedAt, date))
     .map((session) => ({ id: `book-${session.id}`, occurredAt: session.startedAt, title: book.title,
-      detail: session.pagesRead ? `Прочитано ${session.pagesRead} стр.` : 'Сеанс чтения', durationMinutes: session.durationMinutes })))
+      detail: book.bookFormat === 'AUDIOBOOK' ? `Прослушано ${session.listenedMinutes} мин.`
+        : session.pagesRead ? `Прочитано ${session.pagesRead} стр.` : 'Сеанс чтения', durationMinutes: session.durationMinutes })))
   return [...movieItems, ...episodeItems, ...bookItems]
 }
