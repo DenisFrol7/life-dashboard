@@ -7,6 +7,7 @@ import { CalendarPage } from './pages/CalendarPage'
 import { BlogPage } from './pages/JournalPage'
 import { TimelinePage } from './pages/TimelinePage'
 import { MoviesPage } from './pages/MoviesPage'
+import { MovieDetailsPage } from './pages/MovieDetailsPage'
 import { SeriesPage } from './pages/SeriesPage'
 import { AnimePage } from './pages/AnimePage'
 import { GamesPage } from './pages/GamesPage'
@@ -38,6 +39,7 @@ function App() {
   const current = navigation.find((item) => item.path === pathname)
     ?? (pathname.startsWith('/games/') ? navigation.find((item) => item.path === '/games') : undefined)
     ?? (pathname.startsWith('/books/') ? navigation.find((item) => item.path === '/books') : undefined)
+    ?? (pathname.startsWith('/movies/') ? navigation.find((item) => item.path === '/movies') : undefined)
     ?? navigation[0]
 
   return (
@@ -86,6 +88,7 @@ function App() {
           <Route path="/journal" element={<TimelinePage />} />
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/movies" element={<MoviesPage />} />
+          <Route path="/movies/:id" element={<MovieDetailsPage />} />
           <Route path="/series" element={<SeriesPage />} />
           <Route path="/anime" element={<AnimePage />} />
           <Route path="/games" element={<GamesPage />} />

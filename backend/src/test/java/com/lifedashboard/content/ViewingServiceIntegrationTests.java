@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.junit.jupiter.api.Assertions.*;
+import java.time.Instant;
 
 @SpringBootTest
 class ViewingServiceIntegrationTests {
@@ -49,10 +50,15 @@ class ViewingServiceIntegrationTests {
         try {
             long id = contentService.create(new ContentItemRequest(MOVIE, null, ContentType.MOVIE,
                     ContentFormat.LIVE_ACTION, 2025, null, null, 120, ReleaseStatus.RELEASED)).id();
-            assertEquals(1, viewingService.watchMovie(id, new WatchRequest(null)).watchNumber());
+            var first = viewingService.watchMovie(id, new WatchRequest(Instant.parse("2026-07-01T18:30:00Z")));
+            assertEquals(1, first.watchNumber());
             assertEquals(2, viewingService.watchMovie(id, new WatchRequest(null)).watchNumber());
             assertEquals(UserContentStatus.COMPLETED, library(id).getStatus());
             assertEquals(2, viewingService.movieHistory(id).size());
+            var changedAt = Instant.parse("2026-08-01T18:30:00Z");
+            assertEquals(changedAt, viewingService.updateMovieWatch(first.id(), new WatchRequest(changedAt)).watchedAt());
+            viewingService.deleteMovieWatch(first.id());
+            assertEquals(1, viewingService.movieHistory(id).size());
         } finally { cleanup(); }
     }
 
