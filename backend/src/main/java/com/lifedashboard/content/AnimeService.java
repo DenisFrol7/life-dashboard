@@ -32,11 +32,14 @@ public class AnimeService {
         return details(findAnime(created.id()));
     }
     public List<AnimeSummaryResponse> getAll(ReleaseStatus releaseStatus, UserContentStatus userStatus) {
-        return items.findAllByItemTypeOrderByTitleAsc(ContentType.ANIME).stream()
-                .filter(item -> releaseStatus == null || item.getReleaseStatus() == releaseStatus)
-                .filter(item -> userStatus == null || library.findByUserIdAndContentId(userId, item.getId())
-                        .map(entry -> entry.getStatus() == userStatus).orElse(false))
-                .map(this::summary).toList();
+        return items.findSerialCatalog(userId, ContentType.ANIME.name()).stream()
+                .filter(item -> releaseStatus == null || item.getReleaseStatus().equals(releaseStatus.name()))
+                .filter(item -> userStatus == null || userStatus.name().equals(item.getUserStatus()))
+                .map(item -> new AnimeSummaryResponse(item.getId(), item.getTitle(), item.getOriginalTitle(),
+                        item.getReleaseYear(), item.getCoverUrl(), ReleaseStatus.valueOf(item.getReleaseStatus()),
+                        item.getUserStatus() == null ? null : UserContentStatus.valueOf(item.getUserStatus()),
+                        item.getRating(), Boolean.TRUE.equals(item.getFavorite()), item.getSeasonCount(),
+                        item.getEpisodeCount(), item.getWatchedEpisodeCount())).toList();
     }
     public AnimeDetailsResponse get(Long id) { return details(findAnime(id)); }
     @Transactional

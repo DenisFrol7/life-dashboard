@@ -26,9 +26,9 @@ public interface ContentItemRepository extends JpaRepository<ContentItem, Long> 
               left join content_seasons s on s.content_id = c.id
               left join content_episodes e on e.season_id = s.id
               left join episode_watch_history w on w.episode_id = e.id and w.user_id = :userId
-             where c.item_type = 'SERIES'
+             where c.item_type = :itemType
              group by c.id, uc.id
              order by c.title
             """, nativeQuery = true)
-    List<SeriesCatalogProjection> findSeriesCatalog(@Param("userId") Long userId);
+    List<SeriesCatalogProjection> findSerialCatalog(@Param("userId") Long userId, @Param("itemType") String itemType);
 }
