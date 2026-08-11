@@ -481,6 +481,44 @@
 .compact-book-form { width: min(520px,calc(100vw - 32px)); }
 .book-details-page { display: grid; gap: 14px; }
 .movie-details-page { display: grid; gap: 14px; max-width: 1180px; margin: 0 auto; }
+.series-details-page { display: grid; gap: 14px; max-width: 1180px; margin: 0 auto; }
+.series-hero-card { display: grid; grid-template-columns: 220px minmax(0,1fr) minmax(260px,.7fr); gap: 25px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: 0 8px 28px #25322708; }
+.series-summary-grid { display: grid; grid-template-columns: 1.25fr .75fr 1fr; gap: 14px; }
+.series-progress-card { display: grid; grid-template-columns: 1fr auto; align-items: start; }
+.series-progress-card h2 { margin-bottom: 7px; }
+.series-progress-card > b { color: var(--accent-strong); font-size: 25px; }
+.series-progress-card .series-progress { grid-column: 1/-1; height: 8px; margin-top: 18px; }
+.series-count-card { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.series-count-card h2 { grid-column: 1/-1; }
+.series-count-card strong { color: var(--accent-strong); font-size: 25px; }
+.series-count-card small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; font-weight: 500; }
+.series-last-watch { display: grid; align-content: start; gap: 5px; }
+.series-last-watch strong { color: var(--accent-strong); font-size: 18px; }
+.series-last-watch span { color: var(--ink); font-size: 12px; }
+.series-last-watch small { color: var(--muted); font-size: 10px; }
+.series-season-panel .panel-heading { align-items: center; }
+.season-detail-list { display: grid; gap: 10px; margin-top: 15px; }
+.season-detail-list details { overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft); }
+.season-detail-list summary { display: flex; align-items: center; justify-content: space-between; padding: 14px; cursor: pointer; list-style: none; }
+.season-detail-list summary span { display: flex; align-items: baseline; gap: 9px; }
+.season-detail-list summary b { color: var(--ink); font-size: 14px; }
+.season-detail-list summary small,.season-detail-list summary em { color: var(--muted); font-size: 10px; font-style: normal; }
+.episode-detail-list { display: grid; border-top: 1px solid var(--line); }
+.season-bulk-actions { display: flex; flex-wrap: wrap; gap: 7px; padding: 9px 12px; border-top: 1px solid var(--line); }
+.season-bulk-actions button { padding: 6px 9px; border: 0; border-radius: 7px; color: var(--accent-strong); background: var(--accent-soft); cursor: pointer; font-size: 9px; font-weight: 700; }
+.season-bulk-actions button:last-child { color: var(--muted); background: var(--paper); }
+.season-bulk-actions button:disabled { cursor: default; opacity: .45; }
+.episode-detail-list > div { display: grid; grid-template-columns: 30px 1fr auto 34px; align-items: center; gap: 10px; min-height: 50px; padding: 7px 12px; border-bottom: 1px solid var(--line); }
+.episode-detail-list > div > b { display: grid; width: 26px; height: 26px; border-radius: 50%; color: var(--muted); background: var(--paper); font-size: 10px; place-items: center; }
+.episode-title-button { display: grid; gap: 3px; padding: 0; border: 0; color: inherit; background: transparent; cursor: pointer; text-align: left; }
+.episode-detail-list > div strong { color: var(--ink); font-size: 11px; }
+.episode-detail-list > div small,.episode-detail-list > div em { color: var(--muted); font-size: 9px; font-style: normal; }
+.episode-detail-list > div.watched > b { color: #fff; background: var(--accent-strong); }
+.episode-detail-list > div.watched > em { color: var(--accent-strong); font-weight: 700; }
+.episode-detail-list > div > button:last-child { width: 30px; height: 30px; border: 0; border-radius: 8px; color: var(--accent-strong); background: var(--accent-soft); cursor: pointer; }
+.season-summary-actions { display: flex; align-items: center; gap: 10px; }
+.season-summary-actions button { padding: 5px 8px; border: 0; border-radius: 7px; color: var(--accent-strong); background: var(--accent-soft); cursor: pointer; font-size: 9px; }
+.add-episode-row { margin: 8px 12px; padding: 8px; border: 1px dashed var(--line); border-radius: 8px; color: var(--accent-strong); background: transparent; cursor: pointer; }
 .movie-hero-card { display: grid; grid-template-columns: 220px minmax(0,1fr) minmax(260px,.7fr); gap: 25px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: 0 8px 28px #25322708; }
 .movie-detail-poster { display: grid; min-height: 330px; border-radius: 12px; background: linear-gradient(145deg,#526d7d,#263d4c) center/cover; place-items: center; }
 .movie-detail-poster span { color: #ffffff30; font-family: Georgia,serif; font-size: 76px; font-weight: 800; }
@@ -705,7 +743,7 @@
   .structure-forms { grid-template-columns: 1fr; }
   .compact-panel { grid-column: auto; }
   .game-hero-card { grid-template-columns: 120px 1fr; gap: 15px; }
-  .book-hero-card,.movie-hero-card { grid-template-columns: 120px 1fr; gap: 15px; }.book-detail-cover,.movie-detail-poster { min-height: 180px; }.book-detail-summary,.movie-detail-summary { grid-template-columns: 1fr; }.movie-personal-info { grid-column: 1/-1; border-top: 1px solid var(--line); border-left: 0; }
+  .book-hero-card,.movie-hero-card,.series-hero-card { grid-template-columns: 120px 1fr; gap: 15px; }.book-detail-cover,.movie-detail-poster { min-height: 180px; }.book-detail-summary,.movie-detail-summary { grid-template-columns: 1fr; }.movie-personal-info { grid-column: 1/-1; border-top: 1px solid var(--line); border-left: 0; }.series-summary-grid { grid-template-columns: 1fr 1fr; }.series-summary-grid article:first-child { grid-column: 1/-1; }
   .game-detail-cover { min-height: 180px; }
   .game-main-info h1 { font-size: 23px; }
   .game-personal-info { grid-template-columns: 1fr; }
@@ -773,5 +811,5 @@
   .series-structure section > div > small { display: none; }
   .structure-forms form { flex-wrap: wrap; }
   .achievement-group-form > div:not(.form-buttons) { grid-template-columns: 1fr; }
-  .book-hero-card,.movie-hero-card { grid-template-columns: 1fr; }.book-detail-cover,.movie-detail-poster { width: min(220px,100%); min-height: 300px; justify-self: center; }.book-personal-info,.movie-personal-info { grid-column: auto; }.reading-session-list button { grid-template-columns: 1fr auto; }.reading-session-list em { grid-column: 1/-1; text-align: left; }.movie-watch-list button { grid-template-columns: 32px 1fr; }.movie-watch-list button em { grid-column: 2; }
+  .book-hero-card,.movie-hero-card,.series-hero-card { grid-template-columns: 1fr; }.book-detail-cover,.movie-detail-poster { width: min(220px,100%); min-height: 300px; justify-self: center; }.book-personal-info,.movie-personal-info { grid-column: auto; }.reading-session-list button { grid-template-columns: 1fr auto; }.reading-session-list em { grid-column: 1/-1; text-align: left; }.movie-watch-list button { grid-template-columns: 32px 1fr; }.movie-watch-list button em { grid-column: 2; }.series-summary-grid { grid-template-columns: 1fr; }.series-summary-grid article:first-child { grid-column: auto; }.episode-detail-list > div { grid-template-columns: 28px 1fr 32px; }.episode-detail-list > div > em { grid-column: 2; }.episode-detail-list > div > button:last-child { grid-column: 3; grid-row: 1/3; }
 }

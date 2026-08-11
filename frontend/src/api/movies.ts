@@ -7,7 +7,7 @@ export type Movie = { id: number; title: string; originalTitle: string | null; i
 export type MovieInput = Omit<Movie, 'id'>
 export type LibraryEntry = { id: number; content: Movie; status: LibraryStatus; rating: number | null; favorite: boolean; startedAt: string | null; completedAt: string | null; personalNote: string | null }
 export type LibraryInput = Omit<LibraryEntry, 'id' | 'content'>
-export type Watch = { id: number; targetId: number; watchedAt: string; watchNumber: number }
+export type Watch = { id: number; targetId: number; watchedAt: string; watchNumber: number; bulk: boolean }
 
 export const getMovies = () => apiRequest<Movie[]>('/api/content?type=MOVIE')
 export const getMovie = (id: number) => apiRequest<Movie>(`/api/content/${id}`)
