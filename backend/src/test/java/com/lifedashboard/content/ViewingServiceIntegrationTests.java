@@ -33,6 +33,8 @@ class ViewingServiceIntegrationTests {
             assertEquals(UserContentStatus.PAUSED, library(contentId).getStatus());
 
             long second = viewingService.createEpisode(seasonId, new EpisodeRequest(2, "Episode 2", 50, null)).id();
+            viewingService.updateEpisode(second, new EpisodeRequest(2, "Episode 2 updated", 55, null));
+            assertEquals("Episode 2 updated", viewingService.episodes(seasonId).get(1).title());
             assertEquals(UserContentStatus.IN_PROGRESS, library(contentId).getStatus());
             viewingService.watchEpisode(second, new WatchRequest(null));
             assertEquals(UserContentStatus.PAUSED, library(contentId).getStatus());
@@ -42,6 +44,12 @@ class ViewingServiceIntegrationTests {
             viewingService.watchEpisode(second, new WatchRequest(null));
             assertEquals(UserContentStatus.COMPLETED, library(contentId).getStatus());
             assertEquals(2, viewingService.episodeHistory(second).size());
+            viewingService.deleteEpisode(first);
+            assertEquals(1, viewingService.episodes(seasonId).size());
+            viewingService.updateSeason(seasonId, new SeasonRequest(2, "Second", 2025));
+            assertEquals(2, viewingService.seasons(contentId).getFirst().seasonNumber());
+            viewingService.deleteSeason(seasonId);
+            assertTrue(viewingService.seasons(contentId).isEmpty());
         } finally { cleanup(); }
     }
 
@@ -59,6 +67,28 @@ class ViewingServiceIntegrationTests {
             assertEquals(changedAt, viewingService.updateMovieWatch(first.id(), new WatchRequest(changedAt)).watchedAt());
             viewingService.deleteMovieWatch(first.id());
             assertEquals(1, viewingService.movieHistory(id).size());
+        } finally { cleanup(); }
+    }
+
+    @Test
+    void createsAndMarksEpisodesInBulk() {
+        try {
+            long contentId = contentService.create(new ContentItemRequest(SERIES, null, ContentType.SERIES,
+                    ContentFormat.LIVE_ACTION, 2024, null, null, null, ReleaseStatus.ONGOING)).id();
+            long seasonId = viewingService.createSeason(contentId, new SeasonRequest(1, null, 2024)).id();
+            var created = viewingService.createEpisodes(seasonId,
+                    new BulkEpisodeRequest(20, 22, true, Instant.parse("2020-01-01T12:00:00Z")));
+            assertEquals(20, created.size());
+            assertEquals("Эпизод 20", created.getLast().title());
+            assertEquals(UserContentStatus.PAUSED, library(contentId).getStatus());
+            assertEquals(Instant.parse("2020-01-01T12:00:00Z"), viewingService.seasonCompletion(seasonId).completedAt());
+            assertTrue(viewingService.episodeHistory(created.getFirst().id()).getFirst().bulk());
+            viewingService.clearSeasonWatches(seasonId);
+            assertNull(viewingService.seasonCompletion(seasonId));
+            assertEquals(UserContentStatus.IN_PROGRESS, library(contentId).getStatus());
+            viewingService.watchSeason(seasonId, new WatchRequest(null));
+            assertEquals(UserContentStatus.PAUSED, library(contentId).getStatus());
+            assertNull(viewingService.seasonCompletion(seasonId).completedAt());
         } finally { cleanup(); }
     }
 

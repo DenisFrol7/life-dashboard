@@ -9,6 +9,7 @@ import { TimelinePage } from './pages/TimelinePage'
 import { MoviesPage } from './pages/MoviesPage'
 import { MovieDetailsPage } from './pages/MovieDetailsPage'
 import { SeriesPage } from './pages/SeriesPage'
+import { SeriesDetailsPage } from './pages/SeriesDetailsPage'
 import { AnimePage } from './pages/AnimePage'
 import { GamesPage } from './pages/GamesPage'
 import { GameDetailsPage } from './pages/GameDetailsPage'
@@ -40,6 +41,7 @@ function App() {
     ?? (pathname.startsWith('/games/') ? navigation.find((item) => item.path === '/games') : undefined)
     ?? (pathname.startsWith('/books/') ? navigation.find((item) => item.path === '/books') : undefined)
     ?? (pathname.startsWith('/movies/') ? navigation.find((item) => item.path === '/movies') : undefined)
+    ?? (pathname.startsWith('/series/') ? navigation.find((item) => item.path === '/series') : undefined)
     ?? navigation[0]
 
   return (
@@ -90,6 +92,7 @@ function App() {
           <Route path="/movies" element={<MoviesPage />} />
           <Route path="/movies/:id" element={<MovieDetailsPage />} />
           <Route path="/series" element={<SeriesPage />} />
+          <Route path="/series/:id" element={<SeriesDetailsPage />} />
           <Route path="/anime" element={<AnimePage />} />
           <Route path="/games" element={<GamesPage />} />
           <Route path="/games/:id" element={<GameDetailsPage />} />
