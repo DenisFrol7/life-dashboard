@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { createSeries, deleteSeries, getEpisodeWatches, getEpisodes, getSeasons, getSeries, getSeriesLibrary, putSeriesLibrary, removeSeriesLibrary, updateSeries, type Episode, type Season, type Series, type SeriesFormat, type SeriesInput, type SeriesLibraryEntry } from '../api/series'
+import { createSeries, deleteSeries, getEpisodeWatches, getEpisodes, getSeasons, getSeries, getSeriesLibrary, putSeriesLibrary, updateSeries, type Episode, type Season, type Series, type SeriesFormat, type SeriesInput, type SeriesLibraryEntry } from '../api/series'
 import type { LibraryInput, LibraryStatus, ReleaseStatus, Watch } from '../api/movies'
 
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
@@ -23,12 +23,48 @@ export function SeriesPage() {
   const load = useCallback(async () => { setLoading(true); setError(null); try { const [catalog, allLibrary] = await Promise.all([getSeries(), getSeriesLibrary()]); setSeries(catalog); setLibrary(Object.fromEntries(allLibrary.filter((entry) => entry.content.itemType === 'SERIES').map((entry) => [entry.content.id, entry]))); const records = await Promise.all(catalog.map(async (item) => { const seasons = await getSeasons(item.id); const episodeGroups = await Promise.all(seasons.map((season) => getEpisodes(season.id))); const episodes = episodeGroups.flat(); const watchPairs = await Promise.all(episodes.map(async (episode) => [episode.id, await getEpisodeWatches(episode.id)] as const)); return [item.id, { seasons, episodes, watches: Object.fromEntries(watchPairs) }] as const })); setProgress(Object.fromEntries(records)) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить сериалы') } finally { setLoading(false) } }, [])
   useEffect(() => { void load() }, [load])
   const visible = useMemo(() => { const normalized = query.trim().toLocaleLowerCase('ru-RU'); return series.filter((item) => (!normalized || `${item.title} ${item.originalTitle ?? ''}`.toLocaleLowerCase('ru-RU').includes(normalized)) && (!status || library[item.id]?.status === status)) }, [library, query, series, status])
-  const removeLibrary = async (item: Series) => { if (!window.confirm(`Убрать «${item.title}» из библиотеки?`)) return; try { await removeSeriesLibrary(item.id); await load() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось убрать сериал') } }
-
-  return <div className="movies-page"><section className="media-toolbar"><div className="journal-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти сериал" /></div><div className="media-filters"><select value={status} onChange={(event) => setStatus(event.target.value as LibraryStatus | '')}><option value="">Все статусы</option>{Object.entries(statusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select><button className="primary-button" onClick={() => setEditing('new')}>+ Добавить сериал</button></div></section>
-    <section className="media-stats"><div><strong>{series.length}</strong><span>в каталоге</span></div><div><strong>{Object.keys(library).length}</strong><span>в библиотеке</span></div><div><strong>{Object.values(progress).reduce((sum, item) => sum + item.episodes.length, 0)}</strong><span>эпизодов</span></div><div><strong>{Object.values(progress).reduce((sum, item) => sum + Object.values(item.watches).flat().length, 0)}</strong><span>просмотров</span></div></section>
+  const libraryEntries = Object.values(library)
+  const episodeCount = Object.values(progress).reduce((sum, item) => sum + item.episodes.length, 0)
+  const watchedMinutes = Object.values(progress).reduce((sum, item) => sum + item.episodes.reduce((episodeSum, episode) => episodeSum + (episode.durationMinutes ?? 0) * (item.watches[episode.id]?.length ?? 0), 0), 0)
+  const watchTime = `${Math.floor(watchedMinutes / 60)} ч ${watchedMinutes % 60} мин`
+  return <div className="movies-page series-page"><section className="media-toolbar series-media-toolbar"><div className="series-status-tabs" aria-label="Фильтр сериалов по статусу">{([
+      ['', 'Все'],
+      ['IN_PROGRESS', 'Смотрю'],
+      ['PLANNED', 'В планах'],
+      ['COMPLETED', 'Просмотрено'],
+      ['PAUSED', 'На паузе'],
+      ['DROPPED', 'Брошено'],
+    ] as const).map(([value, label]) => <button key={value || 'all'} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><div className="journal-search series-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти сериал" /></div><button className="primary-button series-add-button" onClick={() => setEditing('new')}>+ Добавить сериал</button></section>
+    <section className="series-catalog-layout"><div className="series-catalog-main">
     {error && <div className="notice error movies-error"><strong>Ошибка</strong><span>{error}</span></div>}
-    {loading ? <div className="loading"><span />Загружаем сериалы…</div> : visible.length === 0 ? <div className="media-empty"><span>▤</span><h2>Сериалов пока нет</h2><p>Добавьте первый сериал в каталог.</p></div> : <section className="movie-grid">{visible.map((item) => { const entry = library[item.id]; const data = progress[item.id]; const watched = data?.episodes.filter((episode) => data.watches[episode.id]?.length).length ?? 0; const total = data?.episodes.length ?? 0; return <article className="movie-card" key={item.id}><button className="movie-poster series-poster" onClick={() => navigate(`/series/${item.id}`)} style={item.coverUrl ? { backgroundImage: `url(${item.coverUrl})` } : undefined}><span>{item.title.slice(0, 1)}</span>{entry?.favorite && <i>♥</i>}<em>{item.format === 'ANIMATION' ? 'Мультсериал' : 'Сериал'}</em></button><div className="movie-info"><div><h3>{item.title}</h3>{item.originalTitle && <p>{item.originalTitle}</p>}</div><div className="movie-meta"><span>{item.releaseYear ?? '—'}</span><span>{releaseLabels[item.releaseStatus]}</span></div><div className="series-progress"><span style={{ width: `${total ? watched / total * 100 : 0}%` }} /></div><small className="series-progress-label">{watched} из {total} серий</small>{entry ? <><div className={`media-status ${entry.status.toLowerCase()}`}>{statusLabels[entry.status]}</div><div className="movie-actions"><button onClick={() => navigate(`/series/${item.id}`)}>Эпизоды</button><button onClick={() => setEditing(item)}>Настройки</button><button onClick={() => void removeLibrary(item)}>×</button></div></> : <button className="add-library-button" onClick={() => setEditing(item)}>+ В библиотеку</button>}</div></article>})}</section>}
+    {loading ? <div className="loading"><span />Загружаем сериалы…</div> : visible.length === 0 ? <div className="media-empty"><span>▤</span><h2>Сериалов пока нет</h2><p>Добавьте первый сериал в каталог.</p></div> : <section className="movie-grid series-catalog-grid">{visible.map((item) => {
+      const entry = library[item.id]
+      const data = progress[item.id]
+      const watched = data?.episodes.filter((episode) => data.watches[episode.id]?.length).length ?? 0
+      const total = data?.episodes.length ?? 0
+      const percent = total ? watched / total * 100 : 0
+      const stars = entry?.rating ?? 0
+      return <article className="series-list-card" key={item.id}>
+        <button className="series-list-cover" onClick={() => navigate(`/series/${item.id}`)} style={item.coverUrl ? { backgroundImage: `url(${item.coverUrl})` } : undefined}><span>{item.title.slice(0, 1)}</span>{entry?.favorite && <i>♥</i>}</button>
+        <div className="series-list-content">
+          <div className="series-list-heading"><button onClick={() => navigate(`/series/${item.id}`)}>{item.title}</button><span className={`release-badge ${item.releaseStatus.toLowerCase()}`}>{releaseLabels[item.releaseStatus]}</span></div>
+          {item.originalTitle && <p>{item.originalTitle}</p>}
+          <div className="series-list-rating" aria-label={entry?.rating ? `Оценка ${entry.rating} из 10` : 'Без оценки'}>{Array.from({ length: 10 }, (_, index) => <span className={index < stars ? 'filled' : ''} key={index}>★</span>)}</div>
+          <div className="series-list-progress"><span style={{ width: `${percent}%` }} /></div>
+        </div>
+        <div className="series-list-side"><strong>{watched} <small>из {total}</small></strong>{entry ? <div className={`media-status ${entry.status.toLowerCase()}`}>{statusLabels[entry.status]}</div> : <button className="add-library-button" onClick={() => setEditing(item)}>+ В библиотеку</button>}</div>
+      </article>
+    })}</section>}
+    </div><aside className="series-statistics"><p className="eyebrow">Общая статистика</p><h2>Сериалы</h2><dl>
+      <div><dt>Количество сериалов</dt><dd>{series.length}</dd></div>
+      <div><dt>Просмотрено</dt><dd>{libraryEntries.filter((item) => item.status === 'COMPLETED').length}</dd></div>
+      <div><dt>Смотрю</dt><dd>{libraryEntries.filter((item) => item.status === 'IN_PROGRESS').length}</dd></div>
+      <div><dt>В планах</dt><dd>{libraryEntries.filter((item) => item.status === 'PLANNED').length}</dd></div>
+      <div><dt>На паузе</dt><dd>{libraryEntries.filter((item) => item.status === 'PAUSED').length}</dd></div>
+      <div><dt>Брошено</dt><dd>{libraryEntries.filter((item) => item.status === 'DROPPED').length}</dd></div>
+      <div className="series-stat-total"><dt>Всего эпизодов</dt><dd>{episodeCount}</dd></div>
+      <div><dt>Затрачено времени</dt><dd>{watchTime}</dd></div>
+    </dl></aside></section>
     {editing && <SeriesForm series={editing === 'new' ? undefined : editing} library={editing === 'new' ? undefined : library[editing.id]} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void load() }} />}
   </div>
 }
