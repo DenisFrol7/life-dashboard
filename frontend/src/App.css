@@ -382,10 +382,12 @@
 .media-filters select { padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; color: #596770; background: var(--paper); font-size: 9px; }
 .series-media-toolbar { flex-wrap: wrap; }
 .series-status-tabs { display: flex; flex: 1 1 52%; align-items: center; gap: 2px; min-width: 540px; padding: 4px; border: 1px solid var(--line); border-radius: 11px; background: #ebeae5; }
-.series-status-tabs button { flex: 1; padding: 8px 8px; border: 0; border-radius: 8px; color: #707974; background: transparent; cursor: pointer; font-size: 9px; font-weight: 800; white-space: nowrap; }
+.series-status-tabs button { flex: 1; padding: 10px 8px; border: 0; border-radius: 8px; color: #707974; background: transparent; cursor: pointer; font-size: 11px; font-weight: 800; white-space: nowrap; }
 .series-status-tabs button:hover { color: #3f5667; }
 .series-status-tabs button.active { color: #304b60; background: var(--paper); box-shadow: 0 2px 8px #30485b14; }
 .series-search { flex: 0 1 250px; width: 250px; min-width: 170px; }
+.series-search input { padding-top: 12px; padding-bottom: 12px; font-size: 13px; }
+.series-search span { top: 9px; }
 .series-add-button { flex: 0 0 auto; white-space: nowrap; }
 .media-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
 .media-stats > div { padding: 14px 17px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
@@ -452,19 +454,21 @@
 .series-list-cover i { position: absolute; top: 5px; right: 6px; color: #e07078; font-size: 12px; font-style: normal; text-shadow: 0 1px 3px #0008; }
 .series-list-content { display: grid; align-content: center; min-width: 0; }
 .series-list-heading { display: flex; align-items: center; gap: 7px; min-width: 0; }
-.series-list-heading > button { min-width: 0; padding: 0; overflow: hidden; border: 0; color: #426f91; background: none; cursor: pointer; font-family: Georgia, serif; font-size: 14px; font-weight: 700; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.series-list-heading > button { min-width: 0; padding: 0; overflow: hidden; border: 0; color: #426f91; background: none; cursor: pointer; font-family: Georgia, serif; font-size: 17px; font-weight: 700; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .series-list-heading > button:hover { text-decoration: underline; }
-.release-badge { flex: 0 0 auto; padding: 2px 4px; border-radius: 3px; color: #fff; background: #899197; font-size: 6px; font-weight: 900; text-transform: uppercase; }
+.release-badge { flex: 0 0 auto; padding: 3px 5px; border-radius: 3px; color: #fff; background: #899197; font-size: 8px; font-weight: 900; text-transform: uppercase; }
 .release-badge.ongoing { background: #6d9a54; }
 .release-badge.cancelled { background: #a4675b; }
-.series-list-content > p { margin: 3px 0; overflow: hidden; color: #919895; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
-.series-list-rating { display: flex; gap: 1px; margin: 3px 0 6px; color: #d5d9db; font-size: 12px; line-height: 1; }
-.series-list-rating .filled { color: #c99031; }
+.series-list-content > p { margin: 4px 0; overflow: hidden; color: #919895; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.series-list-inline-status { min-height: 22px; margin: 5px 0 4px; }
+.series-list-inline-status .media-status { padding: 5px 8px; font-size: 9px; }
+.series-list-progress-row { display: grid; gap: 2px; }
 .series-list-progress { height: 4px; overflow: hidden; border-radius: 5px; background: #e5e8e9; }
 .series-list-progress span { display: block; height: 100%; border-radius: inherit; background: #6689a4; }
+.series-list-progress-row > strong { justify-self: end; color: #496985; font-size: 12px; line-height: 1; white-space: nowrap; }
+.series-list-progress-row > strong small { color: #8d969a; font-size: 10px; font-weight: 500; }
 .series-list-side { display: grid; justify-items: end; align-content: center; gap: 7px; text-align: right; }
-.series-list-side > strong { color: #496985; font-size: 10px; }
-.series-list-side > strong small { color: #8d969a; font-size: 8px; font-weight: 500; }
+.series-list-score { color: #496985; font-family: Georgia, serif; font-size: 21px; }
 .series-details { width: min(850px, 100%); max-height: calc(100vh - 40px); padding: 26px; overflow-y: auto; border-radius: 20px; background: var(--paper); box-shadow: 0 30px 90px #07111a70; }
 .series-structure { display: grid; gap: 14px; }
 .series-structure > section { overflow: hidden; border: 1px solid #dfdfd8; border-radius: 12px; }
@@ -518,6 +522,11 @@
 .movie-details-page { display: grid; gap: 14px; max-width: 1180px; margin: 0 auto; }
 .series-details-page { display: grid; gap: 14px; max-width: 1180px; margin: 0 auto; }
 .series-hero-card { display: grid; grid-template-columns: 220px minmax(0,1fr) minmax(260px,.7fr); gap: 25px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: 0 8px 28px #25322708; }
+.series-details-page .movie-main-info dt,
+.series-details-page .movie-personal-info small { font-size: 13px; }
+.series-details-page .movie-main-info dd { font-size: 16px; }
+.series-details-page .movie-personal-info strong { font-size: 20px; }
+.series-details-page .movie-personal-info p { font-size: 15px; }
 .series-summary-grid { display: grid; grid-template-columns: 1.25fr .75fr 1fr; gap: 14px; }
 .series-progress-card { display: grid; grid-template-columns: 1fr auto; align-items: start; }
 .series-progress-card h2 { margin-bottom: 7px; }

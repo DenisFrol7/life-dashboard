@@ -11,8 +11,10 @@ export type SeasonInput = Omit<Season, 'id' | 'contentId'>
 export type EpisodeInput = Omit<Episode, 'id' | 'seasonId'>
 export type BulkEpisodeInput = { count: number; durationMinutes: number | null; markWatched: boolean; watchedAt: string | null }
 export type SeasonCompletion = { id: number; seasonId: number; completedAt: string | null; episodeCount: number }
+export type SeriesCatalogItem = Omit<Series, 'itemType' | 'xboxPlayAnywhere'> & { libraryId: number | null; userStatus: LibraryStatus | null; rating: number | null; favorite: boolean; startedAt: string | null; completedAt: string | null; personalNote: string | null; seasonCount: number; episodeCount: number; watchedEpisodeCount: number; watchedMinutes: number }
 
 export const getSeries = () => apiRequest<Series[]>('/api/content?type=SERIES')
+export const getSeriesCatalog = () => apiRequest<SeriesCatalogItem[]>('/api/series')
 export const getSeriesById = (id: number) => apiRequest<Series>(`/api/content/${id}`)
 export const createSeries = (input: SeriesInput) => apiRequest<Series>('/api/content', { method: 'POST', body: JSON.stringify(input) })
 export const updateSeries = (id: number, input: SeriesInput) => apiRequest<Series>(`/api/content/${id}`, { method: 'PUT', body: JSON.stringify(input) })
