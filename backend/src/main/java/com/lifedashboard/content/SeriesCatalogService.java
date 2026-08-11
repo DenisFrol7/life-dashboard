@@ -19,7 +19,7 @@ public class SeriesCatalogService {
     }
 
     public List<SeriesCatalogResponse> getAll() {
-        return items.findSeriesCatalog(userId).stream().map(item -> new SeriesCatalogResponse(
+        return items.findSerialCatalog(userId, ContentType.SERIES.name()).stream().map(item -> new SeriesCatalogResponse(
                 item.getId(), item.getTitle(), item.getOriginalTitle(), ContentFormat.valueOf(item.getFormat()),
                 item.getReleaseYear(), item.getDescription(), item.getCoverUrl(), item.getDurationMinutes(),
                 ReleaseStatus.valueOf(item.getReleaseStatus()), item.getGenre(), item.getDeveloper(),
