@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { createSeries, deleteSeries, getEpisodeWatches, getEpisodes, getSeasons, getSeries, getSeriesLibrary, putSeriesLibrary, updateSeries, type Episode, type Season, type Series, type SeriesFormat, type SeriesInput, type SeriesLibraryEntry } from '../api/series'
-import type { LibraryInput, LibraryStatus, ReleaseStatus, Watch } from '../api/movies'
+import { createSeries, deleteSeries, getSeriesCatalog, putSeriesLibrary, updateSeries, type Series, type SeriesFormat, type SeriesInput, type SeriesLibraryEntry } from '../api/series'
+import type { LibraryInput, LibraryStatus, ReleaseStatus } from '../api/movies'
 
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
 const releaseLabels: Record<ReleaseStatus, string> = { ANNOUNCED: 'Анонсирован', ONGOING: 'Выходит', RELEASED: 'Вышел', ENDED: 'Завершён', CANCELLED: 'Отменён' }
 const emptySeries: SeriesInput = { title: '', originalTitle: null, itemType: 'SERIES', format: 'LIVE_ACTION', releaseYear: null, description: null, coverUrl: null, durationMinutes: null, releaseStatus: 'ONGOING', genre: null, developer: null, releaseDate: null, xboxPlayAnywhere: false }
 const emptyLibrary: LibraryInput = { status: 'PLANNED', rating: null, favorite: false, startedAt: null, completedAt: null, personalNote: null }
-type Progress = { seasons: Season[]; episodes: Episode[]; watches: Record<number, Watch[]> }
+type Progress = { episodeCount: number; watchedEpisodeCount: number; watchedMinutes: number }
 
 export function SeriesPage() {
   const navigate = useNavigate()
@@ -20,12 +20,12 @@ export function SeriesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async () => { setLoading(true); setError(null); try { const [catalog, allLibrary] = await Promise.all([getSeries(), getSeriesLibrary()]); setSeries(catalog); setLibrary(Object.fromEntries(allLibrary.filter((entry) => entry.content.itemType === 'SERIES').map((entry) => [entry.content.id, entry]))); const records = await Promise.all(catalog.map(async (item) => { const seasons = await getSeasons(item.id); const episodeGroups = await Promise.all(seasons.map((season) => getEpisodes(season.id))); const episodes = episodeGroups.flat(); const watchPairs = await Promise.all(episodes.map(async (episode) => [episode.id, await getEpisodeWatches(episode.id)] as const)); return [item.id, { seasons, episodes, watches: Object.fromEntries(watchPairs) }] as const })); setProgress(Object.fromEntries(records)) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить сериалы') } finally { setLoading(false) } }, [])
+  const load = useCallback(async () => { setLoading(true); setError(null); try { const catalog = await getSeriesCatalog(); const items: Series[] = catalog.map((item) => ({ ...item, itemType: 'SERIES', xboxPlayAnywhere: false })); setSeries(items); setLibrary(Object.fromEntries(catalog.filter((item) => item.libraryId && item.userStatus).map((item) => [item.id, { id: item.libraryId!, content: { ...item, itemType: 'SERIES', xboxPlayAnywhere: false }, status: item.userStatus!, rating: item.rating, favorite: item.favorite, startedAt: item.startedAt, completedAt: item.completedAt, personalNote: item.personalNote }] as const))); setProgress(Object.fromEntries(catalog.map((item) => [item.id, { episodeCount: item.episodeCount, watchedEpisodeCount: item.watchedEpisodeCount, watchedMinutes: item.watchedMinutes }]))) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить сериалы') } finally { setLoading(false) } }, [])
   useEffect(() => { void load() }, [load])
   const visible = useMemo(() => { const normalized = query.trim().toLocaleLowerCase('ru-RU'); return series.filter((item) => (!normalized || `${item.title} ${item.originalTitle ?? ''}`.toLocaleLowerCase('ru-RU').includes(normalized)) && (!status || library[item.id]?.status === status)) }, [library, query, series, status])
   const libraryEntries = Object.values(library)
-  const episodeCount = Object.values(progress).reduce((sum, item) => sum + item.episodes.length, 0)
-  const watchedMinutes = Object.values(progress).reduce((sum, item) => sum + item.episodes.reduce((episodeSum, episode) => episodeSum + (episode.durationMinutes ?? 0) * (item.watches[episode.id]?.length ?? 0), 0), 0)
+  const episodeCount = Object.values(progress).reduce((sum, item) => sum + item.episodeCount, 0)
+  const watchedMinutes = Object.values(progress).reduce((sum, item) => sum + item.watchedMinutes, 0)
   const watchTime = `${Math.floor(watchedMinutes / 60)} ч ${watchedMinutes % 60} мин`
   return <div className="movies-page series-page"><section className="media-toolbar series-media-toolbar"><div className="series-status-tabs" aria-label="Фильтр сериалов по статусу">{([
       ['', 'Все'],
@@ -40,19 +40,18 @@ export function SeriesPage() {
     {loading ? <div className="loading"><span />Загружаем сериалы…</div> : visible.length === 0 ? <div className="media-empty"><span>▤</span><h2>Сериалов пока нет</h2><p>Добавьте первый сериал в каталог.</p></div> : <section className="movie-grid series-catalog-grid">{visible.map((item) => {
       const entry = library[item.id]
       const data = progress[item.id]
-      const watched = data?.episodes.filter((episode) => data.watches[episode.id]?.length).length ?? 0
-      const total = data?.episodes.length ?? 0
+      const watched = data?.watchedEpisodeCount ?? 0
+      const total = data?.episodeCount ?? 0
       const percent = total ? watched / total * 100 : 0
-      const stars = entry?.rating ?? 0
       return <article className="series-list-card" key={item.id}>
         <button className="series-list-cover" onClick={() => navigate(`/series/${item.id}`)} style={item.coverUrl ? { backgroundImage: `url(${item.coverUrl})` } : undefined}><span>{item.title.slice(0, 1)}</span>{entry?.favorite && <i>♥</i>}</button>
         <div className="series-list-content">
           <div className="series-list-heading"><button onClick={() => navigate(`/series/${item.id}`)}>{item.title}</button><span className={`release-badge ${item.releaseStatus.toLowerCase()}`}>{releaseLabels[item.releaseStatus]}</span></div>
           {item.originalTitle && <p>{item.originalTitle}</p>}
-          <div className="series-list-rating" aria-label={entry?.rating ? `Оценка ${entry.rating} из 10` : 'Без оценки'}>{Array.from({ length: 10 }, (_, index) => <span className={index < stars ? 'filled' : ''} key={index}>★</span>)}</div>
-          <div className="series-list-progress"><span style={{ width: `${percent}%` }} /></div>
+          <div className="series-list-inline-status">{entry ? <span className={`media-status ${entry.status.toLowerCase()}`}>{statusLabels[entry.status]}</span> : <span className="media-status not_started">Не в библиотеке</span>}</div>
+          <div className="series-list-progress-row"><strong>{watched} <small>из {total}</small></strong><div className="series-list-progress"><span style={{ width: `${percent}%` }} /></div></div>
         </div>
-        <div className="series-list-side"><strong>{watched} <small>из {total}</small></strong>{entry ? <div className={`media-status ${entry.status.toLowerCase()}`}>{statusLabels[entry.status]}</div> : <button className="add-library-button" onClick={() => setEditing(item)}>+ В библиотеку</button>}</div>
+        <div className="series-list-side">{entry ? <strong className="series-list-score">{entry.rating ? `${entry.rating}/10` : 'Без оценки'}</strong> : <button className="add-library-button" onClick={() => setEditing(item)}>+ В библиотеку</button>}</div>
       </article>
     })}</section>}
     </div><aside className="series-statistics"><p className="eyebrow">Общая статистика</p><h2>Сериалы</h2><dl>
