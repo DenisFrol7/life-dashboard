@@ -480,6 +480,32 @@
 .book-form { width: min(720px,calc(100vw - 32px)); }
 .compact-book-form { width: min(520px,calc(100vw - 32px)); }
 .book-details-page { display: grid; gap: 14px; }
+.movie-details-page { display: grid; gap: 14px; max-width: 1180px; margin: 0 auto; }
+.movie-hero-card { display: grid; grid-template-columns: 220px minmax(0,1fr) minmax(260px,.7fr); gap: 25px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: 0 8px 28px #25322708; }
+.movie-detail-poster { display: grid; min-height: 330px; border-radius: 12px; background: linear-gradient(145deg,#526d7d,#263d4c) center/cover; place-items: center; }
+.movie-detail-poster span { color: #ffffff30; font-family: Georgia,serif; font-size: 76px; font-weight: 800; }
+.movie-detail-poster[style] span { display: none; }
+.movie-main-info { padding: 10px 0; }
+.movie-main-info h1 { margin: 7px 0; color: var(--ink); font-family: Georgia,serif; font-size: clamp(25px,3vw,38px); }
+.movie-main-info h2 { margin: 0 0 25px; color: var(--muted); font-size: 14px; font-weight: 500; }
+.movie-main-info dl { display: grid; gap: 15px; margin: 24px 0 0; }
+.movie-main-info dl div { display: grid; gap: 4px; }
+.movie-main-info dt,.movie-personal-info small { color: var(--muted); font-size: 10px; }
+.movie-main-info dd { margin: 0; color: var(--ink); font-size: 13px; }
+.movie-personal-info { display: grid; align-content: start; gap: 7px; padding: 20px; border-left: 1px solid var(--line); }
+.movie-personal-info strong { margin-bottom: 12px; color: var(--ink); font-size: 17px; }
+.movie-personal-info p { margin: 0; color: var(--ink); font-size: 12px; line-height: 1.6; }
+.movie-detail-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.movie-detail-summary article:first-child { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 5px 12px; }
+.movie-detail-summary article:first-child h2,.movie-detail-summary article:first-child button { grid-column: 1/-1; }
+.movie-detail-summary article:first-child strong { color: var(--accent-strong); font-size: 32px; }
+.movie-detail-summary article:first-child span { color: var(--muted); font-size: 12px; }
+.movie-description p { margin: 8px 0 0; color: var(--ink); font-size: 13px; line-height: 1.7; }
+.movie-watch-list { display: grid; gap: 8px; margin-top: 12px; }
+.movie-watch-list button { display: grid; grid-template-columns: 35px 1fr auto; align-items: center; gap: 12px; width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--paper-soft); cursor: pointer; text-align: left; }
+.movie-watch-list button > b { display: grid; width: 30px; height: 30px; border-radius: 50%; color: #fff; background: var(--accent-strong); place-items: center; }
+.movie-watch-list button span { display: grid; gap: 3px; }
+.movie-watch-list button small,.movie-watch-list button em { color: var(--muted); font-size: 10px; font-style: normal; }
 .book-hero-card { display: grid; grid-template-columns: 210px minmax(0,1fr) minmax(250px,32%); gap: 24px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); }
 .book-detail-cover { display: grid; place-items: center; min-height: 315px; border-radius: 12px; background: linear-gradient(145deg,#6c7f88,#344952); background-position: center; background-size: cover; }
 .book-detail-cover span { color: #ffffff30; font-family: Georgia,serif; font-size: 76px; font-weight: 800; }
@@ -679,7 +705,7 @@
   .structure-forms { grid-template-columns: 1fr; }
   .compact-panel { grid-column: auto; }
   .game-hero-card { grid-template-columns: 120px 1fr; gap: 15px; }
-  .book-hero-card { grid-template-columns: 120px 1fr; gap: 15px; }.book-detail-cover { min-height: 180px; }.book-detail-summary { grid-template-columns: 1fr; }
+  .book-hero-card,.movie-hero-card { grid-template-columns: 120px 1fr; gap: 15px; }.book-detail-cover,.movie-detail-poster { min-height: 180px; }.book-detail-summary,.movie-detail-summary { grid-template-columns: 1fr; }.movie-personal-info { grid-column: 1/-1; border-top: 1px solid var(--line); border-left: 0; }
   .game-detail-cover { min-height: 180px; }
   .game-main-info h1 { font-size: 23px; }
   .game-personal-info { grid-template-columns: 1fr; }
@@ -747,5 +773,5 @@
   .series-structure section > div > small { display: none; }
   .structure-forms form { flex-wrap: wrap; }
   .achievement-group-form > div:not(.form-buttons) { grid-template-columns: 1fr; }
-  .book-hero-card { grid-template-columns: 1fr; }.book-detail-cover { width: min(220px,100%); min-height: 300px; justify-self: center; }.book-personal-info { grid-column: auto; }.reading-session-list button { grid-template-columns: 1fr auto; }.reading-session-list em { grid-column: 1/-1; text-align: left; }
+  .book-hero-card,.movie-hero-card { grid-template-columns: 1fr; }.book-detail-cover,.movie-detail-poster { width: min(220px,100%); min-height: 300px; justify-self: center; }.book-personal-info,.movie-personal-info { grid-column: auto; }.reading-session-list button { grid-template-columns: 1fr auto; }.reading-session-list em { grid-column: 1/-1; text-align: left; }.movie-watch-list button { grid-template-columns: 32px 1fr; }.movie-watch-list button em { grid-column: 2; }
 }

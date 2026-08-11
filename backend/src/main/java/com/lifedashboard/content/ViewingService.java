@@ -21,21 +21,26 @@ public class ViewingService {
  @Transactional public WatchResponse watchEpisode(Long id,WatchRequest r){ContentEpisode e=episode(id);User u=user();ensureLibrary(e.getSeason().getContent(),u);
   EpisodeWatch w=episodeWatches.save(new EpisodeWatch(u,e,time(r),episodeWatches.maxNumber(id,userId)+1));refresh(e.getSeason().getContent());return response(w);}
  public List<WatchResponse> episodeHistory(Long id){episode(id);return episodeWatches.findAllByEpisodeIdAndUserIdOrderByWatchNumber(id,userId).stream().map(this::response).toList();}
- @Transactional public WatchResponse watchMovie(Long id,WatchRequest r){ContentItem c=item(id);if(c.getItemType()!=ContentType.MOVIE)throw new InvalidRequestException("Movie watch history is only available for MOVIE");User u=user();UserContent l=ensureLibrary(c,u);
-  MovieWatch w=movieWatches.save(new MovieWatch(u,c,time(r),movieWatches.maxNumber(id,userId)+1));l.changeStatus(UserContentStatus.COMPLETED,w.getWatchedAt());return new WatchResponse(w.getId(),id,w.getWatchedAt(),w.getWatchNumber());}
+ @Transactional public WatchResponse watchMovie(Long id,WatchRequest r){ContentItem c=item(id);if(c.getItemType()!=ContentType.MOVIE)throw new InvalidRequestException("Movie watch history is only available for MOVIE");User u=user();Instant watchedAt=time(r);UserContent l=ensureLibrary(c,u,watchedAt);
+  MovieWatch w=movieWatches.save(new MovieWatch(u,c,watchedAt,movieWatches.maxNumber(id,userId)+1));l.changeStatus(UserContentStatus.COMPLETED,w.getWatchedAt());return new WatchResponse(w.getId(),id,w.getWatchedAt(),w.getWatchNumber());}
  public List<WatchResponse> movieHistory(Long id){item(id);return movieWatches.findAllByContentIdAndUserIdOrderByWatchNumber(id,userId).stream().map(w->new WatchResponse(w.getId(),id,w.getWatchedAt(),w.getWatchNumber())).toList();}
+ @Transactional public WatchResponse updateMovieWatch(Long id,WatchRequest r){MovieWatch w=movieWatch(id);w.changeWatchedAt(time(r));return movieResponse(w);}
+ @Transactional public void deleteMovieWatch(Long id){movieWatches.delete(movieWatch(id));}
  public Long contentIdForSeason(Long id){return season(id).getContent().getId();}
  public Long contentIdForEpisode(Long id){return episode(id).getSeason().getContent().getId();}
  private void refresh(ContentItem c){long total=episodes.countByContent(c.getId()),watched=episodeWatches.watchedCount(userId,c.getId());UserContent l=library.findByUserIdAndContentId(userId,c.getId()).orElseThrow();
   if(total>0&&watched==total){if(c.getReleaseStatus()==ReleaseStatus.ONGOING||c.getReleaseStatus()==ReleaseStatus.ANNOUNCED)l.changeStatus(UserContentStatus.PAUSED,null);else l.changeStatus(UserContentStatus.COMPLETED,Instant.now());}else l.changeStatus(UserContentStatus.IN_PROGRESS,null);}
- private UserContent ensureLibrary(ContentItem c,User u){return library.findByUserIdAndContentId(userId,c.getId()).orElseGet(()->{UserContent x=new UserContent(u,c);x.update(UserContentStatus.IN_PROGRESS,null,false,Instant.now(),null,null);return library.save(x);});}
+ private UserContent ensureLibrary(ContentItem c,User u){return ensureLibrary(c,u,Instant.now());}
+ private UserContent ensureLibrary(ContentItem c,User u,Instant startedAt){return library.findByUserIdAndContentId(userId,c.getId()).orElseGet(()->{UserContent x=new UserContent(u,c);x.update(UserContentStatus.IN_PROGRESS,null,false,startedAt,null,null);return library.save(x);});}
  private void requireSeries(ContentItem c){if(c.getItemType()!=ContentType.SERIES&&c.getItemType()!=ContentType.ANIME)throw new InvalidRequestException("Seasons are only available for SERIES and ANIME");}
  private ContentItem item(Long id){return items.findById(id).orElseThrow(()->new ResourceNotFoundException("Content with id "+id+" was not found"));}
  private ContentSeason season(Long id){return seasons.findById(id).orElseThrow(()->new ResourceNotFoundException("Season with id "+id+" was not found"));}
  private ContentEpisode episode(Long id){return episodes.findById(id).orElseThrow(()->new ResourceNotFoundException("Episode with id "+id+" was not found"));}
+ private MovieWatch movieWatch(Long id){return movieWatches.findByIdAndUserId(id,userId).orElseThrow(()->new ResourceNotFoundException("Movie watch with id "+id+" was not found"));}
  private User user(){return users.findById(userId).orElseThrow(()->new ResourceNotFoundException("Default user was not found"));}
  private Instant time(WatchRequest r){return r==null||r.watchedAt()==null?Instant.now():r.watchedAt();} private String norm(String s){return s==null||s.isBlank()?null:s.trim();}
  private SeasonResponse response(ContentSeason s){return new SeasonResponse(s.getId(),s.getContent().getId(),s.getSeasonNumber(),s.getTitle(),s.getReleaseYear());}
  private EpisodeResponse response(ContentEpisode e){return new EpisodeResponse(e.getId(),e.getSeason().getId(),e.getEpisodeNumber(),e.getTitle(),e.getDurationMinutes(),e.getReleaseDate());}
  private WatchResponse response(EpisodeWatch w){return new WatchResponse(w.getId(),w.getEpisode().getId(),w.getWatchedAt(),w.getWatchNumber());}
+ private WatchResponse movieResponse(MovieWatch w){return new WatchResponse(w.getId(),w.getContent().getId(),w.getWatchedAt(),w.getWatchNumber());}
 }

@@ -7,5 +7,6 @@ public class MovieWatch {
  @ManyToOne(fetch=FetchType.LAZY,optional=false) @JoinColumn(name="content_id",nullable=false) private ContentItem content;
  @Column(name="watched_at",nullable=false) private Instant watchedAt; @Column(name="watch_number",nullable=false) private Integer watchNumber;
  protected MovieWatch(){} public MovieWatch(User u,ContentItem c,Instant w,Integer n){user=u;content=c;watchedAt=w;watchNumber=n;}
- public Long getId(){return id;} public Instant getWatchedAt(){return watchedAt;} public Integer getWatchNumber(){return watchNumber;}
+ public Long getId(){return id;} public ContentItem getContent(){return content;} public Instant getWatchedAt(){return watchedAt;} public Integer getWatchNumber(){return watchNumber;}
+ public void changeWatchedAt(Instant value){watchedAt=value;}
 }

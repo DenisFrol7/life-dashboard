@@ -43,5 +43,8 @@ public class UserContent {
     public void changeStatus(UserContentStatus status, Instant completedAt) {
         this.status = status;
         this.completedAt = completedAt;
+        if (completedAt != null && startedAt != null && completedAt.isBefore(startedAt)) {
+            startedAt = completedAt;
+        }
     }
 }
