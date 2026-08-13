@@ -1,8 +1,9 @@
 package com.lifedashboard.content;
-import com.lifedashboard.content.dto.*; import jakarta.validation.Valid; import org.springframework.http.*; import org.springframework.web.bind.annotation.*; import java.util.*;
+import com.lifedashboard.content.dto.*; import jakarta.validation.Valid; import org.springframework.http.*; import org.springframework.web.bind.annotation.*; import java.util.*; import java.time.Instant;
 @RestController @RequestMapping("/api/content")
 @io.swagger.v3.oas.annotations.tags.Tag(name = "Content")
-public class ViewingController {private final ViewingService service;public ViewingController(ViewingService s){service=s;}
+public class ViewingController {private final ViewingService service;private final MediaTimelineService timeline;public ViewingController(ViewingService s,MediaTimelineService t){service=s;timeline=t;}
+ @GetMapping("/timeline") public List<MediaTimelineResponse> timeline(@RequestParam Instant from,@RequestParam Instant to){return timeline.get(from,to);}
  @PostMapping("/{id}/seasons") public ResponseEntity<SeasonResponse> season(@PathVariable Long id,@Valid @RequestBody SeasonRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.createSeason(id,r));}
  @GetMapping("/{id}/seasons") public List<SeasonResponse> seasons(@PathVariable Long id){return service.seasons(id);}
  @PutMapping("/seasons/{id}") public SeasonResponse updateSeason(@PathVariable Long id,@Valid @RequestBody SeasonRequest r){return service.updateSeason(id,r);}

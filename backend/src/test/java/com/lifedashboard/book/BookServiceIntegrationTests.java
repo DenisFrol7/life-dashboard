@@ -39,5 +39,17 @@ class BookServiceIntegrationTests {
         service.deleteSession(session.id());
         assertEquals(100,service.get(created.id()).currentMinute());
     }
+    @Test void completedPaperBookStartsWithFullProgress(){
+        var created=service.create(new BookRequest(TITLE,"Test Author",BookFormat.PAPER,230,null,2026,"Novel",null,null));
+        var result=service.putLibrary(created.id(),new LibraryEntryRequest(UserContentStatus.COMPLETED,null,false,null,Instant.now(),null));
+        assertEquals(230,result.currentPage());
+        assertEquals(100.0,result.progressPercent());
+    }
+    @Test void completedAudiobookStartsWithFullProgress(){
+        var created=service.create(new BookRequest(TITLE,"Test Author",BookFormat.AUDIOBOOK,null,480,2026,"Audiobook",null,null));
+        var result=service.putLibrary(created.id(),new LibraryEntryRequest(UserContentStatus.COMPLETED,null,false,null,Instant.now(),null));
+        assertEquals(480,result.currentMinute());
+        assertEquals(100.0,result.progressPercent());
+    }
     private void cleanup(){content.findByTitle(TITLE).ifPresent(content::delete);}
 }
