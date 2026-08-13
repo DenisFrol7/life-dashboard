@@ -24,7 +24,7 @@ export function SeriesPage() {
   useEffect(() => { void load() }, [load])
   const visible = useMemo(() => { const normalized = query.trim().toLocaleLowerCase('ru-RU'); return series.filter((item) => (!normalized || `${item.title} ${item.originalTitle ?? ''}`.toLocaleLowerCase('ru-RU').includes(normalized)) && (!status || library[item.id]?.status === status)) }, [library, query, series, status])
   const libraryEntries = Object.values(library)
-  const episodeCount = Object.values(progress).reduce((sum, item) => sum + item.episodeCount, 0)
+  const watchedEpisodeCount = Object.values(progress).reduce((sum, item) => sum + item.watchedEpisodeCount, 0)
   const watchedMinutes = Object.values(progress).reduce((sum, item) => sum + item.watchedMinutes, 0)
   const watchTime = `${Math.floor(watchedMinutes / 60)} ч ${watchedMinutes % 60} мин`
   return <div className="movies-page series-page"><section className="media-toolbar series-media-toolbar"><div className="series-status-tabs" aria-label="Фильтр сериалов по статусу">{([
@@ -34,7 +34,7 @@ export function SeriesPage() {
       ['COMPLETED', 'Просмотрено'],
       ['PAUSED', 'На паузе'],
       ['DROPPED', 'Брошено'],
-    ] as const).map(([value, label]) => <button key={value || 'all'} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><div className="journal-search series-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти сериал" /></div><button className="primary-button series-add-button" onClick={() => setEditing('new')}>+ Добавить сериал</button></section>
+    ] as const).map(([value, label]) => <button key={value || 'all'} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><div className="journal-search series-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти сериал" /></div><button className="primary-button series-add-button media-add-button" onClick={() => setEditing('new')}>+ Добавить сериал</button></section>
     <section className="series-catalog-layout"><div className="series-catalog-main">
     {error && <div className="notice error movies-error"><strong>Ошибка</strong><span>{error}</span></div>}
     {loading ? <div className="loading"><span />Загружаем сериалы…</div> : visible.length === 0 ? <div className="media-empty"><span>▤</span><h2>Сериалов пока нет</h2><p>Добавьте первый сериал в каталог.</p></div> : <section className="movie-grid series-catalog-grid">{visible.map((item) => {
@@ -61,7 +61,7 @@ export function SeriesPage() {
       <div><dt>В планах</dt><dd>{libraryEntries.filter((item) => item.status === 'PLANNED').length}</dd></div>
       <div><dt>На паузе</dt><dd>{libraryEntries.filter((item) => item.status === 'PAUSED').length}</dd></div>
       <div><dt>Брошено</dt><dd>{libraryEntries.filter((item) => item.status === 'DROPPED').length}</dd></div>
-      <div className="series-stat-total"><dt>Всего эпизодов</dt><dd>{episodeCount}</dd></div>
+      <div className="series-stat-total"><dt>Просмотрено эпизодов</dt><dd>{watchedEpisodeCount}</dd></div>
       <div><dt>Затрачено времени</dt><dd>{watchTime}</dd></div>
     </dl></aside></section>
     {editing && <SeriesForm series={editing === 'new' ? undefined : editing} library={editing === 'new' ? undefined : library[editing.id]} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void load() }} />}

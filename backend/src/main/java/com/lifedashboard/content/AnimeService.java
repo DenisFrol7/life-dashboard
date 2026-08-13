@@ -39,7 +39,7 @@ public class AnimeService {
                         item.getReleaseYear(), item.getCoverUrl(), ReleaseStatus.valueOf(item.getReleaseStatus()),
                         item.getUserStatus() == null ? null : UserContentStatus.valueOf(item.getUserStatus()),
                         item.getRating(), Boolean.TRUE.equals(item.getFavorite()), item.getSeasonCount(),
-                        item.getEpisodeCount(), item.getWatchedEpisodeCount())).toList();
+                        item.getEpisodeCount(), item.getWatchedEpisodeCount(), item.getWatchedMinutes())).toList();
     }
     public AnimeDetailsResponse get(Long id) { return details(findAnime(id)); }
     @Transactional
@@ -55,14 +55,6 @@ public class AnimeService {
     }
     @Transactional public void removeFromLibrary(Long id) { findAnime(id); contentService.removeFromLibrary(id); }
 
-    private AnimeSummaryResponse summary(ContentItem item) {
-        UserContent entry = library.findByUserIdAndContentId(userId, item.getId()).orElse(null);
-        return new AnimeSummaryResponse(item.getId(), item.getTitle(), item.getOriginalTitle(), item.getReleaseYear(),
-                item.getCoverUrl(), item.getReleaseStatus(), entry == null ? null : entry.getStatus(),
-                entry == null ? null : entry.getRating(), entry != null && entry.isFavorite(),
-                seasons.countByContentId(item.getId()), episodes.countByContent(item.getId()),
-                watches.watchedCount(userId, item.getId()));
-    }
     private AnimeDetailsResponse details(ContentItem item) {
         UserContent entry = library.findByUserIdAndContentId(userId, item.getId()).orElse(null);
         List<AnimeSeasonResponse> seasonResponses = seasons.findAllByContentIdOrderBySeasonNumber(item.getId()).stream()

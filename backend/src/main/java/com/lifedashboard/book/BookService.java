@@ -45,7 +45,9 @@ public class BookService {
     }
     @Transactional public void delete(Long id) { contentService.delete(find(id).getContent().getId()); }
     @Transactional public BookResponse putLibrary(Long id,LibraryEntryRequest request) {
-        Book book=find(id); contentService.putInLibrary(book.getContent().getId(),request); return response(book);
+        Book book=find(id); contentService.putInLibrary(book.getContent().getId(),request);
+        if(request.status()==UserContentStatus.COMPLETED) completeProgress(book,findLibrary(book));
+        return response(book);
     }
     @Transactional public BookResponse removeLibrary(Long id) {
         Book book=find(id); contentService.removeFromLibrary(book.getContent().getId()); return response(book);
@@ -83,6 +85,12 @@ public class BookService {
         int page=book.getBookFormat()==BookFormat.AUDIOBOOK?0:Math.max(0,Math.min(book.getPageCount(),value.getCurrentPage()+pageDelta));
         int minute=book.getBookFormat()==BookFormat.AUDIOBOOK?Math.max(0,Math.min(book.getDurationMinutes(),value.getCurrentMinute()+minuteDelta)):0;
         value.update(page,minute); progress.save(value);
+    }
+    private void completeProgress(Book book,UserContent entry) {
+        BookProgress value=findProgress(entry);
+        if(book.getBookFormat()==BookFormat.AUDIOBOOK) value.update(0,book.getDurationMinutes());
+        else value.update(book.getPageCount(),0);
+        progress.save(value);
     }
     private BookProgress findProgress(UserContent entry) { return progress.findByUserContentId(entry.getId()).orElseGet(() -> new BookProgress(entry)); }
     private ReadingSession findSession(Long id) { return sessions.findByIdAndUserContentUserId(id,userId)

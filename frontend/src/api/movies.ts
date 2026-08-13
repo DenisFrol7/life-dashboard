@@ -8,8 +8,10 @@ export type MovieInput = Omit<Movie, 'id'>
 export type LibraryEntry = { id: number; content: Movie; status: LibraryStatus; rating: number | null; favorite: boolean; startedAt: string | null; completedAt: string | null; personalNote: string | null }
 export type LibraryInput = Omit<LibraryEntry, 'id' | 'content'>
 export type Watch = { id: number; targetId: number; watchedAt: string; watchNumber: number; bulk: boolean }
+export type MovieCatalogItem = Omit<Movie, 'itemType' | 'xboxPlayAnywhere'> & { libraryId: number | null; userStatus: LibraryStatus | null; rating: number | null; favorite: boolean; startedAt: string | null; completedAt: string | null; personalNote: string | null; watchCount: number; watchedMinutes: number }
 
 export const getMovies = () => apiRequest<Movie[]>('/api/content?type=MOVIE')
+export const getMovieCatalog = () => apiRequest<MovieCatalogItem[]>('/api/movies')
 export const getMovie = (id: number) => apiRequest<Movie>(`/api/content/${id}`)
 export const createMovie = (input: MovieInput) => apiRequest<Movie>('/api/content', { method: 'POST', body: JSON.stringify(input) })
 export const updateMovie = (id: number, input: MovieInput) => apiRequest<Movie>(`/api/content/${id}`, { method: 'PUT', body: JSON.stringify(input) })
