@@ -538,7 +538,7 @@
 .book-list-add { align-self: start; width: auto; margin: 6px 0 4px; padding-right: 12px; padding-left: 12px; }
 .book-list-side { min-width: 150px; }
 .book-no-rating { color: #8a9498; font-size: 10px; }
-.book-details-page { display: grid; gap: 14px; }
+.book-details-page { display: grid; gap: 14px; max-width: 1280px; margin: 0 auto; }
 .movie-details-page { display: grid; gap: 14px; max-width: 1180px; margin: 0 auto; }
 .series-details-page { display: grid; gap: 14px; max-width: 1280px; margin: 0 auto; }
 .series-hero-card { display: grid; grid-template-columns: 210px minmax(0,1fr) minmax(300px,34%); gap: 14px; padding: 18px; border: 1px solid #dde4e7; border-radius: 15px; background: var(--paper); box-shadow: 0 8px 24px #2a39430d; }
@@ -615,17 +615,18 @@
 .movie-watch-summary small { color: var(--muted); font-size: 11px; }
 .movie-watch-summary strong { color: var(--accent-strong); font-size: 22px; }
 .movie-watch-summary > div > span:first-child strong { font-size: 32px; }
-.movie-description p { margin: 8px 0 0; color: var(--ink); font-size: 13px; line-height: 1.7; }
+.movie-description p { margin: 0; color: #52636c; line-height: 1.7; }
 .movie-watch-list { display: grid; gap: 8px; margin-top: 12px; }
 .movie-watch-list button { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 12px 15px; border: 1px solid #dfe5e8; border-radius: 10px; color: var(--ink); background: var(--paper-soft); cursor: pointer; text-align: left; }
 .movie-watch-list button > b { display: grid; width: 34px; height: 34px; border-radius: 50%; color: #fff; background: var(--accent-strong); place-items: center; }
 .movie-watch-list button span { display: grid; gap: 3px; }
 .movie-watch-list button strong { font-size: 13px; }
 .movie-watch-list button small,.movie-watch-list button em { color: var(--muted); font-size: 11px; font-style: normal; }
-.book-hero-card { display: grid; grid-template-columns: 210px minmax(0,1fr) minmax(250px,32%); gap: 24px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); }
-.book-detail-cover { display: grid; place-items: center; min-height: 315px; border-radius: 12px; background: linear-gradient(145deg,#6c7f88,#344952); background-position: center; background-size: cover; }
+.book-hero-card { display: grid; grid-template-columns: 210px minmax(0,1fr) minmax(300px,34%); gap: 14px; padding: 18px; border: 1px solid #dde4e7; border-radius: 15px; background: var(--paper); box-shadow: 0 8px 24px #2a39430d; }
+.book-detail-cover { display: grid; place-items: center; min-height: 300px; border-radius: 12px; background: linear-gradient(145deg,#6c7f88,#344952); background-position: center; background-size: cover; }
 .book-detail-cover span { color: #ffffff30; font-family: Georgia,serif; font-size: 76px; font-weight: 800; }
-.book-main-info { padding: 10px 0; }
+.book-detail-cover[style] span { display: none; }
+.book-main-info { padding: 8px 12px; }
 .book-main-info h1 { margin: 5px 0; color: #2f3f48; font-family: Georgia,serif; font-size: 30px; }
 .book-main-info h2 { margin: 0 0 24px; color: #73818a; font-size: 14px; font-weight: 500; }
 .book-main-info dl { display: grid; gap: 13px; }
@@ -636,13 +637,14 @@
 .book-personal-info strong { margin-bottom: 14px; color: #3f535f; }
 .book-personal-info p { margin: 0; color: #52636c; font-size: 11px; line-height: 1.6; }
 .book-detail-summary { display: grid; grid-template-columns: 1.5fr 1fr; gap: 14px; }
+.book-detail-summary .detail-card { min-height: 160px; }
 .book-progress-detail { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; }
 .book-progress-detail h2 { margin-bottom: 7px; }.book-progress-detail>div:first-child strong { color: #526874; }
 .book-progress-detail>b { color: #58778b; font-size: 24px; }.book-progress-detail .book-progress { grid-column: 1/-1; width: 100%; }.book-progress-detail button { grid-column: 1/-1; justify-self: end; }
 .book-description p { margin: 0; color: #52636c; line-height: 1.7; }
 .reading-session-list { display: grid; gap: 7px; }
-.reading-session-list button { display: grid; grid-template-columns: 1fr auto 110px; align-items: center; gap: 15px; padding: 11px; border: 1px solid #e5eaed; border-radius: 9px; color: #465761; background: #f8fafb; text-align: left; cursor: pointer; }
-.reading-session-list span { display: grid; gap: 3px; }.reading-session-list small { color: #839099; }.reading-session-list b { color: #58778b; }.reading-session-list em { color: #74838b; font-style: normal; text-align: right; }
+.reading-session-list button { display: grid; grid-template-columns: 1fr auto 120px; align-items: center; gap: 18px; min-height: 64px; padding: 12px 15px; border: 1px solid #dfe5e8; border-radius: 10px; color: #465761; background: #f8fafb; text-align: left; cursor: pointer; }
+.reading-session-list span { display: grid; gap: 4px; }.reading-session-list strong { font-size: 13px; }.reading-session-list small { color: #839099; font-size: 11px; }.reading-session-list b { color: #58778b; font-size: 12px; }.reading-session-list em { color: #74838b; font-size: 11px; font-style: normal; text-align: right; }
 .form-hint { margin: 0; color: #75858d; font-size: 9px; }
 .game-form { width: min(760px, 100%); }
 .game-sessions-panel { margin-bottom: 20px; padding: 18px; border: 1px solid #e1e5e2; border-radius: 14px; background: #fff; }
