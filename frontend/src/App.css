@@ -592,11 +592,11 @@
 .season-summary-actions { display: flex; align-items: center; gap: 10px; }
 .season-summary-actions button { padding: 7px 10px; border: 0; border-radius: 7px; color: var(--accent-strong); background: var(--accent-soft); cursor: pointer; font-size: 10px; }
 .add-episode-row { margin: 8px 12px; padding: 8px; border: 1px dashed var(--line); border-radius: 8px; color: var(--accent-strong); background: transparent; cursor: pointer; }
-.movie-hero-card { display: grid; grid-template-columns: 220px minmax(0,1fr) minmax(260px,.7fr); gap: 25px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: 0 8px 28px #25322708; }
-.movie-detail-poster { display: grid; min-height: 330px; border-radius: 12px; background: linear-gradient(145deg,#526d7d,#263d4c) center/cover; place-items: center; }
+.movie-hero-card { display: grid; grid-template-columns: 210px minmax(0,1fr) minmax(300px,34%); gap: 14px; padding: 18px; border: 1px solid #dde4e7; border-radius: 15px; background: var(--paper); box-shadow: 0 8px 24px #2a39430d; }
+.movie-detail-poster { display: grid; min-height: 300px; border-radius: 12px; background: linear-gradient(145deg,#526d7d,#263d4c) center/cover; place-items: center; }
 .movie-detail-poster span { color: #ffffff30; font-family: Georgia,serif; font-size: 76px; font-weight: 800; }
 .movie-detail-poster[style] span { display: none; }
-.movie-main-info { padding: 10px 0; }
+.movie-main-info { padding: 8px 12px; }
 .movie-main-info h1 { margin: 7px 0; color: var(--ink); font-family: Georgia,serif; font-size: clamp(25px,3vw,38px); }
 .movie-main-info h2 { margin: 0 0 25px; color: var(--muted); font-size: 14px; font-weight: 500; }
 .movie-main-info dl { display: grid; gap: 15px; margin: 24px 0 0; }
@@ -606,17 +606,22 @@
 .movie-personal-info { display: grid; align-content: start; gap: 7px; padding: 20px; border-left: 1px solid var(--line); }
 .movie-personal-info strong { margin-bottom: 12px; color: var(--ink); font-size: 17px; }
 .movie-personal-info p { margin: 0; color: var(--ink); font-size: 12px; line-height: 1.6; }
-.movie-detail-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.movie-detail-summary article:first-child { display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 5px 12px; }
-.movie-detail-summary article:first-child h2,.movie-detail-summary article:first-child button { grid-column: 1/-1; }
-.movie-detail-summary article:first-child strong { color: var(--accent-strong); font-size: 32px; }
-.movie-detail-summary article:first-child span { color: var(--muted); font-size: 12px; }
+.movie-detail-summary { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.movie-detail-summary .detail-card { min-height: 150px; }
+.movie-watch-summary { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 16px 24px; }
+.movie-watch-summary h2 { grid-column: 1/-1; }
+.movie-watch-summary > div { display: grid; grid-template-columns: minmax(160px,.6fr) minmax(260px,1fr); gap: 20px; }
+.movie-watch-summary > div > span { display: grid; gap: 6px; }
+.movie-watch-summary small { color: var(--muted); font-size: 11px; }
+.movie-watch-summary strong { color: var(--accent-strong); font-size: 22px; }
+.movie-watch-summary > div > span:first-child strong { font-size: 32px; }
 .movie-description p { margin: 8px 0 0; color: var(--ink); font-size: 13px; line-height: 1.7; }
 .movie-watch-list { display: grid; gap: 8px; margin-top: 12px; }
-.movie-watch-list button { display: grid; grid-template-columns: 35px 1fr auto; align-items: center; gap: 12px; width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--paper-soft); cursor: pointer; text-align: left; }
-.movie-watch-list button > b { display: grid; width: 30px; height: 30px; border-radius: 50%; color: #fff; background: var(--accent-strong); place-items: center; }
+.movie-watch-list button { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 14px; width: 100%; min-height: 64px; padding: 12px 15px; border: 1px solid #dfe5e8; border-radius: 10px; color: var(--ink); background: var(--paper-soft); cursor: pointer; text-align: left; }
+.movie-watch-list button > b { display: grid; width: 34px; height: 34px; border-radius: 50%; color: #fff; background: var(--accent-strong); place-items: center; }
 .movie-watch-list button span { display: grid; gap: 3px; }
-.movie-watch-list button small,.movie-watch-list button em { color: var(--muted); font-size: 10px; font-style: normal; }
+.movie-watch-list button strong { font-size: 13px; }
+.movie-watch-list button small,.movie-watch-list button em { color: var(--muted); font-size: 11px; font-style: normal; }
 .book-hero-card { display: grid; grid-template-columns: 210px minmax(0,1fr) minmax(250px,32%); gap: 24px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); }
 .book-detail-cover { display: grid; place-items: center; min-height: 315px; border-radius: 12px; background: linear-gradient(145deg,#6c7f88,#344952); background-position: center; background-size: cover; }
 .book-detail-cover span { color: #ffffff30; font-family: Georgia,serif; font-size: 76px; font-weight: 800; }
@@ -1024,4 +1029,10 @@
   .book-list-card { grid-template-columns: 74px minmax(0, 1fr); }
   .book-list-cover { width: 74px; height: 105px; }
   .book-list-side { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .movie-watch-summary { grid-template-columns: 1fr; }
+  .movie-watch-summary > div { grid-template-columns: 1fr; }
+  .movie-watch-summary > button { justify-self: start; }
 }
