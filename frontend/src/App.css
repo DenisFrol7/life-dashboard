@@ -494,6 +494,11 @@
 .structure-forms button { padding: 7px 8px; border: 0; border-radius: 7px; color: #fff; background: #56748a; cursor: pointer; font-size: 8px; font-weight: 700; }
 .anime-poster { background: linear-gradient(145deg, #55455f, #292238); }
 .anime-progress span { background: #8e75a3; }
+.anime-detail-poster { background: linear-gradient(145deg,#55455f,#292238) center/cover; }
+.anime-details-page .detail-status,
+.anime-details-page .series-progress-card > b,
+.anime-details-page .series-count-card strong,
+.anime-details-page .series-last-watch strong { color: #765b82; }
 .anime-rule { margin: 0 0 14px; padding: 10px 12px; border-left: 3px solid #9279a7; border-radius: 4px 9px 9px 4px; color: #6e6474; background: #f0eaf3; font-size: 9px; line-height: 1.5; }
 .anime-empty > span { color: #9279a7; }
 .game-poster { background: linear-gradient(145deg, #31534f, #172d2d); }
@@ -550,7 +555,6 @@
 .series-personal-info > div > span { color: var(--muted); font-size: 11px; }
 .series-personal-info .detail-status { color: #315c72; font-size: 18px; }
 .series-detail-rating { display: flex; align-items: center; gap: 9px; }
-.series-detail-rating span { color: #d09a31; font-size: 17px; letter-spacing: 2px; }
 .series-summary-grid { display: grid; grid-template-columns: 1.25fr .75fr 1fr; gap: 14px; }
 .series-summary-grid .detail-card { min-height: 150px; }
 .series-progress-card { display: grid; grid-template-columns: 1fr auto; align-items: start; }
@@ -691,7 +695,23 @@
 .detail-status { color: #315c72; font-size: 17px; }
 .game-personal-info span, .game-personal-info p { margin: 0; color: #68757d; font-size: 12px; line-height: 1.5; }
 .detail-rating { color: #273640; font-size: 24px; font-weight: 700; }
-.detail-rating span { color: #e6a819; letter-spacing: 2px; }
+
+/* Consistent readable typography across media detail headers. */
+.movie-details-page .movie-main-info dt,
+.movie-details-page .movie-personal-info small,
+.book-details-page .book-main-info dt,
+.book-details-page .book-personal-info small,
+.game-details-page .game-main-info dt,
+.game-details-page .game-personal-info small { font-size: 13px; }
+.movie-details-page .movie-main-info dd,
+.book-details-page .book-main-info dd,
+.game-details-page .game-main-info dd { font-size: 16px; }
+.movie-details-page .movie-personal-info strong,
+.book-details-page .book-personal-info strong,
+.game-details-page .detail-status { font-size: 20px; }
+.movie-details-page .movie-personal-info p,
+.book-details-page .book-personal-info p,
+.game-details-page .game-personal-info p { font-size: 15px; }
 .xbox-detail-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 34%); gap: 14px; }
 .detail-card { padding: 17px; }
 .detail-card h2 { margin: 0 0 15px; color: #293944; font-size: 15px; }
