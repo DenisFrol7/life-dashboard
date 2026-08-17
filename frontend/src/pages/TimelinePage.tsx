@@ -1,28 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getActivityRange } from '../api/activity'
-import { getCalendarEvents, getOccurrences, type CalendarEvent } from '../api/calendar'
-import { getHabits, getHabitEntries } from '../api/habits'
-import { getJournalEntries } from '../api/journal'
-import { getMediaTimeline } from '../api/mediaTimeline'
-import { getSleepSessions } from '../api/sleep'
-import { getGameSessions } from '../api/games'
+import { getTimeline, type TimelineItem as Item, type TimelineKind as Kind } from '../api/timeline'
 
-type Kind = 'activity' | 'sleep' | 'habit' | 'calendar' | 'media' | 'game' | 'blog'
-type Item = { id: string; kind: Kind; time: string | null; title: string; detail: string; value?: string; durationMinutes?: number; completed?: boolean }
 const today = new Date().toLocaleDateString('en-CA')
 const labels: Record<Kind, string> = { activity: 'Активность', sleep: 'Сон', habit: 'Привычка', calendar: 'Календарь', media: 'Просмотр', game: 'Игра', blog: 'Блог' }
 const icons: Record<Kind, string> = { activity: '↗', sleep: '☾', habit: '✓', calendar: '□', media: '▶', game: '◆', blog: '✎' }
-const calendarLabels = { EVENT: 'Событие', TASK: 'Задача', REMINDER: 'Напоминание' }
 const asDate = (value: string) => new Date(`${value}T12:00:00`)
-const occursOn = (event: CalendarEvent, date: string) => {
-  if (date < event.startDate || event.repeatUntil && date > event.repeatUntil) return false
-  const day = asDate(date).getDay() || 7
-  if (event.scheduleType === 'ONCE') return date === event.startDate
-  if (event.scheduleType === 'DAILY') return true
-  if (event.scheduleType === 'SELECTED_DAYS') return event.scheduleDays.includes(day)
-  return Math.round((asDate(date).getTime() - asDate(event.startDate).getTime()) / 86_400_000) % 7 === 0
-}
-const dayRange = (date: string) => { const from = new Date(`${date}T00:00:00`); const to = new Date(from); to.setDate(to.getDate() + 1); return { from: from.toISOString(), to: to.toISOString() } }
 const duration = (minutes: number) => `${Math.floor(minutes / 60)} ч ${minutes % 60} мин`
 
 export function TimelinePage() {
@@ -35,24 +17,7 @@ export function TimelinePage() {
   const load = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const range = dayRange(date)
-      const [activity, sleep, habits, calendar, blog, media, gameSessions] = await Promise.all([
-        getActivityRange(date, date), getSleepSessions(range.from, range.to), getHabits('ACTIVE'),
-        getCalendarEvents(), getJournalEntries({ from: date, to: date }), getMediaTimeline(date),
-        getGameSessions(range.from, range.to),
-      ])
-      const habitData = await Promise.all(habits.map(async (habit) => ({ habit, entries: await getHabitEntries(habit.id) })))
-      const calendarData = await Promise.all(calendar.map(async (event) => ({ event, occurrences: await getOccurrences(event.id) })))
-      const result: Item[] = []
-      activity.forEach((entry) => result.push({ id: `activity-${entry.id}`, kind: 'activity', time: null, title: 'Дневная активность', detail: `${entry.steps?.toLocaleString('ru-RU') ?? '—'} шагов · ${entry.distanceMeters == null ? '—' : `${(entry.distanceMeters / 1000).toFixed(2)} км`}`, value: entry.note ?? undefined }))
-      sleep.forEach((session) => { const minutes = Math.max(0, Math.round((new Date(session.endedAt).getTime() - new Date(session.startedAt).getTime()) / 60_000) - (session.awakeMinutes ?? 0)); result.push({ id: `sleep-${session.id}`, kind: 'sleep', time: new Date(session.endedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }), title: `Сон — ${duration(minutes)}`, detail: `Заснул в ${new Date(session.startedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}${session.qualityRating ? ` · качество ${session.qualityRating}/5` : ''}` }) })
-      habitData.forEach(({ habit, entries }) => { const entry = entries.find((item) => item.entryDate === date); if (entry) result.push({ id: `habit-${entry.id}`, kind: 'habit', time: null, title: habit.name, detail: entry.skipped ? 'Пропущено' : habit.trackingType === 'BOOLEAN' ? 'Выполнено' : `${entry.value ?? 0} ${habit.unit ?? ''}`, completed: !entry.skipped }) })
-      calendarData.forEach(({ event, occurrences }) => { if (!occursOn(event, date)) return; const occurrence = occurrences.find((item) => item.occurrenceDate === date); if (occurrence?.status === 'CANCELLED' || occurrence?.status === 'SKIPPED') return; result.push({ id: `calendar-${event.id}`, kind: 'calendar', time: event.startTime?.slice(0, 5) ?? null, title: event.title, detail: `${calendarLabels[event.eventType]}${event.location ? ` · ${event.location}` : ''}`, completed: occurrence?.status === 'COMPLETED' }) })
-      media.forEach((entry) => result.push({ id: entry.id, kind: 'media', time: new Date(entry.occurredAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }), title: entry.title, detail: entry.detail, value: entry.durationMinutes ? duration(entry.durationMinutes) : undefined }))
-      gameSessions.forEach((session) => { const progress = [session.unlockedAchievements ? `${session.unlockedAchievements} достиж.` : '', session.earnedGamerscore ? `${session.earnedGamerscore} G` : ''].filter(Boolean).join(' · '); result.push({ id: `game-${session.id}`, kind: 'game', time: new Date(session.startedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }), title: session.title, detail: [progress, session.note].filter(Boolean).join(' · ') || 'Игровая сессия', value: duration(session.durationMinutes), durationMinutes: session.durationMinutes }) })
-      blog.forEach((entry) => result.push({ id: `blog-${entry.id}`, kind: 'blog', time: null, title: entry.title ?? 'Запись без заголовка', detail: entry.content.length > 100 ? `${entry.content.slice(0, 100)}…` : entry.content }))
-      result.sort((a, b) => (a.time ?? '23:59').localeCompare(b.time ?? '23:59'))
-      setItems(result)
+      setItems(await getTimeline(date))
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось собрать ленту дня') }
     finally { setLoading(false) }
   }, [date])

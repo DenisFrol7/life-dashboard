@@ -1,6 +1,7 @@
 package com.lifedashboard.game;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.time.Instant;
@@ -12,6 +13,7 @@ public interface GameSessionRepository extends JpaRepository<GameSession, Long> 
             Long userId, Instant from);
     List<GameSession> findAllByLibraryEntryUserContentUserIdAndStartedAtLessThanOrderByStartedAtDesc(
             Long userId, Instant to);
+    @EntityGraph(attributePaths = {"libraryEntry", "libraryEntry.userContent", "libraryEntry.userContent.content"})
     List<GameSession> findAllByLibraryEntryUserContentUserIdAndStartedAtGreaterThanEqualAndStartedAtLessThanOrderByStartedAtDesc(
             Long userId, Instant from, Instant to);
     Optional<GameSession> findByIdAndLibraryEntryUserContentUserId(Long id, Long userId);
