@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { getAnimeDetails, type AnimeDetails } from '../api/anime'
 import {
-  clearSeasonWatches, getEpisodeWatches, getSeasonCompletion, watchEpisode,
+  clearSeasonWatches, getViewingStructure, watchEpisode,
   type Episode, type Season, type SeasonCompletion,
 } from '../api/series'
 import type { LibraryStatus, ReleaseStatus, Watch } from '../api/movies'
@@ -32,17 +32,8 @@ export function AnimeDetailsPage() {
   const load = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const item = await getAnimeDetails(id)
-      const details = await Promise.all(item.seasons.map(async (season) => ({
-        id: season.id, contentId: item.id, seasonNumber: season.seasonNumber, title: season.title,
-        releaseYear: season.releaseYear, completion: await getSeasonCompletion(season.id),
-        episodes: await Promise.all(season.episodes.map(async (episode) => ({
-          id: episode.id, seasonId: season.id, episodeNumber: episode.episodeNumber, title: episode.title,
-          durationMinutes: episode.durationMinutes, releaseDate: episode.releaseDate,
-          watches: await getEpisodeWatches(episode.id),
-        }))),
-      })))
-      setAnime(item); setSeasons(details)
+      const [item, structure] = await Promise.all([getAnimeDetails(id), getViewingStructure(id)])
+      setAnime(item); setSeasons(structure.seasons)
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить аниме') }
     finally { setLoading(false) }
   }, [id])

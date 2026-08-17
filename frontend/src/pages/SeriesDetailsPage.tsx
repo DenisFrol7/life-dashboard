@@ -7,10 +7,7 @@ import {
   deleteEpisode,
   deleteSeason,
   clearSeasonWatches,
-  getEpisodes,
-  getEpisodeWatches,
-  getSeasons,
-  getSeasonCompletion,
+  getViewingStructure,
   getSeriesById,
   getSeriesLibrary,
   watchEpisode,
@@ -49,13 +46,9 @@ export function SeriesDetailsPage() {
   const load = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const [item, entries, seasonItems] = await Promise.all([getSeriesById(id), getSeriesLibrary(), getSeasons(id)])
+      const [item, entries, structure] = await Promise.all([getSeriesById(id), getSeriesLibrary(), getViewingStructure(id)])
       if (item.itemType !== 'SERIES') throw new Error('Запрошенная запись не является сериалом')
-      const details = await Promise.all(seasonItems.map(async (season) => {
-        const [episodes, completion] = await Promise.all([getEpisodes(season.id), getSeasonCompletion(season.id)])
-        return { ...season, completion, episodes: await Promise.all(episodes.map(async (episode) => ({ ...episode, watches: await getEpisodeWatches(episode.id) }))) }
-      }))
-      setSeries(item); setLibrary(entries.find((entry) => entry.content.id === id)); setSeasons(details)
+      setSeries(item); setLibrary(entries.find((entry) => entry.content.id === id)); setSeasons(structure.seasons)
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить сериал') }
     finally { setLoading(false) }
   }, [id])

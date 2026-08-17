@@ -49,6 +49,30 @@ public class ViewingService {
                 .map((@NonNull ContentSeason season) -> response(season)).toList();
     }
 
+    public ViewingStructureResponse viewingStructure(Long id) {
+        ContentItem content = item(id); requireSeries(content);
+        List<ContentEpisode> contentEpisodes = episodes.findAllByContentId(id);
+        Map<Long, List<EpisodeWatch>> watchesByEpisode = episodeWatches.findAllByUserIdAndContentId(userId, id).stream()
+                .collect(java.util.stream.Collectors.groupingBy(watch -> watch.getEpisode().getId()));
+        Map<Long, SeasonCompletion> completionsBySeason = seasonCompletions.findAllByUserIdAndSeasonContentId(userId, id)
+                .stream().collect(java.util.stream.Collectors.toMap(completion -> completion.getSeason().getId(), completion -> completion));
+        Map<Long, List<ContentEpisode>> episodesBySeason = contentEpisodes.stream()
+                .collect(java.util.stream.Collectors.groupingBy(episode -> episode.getSeason().getId()));
+        List<ViewingSeasonResponse> result = seasons.findAllByContentIdOrderBySeasonNumber(id).stream().map(season -> {
+            SeasonCompletion completion = completionsBySeason.get(season.getId());
+            SeasonCompletionResponse completionResponse = completion == null ? null : response(completion);
+            List<ViewingEpisodeResponse> episodeResponses = episodesBySeason.getOrDefault(season.getId(), List.of()).stream()
+                    .map(episode -> new ViewingEpisodeResponse(episode.getId(), season.getId(), episode.getEpisodeNumber(),
+                            episode.getTitle(), episode.getDurationMinutes(), episode.getReleaseDate(),
+                            watchesByEpisode.getOrDefault(episode.getId(), List.of()).stream()
+                                    .map(watch -> response(watch)).toList()))
+                    .toList();
+            return new ViewingSeasonResponse(season.getId(), id, season.getSeasonNumber(), season.getTitle(),
+                    season.getReleaseYear(), completionResponse, episodeResponses);
+        }).toList();
+        return new ViewingStructureResponse(result);
+    }
+
     @Transactional
     public SeasonResponse updateSeason(Long id, SeasonRequest request) {
         ContentSeason season = season(id); Long contentId = season.getContent().getId();

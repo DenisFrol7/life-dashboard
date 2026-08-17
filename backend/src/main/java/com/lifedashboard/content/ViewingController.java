@@ -6,6 +6,7 @@ public class ViewingController {private final ViewingService service;private fin
  @GetMapping("/timeline") public List<MediaTimelineResponse> timeline(@RequestParam Instant from,@RequestParam Instant to){return timeline.get(from,to);}
  @PostMapping("/{id}/seasons") public ResponseEntity<SeasonResponse> season(@PathVariable Long id,@Valid @RequestBody SeasonRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.createSeason(id,r));}
  @GetMapping("/{id}/seasons") public List<SeasonResponse> seasons(@PathVariable Long id){return service.seasons(id);}
+ @GetMapping("/{id}/viewing-structure") public ViewingStructureResponse viewingStructure(@PathVariable Long id){return service.viewingStructure(id);}
  @PutMapping("/seasons/{id}") public SeasonResponse updateSeason(@PathVariable Long id,@Valid @RequestBody SeasonRequest r){return service.updateSeason(id,r);}
  @DeleteMapping("/seasons/{id}") public ResponseEntity<Void> deleteSeason(@PathVariable Long id){service.deleteSeason(id);return ResponseEntity.noContent().build();}
  @PostMapping("/seasons/{id}/episodes") public ResponseEntity<EpisodeResponse> episode(@PathVariable Long id,@Valid @RequestBody EpisodeRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.createEpisode(id,r));}
