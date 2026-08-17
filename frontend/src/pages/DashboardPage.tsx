@@ -36,10 +36,14 @@ export function DashboardPage() {
       </section>
 
       <section className="metrics-grid" aria-label="Показатели за сегодня">
-        <Metric to="/activity" icon="↗" tone="mint" label="Шаги" value={data.activity.steps?.toLocaleString('ru-RU') ?? '—'} note={formatDistance(data.activity.distanceMeters)} />
-        <Metric to="/sleep" icon="☾" tone="violet" label="Сон" value={formatDuration(data.sleep.durationMinutes)} note={data.sleep.qualityRating ? `Качество ${data.sleep.qualityRating}/10` : 'Нет оценки'} />
-        <Metric to="/habits" icon="✓" tone="amber" label="Привычки" value={`${data.habits.completed} из ${data.habits.scheduled}`} note={data.habits.skipped ? `Пропущено: ${data.habits.skipped}` : 'Без пропусков'} />
-        <Metric to="/games" icon="◇" tone="blue" label="Игровое время" value={formatDuration(data.gaming.durationMinutes)} note={`${data.gaming.sessions} ${sessionWord(data.gaming.sessions)}`} />
+        <div className="metrics-column">
+          <Metric to="/activity" icon="↗" tone="mint" label="Шаги" value={data.activity.steps?.toLocaleString('ru-RU') ?? '—'} note={formatDistance(data.activity.distanceMeters)} />
+          <Metric to="/sleep" icon="☾" tone="violet" label="Сон" value={formatDuration(data.sleep.durationMinutes)} note={data.sleep.qualityRating ? `Качество ${data.sleep.qualityRating}/10` : 'Нет оценки'} />
+        </div>
+        <div className="metrics-column">
+          <Metric to="/habits" icon="✓" tone="amber" label="Привычки" value={`${data.habits.completed} из ${data.habits.scheduled}`} note={data.habits.skipped ? `Пропущено: ${data.habits.skipped}` : 'Без пропусков'} />
+          <Metric to="/games" icon="◇" tone="blue" label="Игровое время" value={formatDuration(data.gaming.durationMinutes)} note={`${data.gaming.sessions} ${sessionWord(data.gaming.sessions)}`} />
+        </div>
       </section>
 
       <section className="dashboard-main-grid">
@@ -49,7 +53,6 @@ export function DashboardPage() {
           <ScheduleRow icon="✓" tone="amber" title="Задачи" note={`Выполнено: ${data.calendar.completedTasks}`} value={data.calendar.pendingTasks} suffix="осталось" />
           <ScheduleRow icon="!" tone="violet" title="Напоминания" note="Требуют внимания сегодня" value={data.calendar.reminders} />
         </article>
-
         <article className="panel dashboard-media">
           <PanelHeading eyebrow="Медиатека" title="Сейчас в процессе" count={mediaTotal} />
           <MediaRow to="/movies" label="Фильмы" value={data.media.currentMovies} color="coral" />
@@ -57,9 +60,6 @@ export function DashboardPage() {
           <MediaRow to="/anime" label="Аниме" value={data.media.currentAnime} paused={data.media.pausedAnime} color="violet" />
           <MediaRow to="/games" label="Игры" value={data.media.currentGames} color="mint" />
         </article>
-      </section>
-
-      <section className="dashboard-shortcuts">
         <DashboardShortcut to="/journal" eyebrow="Активность дня" title="Журнал активности" text="Просмотры, тренировки, привычки и игровые сессии в одной хронологии." action="Открыть ленту" />
         <DashboardShortcut to="/blog" eyebrow="Мысли и заметки" title="Блог" text={data.journalEntries ? `Сегодня добавлено записей: ${data.journalEntries}.` : 'Сегодня записей пока нет.'} action="Перейти к записям" accent />
       </section>
