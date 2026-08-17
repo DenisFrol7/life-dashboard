@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router'
 import {
   deleteMovieWatch,
@@ -42,8 +42,6 @@ export function MovieDetailsPage() {
     finally { setLoading(false) }
   }, [id])
   useEffect(() => { void load() }, [load])
-  const totalTime = useMemo(() => (movie?.durationMinutes ?? 0) * watches.length, [movie, watches.length])
-
   if (loading) return <div className="loading"><span />Загружаем фильм…</div>
   if (error || !movie) return <div className="notice error"><strong>Не удалось открыть фильм</strong><span>{error}</span></div>
 
@@ -52,11 +50,10 @@ export function MovieDetailsPage() {
     <section className="movie-hero-card">
       <div className="movie-detail-poster" style={movie.coverUrl ? { backgroundImage: `url(${movie.coverUrl})` } : undefined}><span>{movie.title.slice(0, 1)}</span></div>
       <div className="movie-main-info"><p className="eyebrow">{movie.format === 'ANIMATION' ? 'Мультфильм' : 'Фильм'}</p><h1>{movie.title}</h1>{movie.originalTitle && <h2>{movie.originalTitle}</h2>}<dl><div><dt>Год</dt><dd>{movie.releaseYear ?? '—'}</dd></div><div><dt>Жанр</dt><dd>{movie.genre ?? '—'}</dd></div><div><dt>Длительность</dt><dd>{duration(movie.durationMinutes)}</dd></div></dl></div>
-      <div className="movie-personal-info"><small>Статус</small><strong>{library ? statusLabels[library.status] : 'Не в библиотеке'}</strong><small>Моя оценка</small><strong>{library?.rating ? `★ ${library.rating}/10` : '—'}</strong><small>Заметки</small><p>{library?.personalNote ?? 'Заметок пока нет.'}</p></div>
+      <div className="movie-personal-info series-personal-info"><div><small>Статус</small><strong className="detail-status">● {library ? statusLabels[library.status] : 'Не в библиотеке'}</strong>{watches.length > 0 && <span>Последний просмотр: {formatDate(watches.at(-1)!.watchedAt)}</span>}</div><div><small>Моя оценка</small><strong className="series-detail-rating">{library?.rating ? `${library.rating}/10` : '—'}</strong></div><div><small>Заметки</small><p>{library?.personalNote ?? 'Заметок пока нет.'}</p></div></div>
     </section>
     <section className="movie-detail-summary">
-      <article className="detail-card"><h2>История просмотров</h2><strong>{watches.length}</strong><span>{watches.length === 1 ? 'просмотр' : 'просмотров'}</span><button className="primary-button" onClick={() => setWatch('new')}>+ Добавить просмотр</button></article>
-      <article className="detail-card total-playtime"><h2>Общее время просмотра</h2><strong>◷ {duration(totalTime)}</strong><small>Последний просмотр</small><span>{watches.length ? formatDate(watches.at(-1)!.watchedAt) : '—'}</span></article>
+      <article className="detail-card movie-watch-summary"><h2>История просмотров</h2><div><span><small>Количество просмотров</small><strong>{watches.length}</strong></span><span><small>Последний просмотр</small><strong>{watches.length ? formatDate(watches.at(-1)!.watchedAt) : 'Просмотров пока нет'}</strong></span></div><button className="primary-button" onClick={() => setWatch('new')}>+ Добавить просмотр</button></article>
     </section>
     {movie.description && <section className="detail-card movie-description"><h2>Описание</h2><p>{movie.description}</p></section>}
     <section className="detail-card movie-watch-history"><div className="panel-heading"><div><p className="eyebrow">История</p><h2>Все просмотры</h2></div></div>{watches.length ? <div className="movie-watch-list">{[...watches].reverse().map((item) => <button key={item.id} onClick={() => setWatch(item)}><b>{item.watchNumber}</b><span><strong>Просмотр №{item.watchNumber}</strong><small>{formatDate(item.watchedAt)}</small></span><em>Изменить</em></button>)}</div> : <p className="muted">Просмотров пока нет.</p>}</section>
