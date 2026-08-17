@@ -11,6 +11,9 @@ export type SeasonInput = Omit<Season, 'id' | 'contentId'>
 export type EpisodeInput = Omit<Episode, 'id' | 'seasonId'>
 export type BulkEpisodeInput = { count: number; durationMinutes: number | null; markWatched: boolean; watchedAt: string | null }
 export type SeasonCompletion = { id: number; seasonId: number; completedAt: string | null; episodeCount: number }
+export type ViewingEpisode = Episode & { watches: Watch[] }
+export type ViewingSeason = Season & { completion?: SeasonCompletion; episodes: ViewingEpisode[] }
+export type ViewingStructure = { seasons: ViewingSeason[] }
 export type SeriesCatalogItem = Omit<Series, 'itemType' | 'xboxPlayAnywhere'> & { libraryId: number | null; userStatus: LibraryStatus | null; rating: number | null; favorite: boolean; startedAt: string | null; completedAt: string | null; personalNote: string | null; seasonCount: number; episodeCount: number; watchedEpisodeCount: number; watchedMinutes: number }
 
 export const getSeries = () => apiRequest<Series[]>('/api/content?type=SERIES')
@@ -23,6 +26,7 @@ export const getSeriesLibrary = () => apiRequest<SeriesLibraryEntry[]>('/api/lib
 export const putSeriesLibrary = (id: number, input: LibraryInput) => apiRequest<SeriesLibraryEntry>(`/api/library/${id}`, { method: 'PUT', body: JSON.stringify(input) })
 export const removeSeriesLibrary = (id: number) => apiRequest<void>(`/api/library/${id}`, { method: 'DELETE' })
 export const getSeasons = (id: number) => apiRequest<Season[]>(`/api/content/${id}/seasons`)
+export const getViewingStructure = (id: number) => apiRequest<ViewingStructure>(`/api/content/${id}/viewing-structure`)
 export const createSeason = (id: number, input: SeasonInput) => apiRequest<Season>(`/api/content/${id}/seasons`, { method: 'POST', body: JSON.stringify(input) })
 export const updateSeason = (id: number, input: SeasonInput) => apiRequest<Season>(`/api/content/seasons/${id}`, { method: 'PUT', body: JSON.stringify(input) })
 export const deleteSeason = (id: number) => apiRequest<void>(`/api/content/seasons/${id}`, { method: 'DELETE' })
