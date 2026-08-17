@@ -3,6 +3,7 @@ package com.lifedashboard.content;
 import com.lifedashboard.common.error.*;
 import com.lifedashboard.content.dto.*;
 import com.lifedashboard.user.*;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,7 +45,8 @@ public class ViewingService {
     }
 
     public List<SeasonResponse> seasons(Long id) {
-        item(id); return seasons.findAllByContentIdOrderBySeasonNumber(id).stream().map(this::response).toList();
+        item(id); return seasons.findAllByContentIdOrderBySeasonNumber(id).stream()
+                .map((@NonNull ContentSeason season) -> response(season)).toList();
     }
 
     @Transactional
@@ -78,7 +80,7 @@ public class ViewingService {
     public List<EpisodeResponse> createEpisodes(Long seasonId, BulkEpisodeRequest request) {
         ContentSeason season = season(seasonId);
         int next = episodes.findAllBySeasonIdOrderByEpisodeNumber(seasonId).stream()
-                .mapToInt(ContentEpisode::getEpisodeNumber).max().orElse(0) + 1;
+                .mapToInt((@NonNull ContentEpisode episode) -> episode.getEpisodeNumber()).max().orElse(0) + 1;
         List<ContentEpisode> created = new ArrayList<>();
         for (int index = 0; index < request.count(); index++) {
             ContentEpisode episode = new ContentEpisode(season); int number = next + index;
@@ -95,11 +97,12 @@ public class ViewingService {
             seasonCompletions.deleteByUserIdAndSeasonId(userId, seasonId);
             moveCompletedLibraryToProgress(season.getContent());
         }
-        return created.stream().map(this::response).toList();
+        return created.stream().map((@NonNull ContentEpisode episode) -> response(episode)).toList();
     }
 
     public List<EpisodeResponse> episodes(Long id) {
-        season(id); return episodes.findAllBySeasonIdOrderByEpisodeNumber(id).stream().map(this::response).toList();
+        season(id); return episodes.findAllBySeasonIdOrderByEpisodeNumber(id).stream()
+                .map((@NonNull ContentEpisode episode) -> response(episode)).toList();
     }
 
     @Transactional
@@ -141,7 +144,8 @@ public class ViewingService {
 
     public SeasonCompletionResponse seasonCompletion(Long id) {
         season(id);
-        return seasonCompletions.findByUserIdAndSeasonId(userId, id).map(this::response).orElse(null);
+        return seasonCompletions.findByUserIdAndSeasonId(userId, id)
+                .map((@NonNull SeasonCompletion completion) -> response(completion)).orElse(null);
     }
 
     @Transactional
@@ -153,7 +157,8 @@ public class ViewingService {
     }
 
     public List<WatchResponse> episodeHistory(Long id) {
-        episode(id); return episodeWatches.findAllByEpisodeIdAndUserIdOrderByWatchNumber(id, userId).stream().map(this::response).toList();
+        episode(id); return episodeWatches.findAllByEpisodeIdAndUserIdOrderByWatchNumber(id, userId).stream()
+                .map((@NonNull EpisodeWatch watch) -> response(watch)).toList();
     }
 
     @Transactional
@@ -167,7 +172,8 @@ public class ViewingService {
     }
 
     public List<WatchResponse> movieHistory(Long id) {
-        item(id); return movieWatches.findAllByContentIdAndUserIdOrderByWatchNumber(id, userId).stream().map(this::movieResponse).toList();
+        item(id); return movieWatches.findAllByContentIdAndUserIdOrderByWatchNumber(id, userId).stream()
+                .map((@NonNull MovieWatch watch) -> movieResponse(watch)).toList();
     }
 
     @Transactional public WatchResponse updateMovieWatch(Long id, WatchRequest request) { MovieWatch watch = movieWatch(id); watch.changeWatchedAt(time(request)); return movieResponse(watch); }
@@ -189,9 +195,12 @@ public class ViewingService {
     private Instant completionDate(ContentItem content) {
         if (episodeWatches.individualWatchCount(userId, content.getId()) > 0) return Instant.now();
         return seasonCompletions.findAllByUserIdAndSeasonContentId(userId, content.getId()).stream()
-                .map(SeasonCompletion::getCompletedAt).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(null);
+                .map((@NonNull SeasonCompletion completion) -> completion.getCompletedAt())
+                .filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(null);
     }
-    private void moveCompletedLibraryToProgress(ContentItem content) { library.findAllByContentId(content.getId()).stream().filter(entry -> entry.getStatus() == UserContentStatus.PAUSED || entry.getStatus() == UserContentStatus.COMPLETED).forEach(entry -> entry.changeStatus(UserContentStatus.IN_PROGRESS, null)); }
+    private void moveCompletedLibraryToProgress(ContentItem content) { library.findAllByContentId(content.getId()).stream()
+            .filter((@NonNull UserContent entry) -> entry.getStatus() == UserContentStatus.PAUSED || entry.getStatus() == UserContentStatus.COMPLETED)
+            .forEach((@NonNull UserContent entry) -> entry.changeStatus(UserContentStatus.IN_PROGRESS, null)); }
     private void syncCompletion(ContentSeason season, Instant completedAt) {
         Optional<SeasonCompletion> existing = seasonCompletions.findByUserIdAndSeasonId(userId, season.getId());
         if (existing.isEmpty()) return;
