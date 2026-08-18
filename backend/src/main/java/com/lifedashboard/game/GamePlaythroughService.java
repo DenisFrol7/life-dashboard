@@ -33,13 +33,24 @@ public class GamePlaythroughService {
                 completedAt, game.getLegacyPlaytimeMinutes() + sessions.totalMinutes(libraryId, userId), note);
         return response(playthroughs.save(result));
     }
+    @Transactional
+    public GamePlaythroughResponse update(Long id, GamePlaythroughRequest request) {
+        GamePlaythrough item = findPlaythrough(id);
+        Instant completedAt = request.completedAt() == null ? item.getCompletedAt() : request.completedAt();
+        String note = request.note() == null || request.note().isBlank() ? null : request.note().trim();
+        item.update(completedAt, note);
+        return response(item);
+    }
     @Transactional public void delete(Long id) {
-        GamePlaythrough item = playthroughs.findByIdAndLibraryEntryUserContentUserId(id, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Game playthrough with id " + id + " was not found"));
-        playthroughs.delete(item);
+        playthroughs.delete(findPlaythrough(id));
     }
     private UserGame findGame(Long id) { return games.findByIdAndUserContentUserId(id, userId)
             .orElseThrow(() -> new ResourceNotFoundException("Game library entry with id " + id + " was not found")); }
+    private GamePlaythrough findPlaythrough(Long id) {
+        return playthroughs.findByIdAndLibraryEntryUserContentUserId(id, userId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Game playthrough with id " + id + " was not found"));
+    }
     private GamePlaythroughResponse response(GamePlaythrough item) {
         return new GamePlaythroughResponse(item.getId(), item.getLibraryEntry().getId(),
                 item.getPlaythroughNumber(), item.getCompletedAt(), item.getPlaytimeMinutes(), item.getNote());

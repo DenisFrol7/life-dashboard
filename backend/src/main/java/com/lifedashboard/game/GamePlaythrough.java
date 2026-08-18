@@ -33,4 +33,8 @@ public class GamePlaythrough {
     public Long getPlaytimeMinutes() { return playtimeMinutes; }
     public String getNote() { return note; }
     public void updateCompletedAt(Instant completedAt) { this.completedAt = completedAt; }
+    public void update(Instant completedAt, String note) {
+        this.completedAt = completedAt;
+        this.note = note;
+    }
 }

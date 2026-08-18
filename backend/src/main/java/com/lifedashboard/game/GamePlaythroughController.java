@@ -21,6 +21,11 @@ public class GamePlaythroughController {
         GamePlaythroughResponse result = service.create(libraryId, request);
         return ResponseEntity.created(URI.create("/api/games/playthroughs/" + result.id())).body(result);
     }
+    @PutMapping("/playthroughs/{id}")
+    public GamePlaythroughResponse update(@PathVariable Long id,
+            @Valid @RequestBody GamePlaythroughRequest request) {
+        return service.update(id, request);
+    }
     @DeleteMapping("/playthroughs/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id); return ResponseEntity.noContent().build();

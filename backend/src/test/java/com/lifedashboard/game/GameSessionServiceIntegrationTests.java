@@ -61,6 +61,12 @@ class GameSessionServiceIntegrationTests {
             var playthrough = playthroughs.create(libraryId, new GamePlaythroughRequest(startedAt, "Completed"));
             assertEquals(2, playthrough.playthroughNumber());
             assertEquals(720, playthrough.playtimeMinutes());
+            var editedPlaythrough = playthroughs.update(playthrough.id(),
+                    new GamePlaythroughRequest(correctedAt, " Updated "));
+            assertEquals(correctedAt, editedPlaythrough.completedAt());
+            assertEquals("Updated", editedPlaythrough.note());
+            playthroughs.delete(playthrough.id());
+            assertEquals(1, playthroughs.getAll(libraryId).size());
             sessions.delete(created.id());
             assertTrue(sessions.getAll(startedAt.minusSeconds(1), startedAt.plusSeconds(1)).isEmpty());
             assertEquals(10, xboxProgress.get(libraryId).unlockedAchievements());
