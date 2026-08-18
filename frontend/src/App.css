@@ -102,6 +102,18 @@
 .loading { display: flex; align-items: center; justify-content: center; gap: 11px; min-height: 300px; color: var(--muted); font-size: 13px; }
 .loading span { width: 15px; height: 15px; border: 2px solid #cbd7e0; border-top-color: #496985; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.async-state { display: flex; align-items: center; justify-content: center; gap: 14px; min-height: 300px; padding: 28px; border: 1px solid var(--line); border-radius: 20px; background: var(--paper); color: var(--muted); text-align: left; }
+.async-state.compact { min-height: 140px; padding: 20px; }
+.async-spinner { width: 17px; height: 17px; border: 2px solid #cbd7e0; border-top-color: #496985; border-radius: 50%; animation: spin .8s linear infinite; }
+.async-state-icon { display: grid; flex: 0 0 auto; place-items: center; width: 42px; height: 42px; border-radius: 50%; color: #5f7789; background: #e6eff5; font-family: Georgia, serif; font-size: 22px; }
+.async-state strong { display: block; color: #46545c; font-family: Georgia, serif; font-size: 20px; }
+.async-state p { max-width: 480px; margin: 5px 0 0; font-size: 12px; line-height: 1.5; }
+.async-error { border-color: #e5c9c3; background: #fffaf8; }
+.async-error .async-state-icon { color: #8a4f44; background: #f6e2dd; }
+.async-error button { margin-top: 14px; padding: 9px 15px; border: 0; border-radius: 9px; color: #fff; background: #496985; cursor: pointer; font-size: 11px; font-weight: 800; }
+.async-error button:hover { background: #3b5972; }
+.async-empty { min-height: 430px; border-style: dashed; text-align: center; }
+.async-empty > div { display: grid; justify-items: center; }
 
 .habits-page { display: grid; gap: 18px; max-width: 1280px; margin: 0 auto; }
 .habits-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; }

@@ -16,6 +16,18 @@ export class ApiClientError extends Error {
   }
 }
 
+export function getApiErrorMessage(reason: unknown, fallback: string): string {
+  if (reason instanceof ApiClientError) {
+    if (reason.payload.status === 404) return 'Запрашиваемые данные не найдены.'
+    if (reason.payload.status >= 500) return 'Backend вернул ошибку. Попробуйте повторить запрос.'
+    return reason.message || fallback
+  }
+  if (reason instanceof TypeError) {
+    return 'Не удалось связаться с backend. Проверьте, что сервер запущен.'
+  }
+  return reason instanceof Error && reason.message ? reason.message : fallback
+}
+
 const apiBaseUrl = import.meta.env.VITE_API_URL ?? ''
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
