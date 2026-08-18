@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { useNavigate } from 'react-router'
 import { createAnime, deleteAnime, getAnime, getAnimeDetails, putAnimeLibrary, updateAnime, type AnimeDetails, type AnimeInput, type AnimeSummary } from '../api/anime'
 import type { LibraryInput, LibraryStatus, ReleaseStatus } from '../api/movies'
+import { ErrorState, LoadingState } from '../components/AsyncState'
 
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
 const releaseLabels: Record<ReleaseStatus, string> = { ANNOUNCED: 'Анонсировано', ONGOING: 'Выходит', RELEASED: 'Вышло', ENDED: 'Завершено', CANCELLED: 'Отменено' }
@@ -21,6 +22,8 @@ export function AnimePage() {
   const visible = useMemo(() => { const normalized = query.trim().toLocaleLowerCase('ru-RU'); return anime.filter((item) => (!normalized || `${item.title} ${item.originalTitle ?? ''}`.toLocaleLowerCase('ru-RU').includes(normalized)) && (!status || item.userStatus === status)) }, [anime, query, status])
   const watchedMinutes = anime.reduce((sum, item) => sum + (item.watchedMinutes ?? 0), 0)
   const openEdit = async (item: AnimeSummary) => { try { setEditing(await getAnimeDetails(item.id)) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось открыть аниме') } }
+  if (loading) return <LoadingState message="Загружаем аниме…" />
+  if (error) return <ErrorState title="Не удалось загрузить аниме" message={error} onRetry={() => void load()} />
   return <div className="movies-page series-page anime-page"><section className="media-toolbar series-media-toolbar"><div className="series-status-tabs" aria-label="Фильтр аниме по статусу">{([['', 'Все'], ['IN_PROGRESS', 'Смотрю'], ['PLANNED', 'В планах'], ['COMPLETED', 'Просмотрено'], ['PAUSED', 'На паузе'], ['DROPPED', 'Брошено']] as const).map(([value, label]) => <button key={value || 'all'} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><div className="journal-search series-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти аниме" /></div><button className="primary-button series-add-button media-add-button" onClick={() => setEditing('new')}>+ Добавить аниме</button></section>
     <section className="series-catalog-layout"><div className="series-catalog-main">
     {error && <div className="notice error movies-error"><strong>Ошибка</strong><span>{error}</span></div>}

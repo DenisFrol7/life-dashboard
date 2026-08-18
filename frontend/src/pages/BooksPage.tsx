@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { createBook,createReadingSession,deleteBook,deleteReadingSession,getBooks,putBookLibrary,putBookProgress,removeBookLibrary,updateBook,updateReadingSession,type Book,type BookFormat,type BookInput,type BookLibraryInput,type ReadingSession,type ReadingSessionInput } from '../api/books'
 import type { LibraryStatus } from '../api/movies'
 import { bookFormatLabels, bookStatusLabels, progressText } from './bookUi'
+import { ErrorState, LoadingState } from '../components/AsyncState'
 
 const emptyBook:BookInput={title:'',author:'',bookFormat:'PAPER',pageCount:null,durationMinutes:null,releaseYear:null,genre:null,coverUrl:null,description:null}
 const localDateTime=(value:string)=>{const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)}
@@ -15,6 +16,8 @@ export function BooksPage(){
  const libraryBooks=books.filter(book=>book.libraryEntryId)
  const sessionCount=books.reduce((sum,book)=>sum+book.sessions.length,0)
  const readingMinutes=books.reduce((sum,book)=>sum+book.sessions.reduce((bookSum,session)=>bookSum+session.durationMinutes,0),0)
+ if(loading)return <LoadingState message="Загружаем книги…"/>
+ if(error)return <ErrorState title="Не удалось загрузить книги" message={error} onRetry={()=>void load()}/>
  return <div className="movies-page series-page books-page"><section className="media-toolbar series-media-toolbar"><div className="series-status-tabs book-status-tabs" aria-label="Фильтр книг по статусу">{([
    ['', 'Все'], ['NOT_STARTED', 'Не начата'], ['IN_PROGRESS', 'Читаю'], ['PLANNED', 'В планах'], ['COMPLETED', 'Прочитано'],
   ] as const).map(([value,label])=><button key={value||'all'} className={status===value?'active':''} onClick={()=>setStatus(value)}>{label}</button>)}</div><div className="journal-search series-search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Найти книгу или автора"/></div><button className="primary-button series-add-button media-add-button" onClick={()=>setEditing('new')}>+ Добавить книгу</button></section>

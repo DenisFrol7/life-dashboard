@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { useNavigate, useSearchParams } from 'react-router'
 import { createGame, createGameLibrary, createGameSession, deleteGame, deleteGameSession, getGameCatalog, getGameLibrary, getGameSessions, getPlatforms, getSources, getXboxAchievementGroups, getXboxProgress, putXboxProgress, updateGame, updateGameLibrary, updateGameSession, type Game, type GameInput, type GameLibrary, type GameLibraryInput, type GameSession, type GameSessionInput, type Reference, type XboxAchievementGroup, type XboxProgress, type XboxProgressInput } from '../api/games'
 import type { LibraryStatus } from '../api/movies'
+import { ErrorState, LoadingState } from '../components/AsyncState'
 
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начата', PLANNED: 'В планах', IN_PROGRESS: 'Играю', COMPLETED: 'Пройдено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
 const emptyGame: GameInput = { title: '', originalTitle: null, itemType: 'GAME', format: null, releaseYear: null, description: null, coverUrl: null, durationMinutes: null, releaseStatus: 'RELEASED', genre: null, developer: null, releaseDate: null, xboxPlayAnywhere: false }
@@ -19,6 +20,8 @@ export function GamesPage() {
   const totalPlaytime = sessions.reduce((sum, item) => sum + item.durationMinutes, 0)
   const totalAchievements = Object.values(xbox).reduce((sum, item) => sum + (item?.unlockedAchievements ?? 0), 0)
   const totalGamerscore = Object.values(xbox).reduce((sum, item) => sum + (item?.earnedGamerscore ?? 0), 0)
+  if (loading) return <LoadingState message="Загружаем игры…" />
+  if (error) return <ErrorState title="Не удалось загрузить игры" message={error} onRetry={() => void load()} />
   return <div className="movies-page series-page games-page"><section className="media-toolbar series-media-toolbar"><div className="series-status-tabs game-status-tabs" aria-label="Фильтр игр по статусу">{([['', 'Все'], ['NOT_STARTED', 'Не начата'], ['IN_PROGRESS', 'Играю'], ['PLANNED', 'В планах'], ['COMPLETED', 'Пройдено'], ['PAUSED', 'На паузе'], ['DROPPED', 'Брошено']] as const).map(([value, label]) => <button key={value || 'all'} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><div className="journal-search game-catalog-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти игру" /></div><select className="game-platform-filter" value={platform} onChange={(event) => setPlatform(event.target.value)}><option value="">Все платформы</option>{platforms.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button className="primary-button series-add-button media-add-button" onClick={() => setEditing('new')}>+ Добавить игру</button></section>
     <section className="series-catalog-layout"><div className="series-catalog-main">
     {error && <div className="notice error movies-error"><strong>Ошибка</strong><span>{error}</span></div>}
