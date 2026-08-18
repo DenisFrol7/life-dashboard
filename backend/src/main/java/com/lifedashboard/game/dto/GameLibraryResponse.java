@@ -7,4 +7,4 @@ import java.time.Instant;
 public record GameLibraryResponse(Long id, Long contentId, String title, ReferenceResponse platform,
         ReferenceResponse source, GameAccessType accessType, String edition, Instant acquiredAt, String note,
         UserContentStatus status, Short rating, boolean favorite, Instant startedAt, Instant completedAt,
-        String personalNote) {}
+        String personalNote, long legacyPlaytimeMinutes) {}

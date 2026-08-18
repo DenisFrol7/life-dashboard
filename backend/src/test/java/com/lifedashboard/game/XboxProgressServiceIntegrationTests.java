@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.junit.jupiter.api.Assertions.*;
+import java.time.Instant;
 
 @SpringBootTest
 class XboxProgressServiceIntegrationTests {
@@ -63,7 +64,9 @@ class XboxProgressServiceIntegrationTests {
             long entryId = createLibraryEntry("XBOX_SERIES");
             progressService.put(entryId, new XboxProgressRequest(50, 25, 1000, 300));
             var dlc = groupService.createDlc(entryId,
-                    new XboxAchievementGroupRequest("Expansion", 10, 2, 500, 100));
+                    new XboxAchievementGroupRequest("Expansion", 10, 2, 500, 100,
+                            Instant.parse("2025-08-16T09:00:00Z")));
+            assertEquals(Instant.parse("2025-08-16T09:00:00Z"), dlc.completedAt());
 
             var aggregate = progressService.get(entryId);
             assertEquals(60, aggregate.totalAchievements());
@@ -71,7 +74,8 @@ class XboxProgressServiceIntegrationTests {
             assertEquals(1500, aggregate.totalGamerscore());
             assertEquals(400, aggregate.earnedGamerscore());
 
-            groupService.update(dlc.id(), new XboxAchievementGroupRequest("Expansion", 10, 5, 500, 200));
+            groupService.update(dlc.id(), new XboxAchievementGroupRequest("Expansion", 10, 5, 500, 200,
+                    Instant.parse("2025-08-16T09:00:00Z")));
             assertEquals(30, progressService.get(entryId).unlockedAchievements());
             assertEquals(500, progressService.get(entryId).earnedGamerscore());
             groupService.delete(dlc.id());
@@ -87,7 +91,7 @@ class XboxProgressServiceIntegrationTests {
         long source = sources.findByCode("XBOX_STORE").orElseThrow().getId();
         return gameLibraryService.create(contentId, new GameLibraryRequest(platform, source,
                 GameAccessType.OWNED, null, null, null, UserContentStatus.IN_PROGRESS,
-                null, false, null, null, null)).id();
+                null, false, null, null, null, 0L)).id();
     }
     private void cleanup() {
         contentRepository.findByTitle(TITLE).ifPresent(contentRepository::delete);

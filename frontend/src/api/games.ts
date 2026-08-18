@@ -5,15 +5,15 @@ export type Game = { id: number; title: string; originalTitle: string | null; it
 export type GameInput = Omit<Game, 'id'>
 export type Reference = { id: number; code: string; name: string; type: 'DIGITAL_STORE' | 'PHYSICAL' | 'SUBSCRIPTION' | null }
 export type AccessType = 'OWNED' | 'SUBSCRIPTION'
-export type GameLibrary = { id: number; contentId: number; title: string; platform: Reference; source: Reference; accessType: AccessType; edition: string | null; acquiredAt: string | null; note: string | null; status: LibraryStatus; rating: number | null; favorite: boolean; startedAt: string | null; completedAt: string | null; personalNote: string | null }
+export type GameLibrary = { id: number; contentId: number; title: string; platform: Reference; source: Reference; accessType: AccessType; edition: string | null; acquiredAt: string | null; note: string | null; status: LibraryStatus; rating: number | null; favorite: boolean; startedAt: string | null; completedAt: string | null; personalNote: string | null; legacyPlaytimeMinutes: number }
 export type GameLibraryInput = Omit<GameLibrary, 'id' | 'contentId' | 'title' | 'platform' | 'source'> & { platformId: number; sourceId: number }
 export type XboxProgress = { id: number; libraryEntryId: number; totalAchievements: number; unlockedAchievements: number; achievementPercent: number; totalGamerscore: number; earnedGamerscore: number; gamerscorePercent: number; lastUpdatedAt: string }
 export type XboxProgressInput = Pick<XboxProgress, 'totalAchievements' | 'unlockedAchievements' | 'totalGamerscore' | 'earnedGamerscore'>
 export type GameSession = { id: number; libraryEntryId: number; contentId: number; title: string; startedAt: string; durationMinutes: number; note: string | null; unlockedAchievements: number; earnedGamerscore: number; achievementGroupId: number | null; achievementGroupName: string | null }
 export type GameSessionInput = Pick<GameSession, 'startedAt' | 'durationMinutes' | 'note' | 'unlockedAchievements' | 'earnedGamerscore' | 'achievementGroupId'>
 export type GamePlaythrough = { id: number; libraryEntryId: number; playthroughNumber: number; completedAt: string; playtimeMinutes: number; note: string | null }
-export type XboxAchievementGroup = { id: number; libraryEntryId: number; name: string; groupType: 'BASE_GAME' | 'DLC'; totalAchievements: number; unlockedAchievements: number; achievementPercent: number; totalGamerscore: number; earnedGamerscore: number; gamerscorePercent: number }
-export type XboxAchievementGroupInput = Pick<XboxAchievementGroup, 'name' | 'totalAchievements' | 'unlockedAchievements' | 'totalGamerscore' | 'earnedGamerscore'>
+export type XboxAchievementGroup = { id: number; libraryEntryId: number; name: string; groupType: 'BASE_GAME' | 'DLC'; totalAchievements: number; unlockedAchievements: number; achievementPercent: number; totalGamerscore: number; earnedGamerscore: number; gamerscorePercent: number; completedAt: string | null }
+export type XboxAchievementGroupInput = Pick<XboxAchievementGroup, 'name' | 'totalAchievements' | 'unlockedAchievements' | 'totalGamerscore' | 'earnedGamerscore' | 'completedAt'>
 
 export const getGameCatalog = () => apiRequest<Game[]>('/api/content?type=GAME')
 export const createGame = (input: GameInput) => apiRequest<Game>('/api/content', { method: 'POST', body: JSON.stringify(input) })
