@@ -1,6 +1,8 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { getDashboard, type Dashboard } from '../api/dashboard'
+import { getApiErrorMessage } from '../api/client'
+import { ErrorState, LoadingState } from '../components/AsyncState'
 
 const formatDistance = (meters: number | null) => meters == null ? 'Нет данных' : `${(meters / 1000).toFixed(1)} км`
 const formatDuration = (minutes: number) => minutes > 0 ? `${Math.floor(minutes / 60)} ч ${minutes % 60} мин` : 'Нет данных'
@@ -8,15 +10,18 @@ const formatDuration = (minutes: number) => minutes > 0 ? `${Math.floor(minutes 
 export function DashboardPage() {
   const [data, setData] = useState<Dashboard | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    getDashboard().then(setData).catch((reason: unknown) => {
-      setError(reason instanceof Error ? reason.message : 'Backend недоступен')
-    })
+  const load = useCallback(async () => {
+    setLoading(true); setError(null)
+    try { setData(await getDashboard()) }
+    catch (reason) { setError(getApiErrorMessage(reason, 'Не удалось загрузить обзор.')) }
+    finally { setLoading(false) }
   }, [])
+  useEffect(() => { void load() }, [load])
 
-  if (error) return <div className="notice error"><strong>Не удалось загрузить обзор</strong><span>{error}</span></div>
-  if (!data) return <div className="loading"><span />Загружаем сводку дня…</div>
+  if (loading && !data) return <LoadingState message="Загружаем сводку дня…" />
+  if (error || !data) return <ErrorState title="Не удалось загрузить обзор" message={error ?? 'Данные не получены.'} onRetry={() => void load()} />
 
   const date = new Intl.DateTimeFormat('ru-RU', { dateStyle: 'full' }).format(new Date(`${data.date}T12:00:00`))
   const mediaTotal = data.media.currentMovies + data.media.currentSeries + data.media.currentAnime + data.media.currentGames
