@@ -38,7 +38,8 @@ public class XboxAchievementGroupService {
         String name = group.getGroupType() == XboxAchievementGroupType.BASE_GAME ? "Основная игра" : request.name().trim();
         validateName(group.getLibraryEntry().getId(), name, group.getId());
         group.update(name, request.totalAchievements(), request.unlockedAchievements(),
-                request.totalGamerscore(), request.earnedGamerscore());
+                request.totalGamerscore(), request.earnedGamerscore(),
+                group.getGroupType() == XboxAchievementGroupType.DLC ? request.completedAt() : null);
         recalculate(group.getLibraryEntry()); return response(group);
     }
     @Transactional
@@ -53,7 +54,7 @@ public class XboxAchievementGroupService {
         XboxAchievementGroup base = groups.findByLibraryEntryIdAndGroupType(game.getId(), XboxAchievementGroupType.BASE_GAME)
                 .orElseGet(() -> new XboxAchievementGroup(game, "Основная игра", XboxAchievementGroupType.BASE_GAME));
         base.update("Основная игра", request.totalAchievements(), request.unlockedAchievements(),
-                request.totalGamerscore(), request.earnedGamerscore());
+                request.totalGamerscore(), request.earnedGamerscore(), null);
         groups.save(base); recalculate(game);
     }
     @Transactional
@@ -73,7 +74,7 @@ public class XboxAchievementGroupService {
     }
     private void apply(XboxAchievementGroup group, XboxAchievementGroupRequest request) {
         group.update(request.name().trim(), request.totalAchievements(), request.unlockedAchievements(),
-                request.totalGamerscore(), request.earnedGamerscore());
+                request.totalGamerscore(), request.earnedGamerscore(), request.completedAt());
     }
     private void validate(XboxAchievementGroupRequest request) {
         if (request.unlockedAchievements() > request.totalAchievements())
@@ -100,6 +101,7 @@ public class XboxAchievementGroupService {
         return new XboxAchievementGroupResponse(group.getId(), group.getLibraryEntry().getId(), group.getName(),
                 group.getGroupType(), group.getTotalAchievements(), group.getUnlockedAchievements(),
                 percent(group.getUnlockedAchievements(), group.getTotalAchievements()), group.getTotalGamerscore(),
-                group.getEarnedGamerscore(), percent(group.getEarnedGamerscore(), group.getTotalGamerscore()));
+                group.getEarnedGamerscore(), percent(group.getEarnedGamerscore(), group.getTotalGamerscore()),
+                group.getCompletedAt());
     }
 }

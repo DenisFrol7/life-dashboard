@@ -9,4 +9,5 @@ public record GameLibraryRequest(
         @NotNull Long platformId, @NotNull Long sourceId, @NotNull GameAccessType accessType,
         @Size(max = 200) String edition, Instant acquiredAt, String note,
         @NotNull UserContentStatus status, @Min(1) @Max(10) Short rating, boolean favorite,
-        Instant startedAt, Instant completedAt, String personalNote) {}
+        Instant startedAt, Instant completedAt, String personalNote,
+        @NotNull @Min(0) Long legacyPlaytimeMinutes) {}

@@ -1,6 +1,7 @@
 package com.lifedashboard.game;
 
 import jakarta.persistence.*;
+import java.time.Instant;
 
 @Entity
 @Table(name = "xbox_achievement_groups")
@@ -18,16 +19,18 @@ public class XboxAchievementGroup {
     @Column(name = "unlocked_achievements", nullable = false) private Integer unlockedAchievements;
     @Column(name = "total_gamerscore", nullable = false) private Integer totalGamerscore;
     @Column(name = "earned_gamerscore", nullable = false) private Integer earnedGamerscore;
+    @Column(name = "completed_at") private Instant completedAt;
 
     protected XboxAchievementGroup() {}
     public XboxAchievementGroup(UserGame libraryEntry, String name, XboxAchievementGroupType groupType) {
         this.libraryEntry = libraryEntry; this.name = name; this.groupType = groupType;
     }
     public void update(String name, int totalAchievements, int unlockedAchievements,
-            int totalGamerscore, int earnedGamerscore) {
+            int totalGamerscore, int earnedGamerscore, Instant completedAt) {
         this.name = name; this.totalAchievements = totalAchievements;
         this.unlockedAchievements = unlockedAchievements; this.totalGamerscore = totalGamerscore;
         this.earnedGamerscore = earnedGamerscore;
+        this.completedAt = completedAt;
     }
     public Long getId() { return id; }
     public UserGame getLibraryEntry() { return libraryEntry; }
@@ -37,4 +40,5 @@ public class XboxAchievementGroup {
     public Integer getUnlockedAchievements() { return unlockedAchievements; }
     public Integer getTotalGamerscore() { return totalGamerscore; }
     public Integer getEarnedGamerscore() { return earnedGamerscore; }
+    public Instant getCompletedAt() { return completedAt; }
 }

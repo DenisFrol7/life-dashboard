@@ -94,7 +94,7 @@ public class GameSessionService {
         if (gamerscore < 0 || gamerscore > group.getTotalGamerscore())
             throw new InvalidRequestException("Session gamerscore exceeds the Xbox progress limits");
         group.update(group.getName(), group.getTotalAchievements(), achievements,
-                group.getTotalGamerscore(), gamerscore);
+                group.getTotalGamerscore(), gamerscore, group.getCompletedAt());
         achievementGroupService.recalculate(game);
     }
     private boolean isXbox(UserGame game) {

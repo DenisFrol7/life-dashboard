@@ -33,7 +33,7 @@ class GameSessionServiceIntegrationTests {
             long sourceId = sources.findByCode("XBOX_STORE").orElseThrow().getId();
             long libraryId = gameLibrary.create(contentId, new GameLibraryRequest(platformId, sourceId,
                     GameAccessType.OWNED, null, null, null, UserContentStatus.IN_PROGRESS,
-                    null, false, null, null, null)).id();
+                    null, false, null, null, null, 600L)).id();
             xboxProgress.put(libraryId, new XboxProgressRequest(20, 10, 1000, 200));
             Instant startedAt = Instant.parse("2026-08-06T17:00:00Z");
 
@@ -50,17 +50,17 @@ class GameSessionServiceIntegrationTests {
             assertEquals(270, xboxProgress.get(libraryId).earnedGamerscore());
             Instant completedAt = startedAt.plusSeconds(10_000);
             gameLibrary.update(libraryId, new GameLibraryRequest(platformId, sourceId, GameAccessType.OWNED,
-                    null, null, null, UserContentStatus.COMPLETED, null, false, null, completedAt, null));
+                    null, null, null, UserContentStatus.COMPLETED, null, false, null, completedAt, null, 600L));
             assertEquals(1, playthroughs.getAll(libraryId).size());
             assertEquals(completedAt, playthroughs.getAll(libraryId).getFirst().completedAt());
             Instant correctedAt = completedAt.plusSeconds(86_400);
             gameLibrary.update(libraryId, new GameLibraryRequest(platformId, sourceId, GameAccessType.OWNED,
-                    null, null, null, UserContentStatus.COMPLETED, null, false, null, correctedAt, null));
+                    null, null, null, UserContentStatus.COMPLETED, null, false, null, correctedAt, null, 600L));
             assertEquals(1, playthroughs.getAll(libraryId).size());
             assertEquals(correctedAt, playthroughs.getAll(libraryId).getFirst().completedAt());
             var playthrough = playthroughs.create(libraryId, new GamePlaythroughRequest(startedAt, "Completed"));
             assertEquals(2, playthrough.playthroughNumber());
-            assertEquals(120, playthrough.playtimeMinutes());
+            assertEquals(720, playthrough.playtimeMinutes());
             sessions.delete(created.id());
             assertTrue(sessions.getAll(startedAt.minusSeconds(1), startedAt.plusSeconds(1)).isEmpty());
             assertEquals(10, xboxProgress.get(libraryId).unlockedAchievements());

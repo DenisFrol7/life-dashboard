@@ -26,12 +26,15 @@ public class UserGame {
     private Instant acquiredAt;
     @Column(columnDefinition = "text")
     private String note;
+    @Column(name = "legacy_playtime_minutes", nullable = false)
+    private long legacyPlaytimeMinutes;
     protected UserGame() {}
     public UserGame(UserContent userContent) { this.userContent = userContent; }
     public void update(GamingPlatform platform, GameSource source, GameAccessType accessType,
-                       String edition, Instant acquiredAt, String note) {
+                       String edition, Instant acquiredAt, String note, long legacyPlaytimeMinutes) {
         this.platform = platform; this.source = source; this.accessType = accessType;
         this.edition = edition; this.acquiredAt = acquiredAt; this.note = note;
+        this.legacyPlaytimeMinutes = legacyPlaytimeMinutes;
     }
     public Long getId() { return id; }
     public UserContent getUserContent() { return userContent; }
@@ -41,4 +44,5 @@ public class UserGame {
     public String getEdition() { return edition; }
     public Instant getAcquiredAt() { return acquiredAt; }
     public String getNote() { return note; }
+    public long getLegacyPlaytimeMinutes() { return legacyPlaytimeMinutes; }
 }

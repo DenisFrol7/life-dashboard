@@ -84,7 +84,7 @@ class GameLibraryServiceIntegrationTests {
     }
     private GameLibraryRequest request(long platform, long source, GameAccessType access, UserContentStatus status) {
         return new GameLibraryRequest(platform, source, access, null, null, null, status,
-                null, false, null, null, null);
+                null, false, null, null, null, 0L);
     }
     private void cleanup() {
         contentRepository.findByTitle(GAME).ifPresent(contentRepository::delete);

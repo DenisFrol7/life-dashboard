@@ -72,7 +72,8 @@ public class GameLibraryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Game source was not found"));
         if ((r.accessType() == GameAccessType.SUBSCRIPTION) != (source.getSourceType() == GameSourceType.SUBSCRIPTION))
             throw new InvalidRequestException("accessType must match the selected source type");
-        game.update(platform, source, r.accessType(), normalize(r.edition()), r.acquiredAt(), normalize(r.note()));
+        game.update(platform, source, r.accessType(), normalize(r.edition()), r.acquiredAt(), normalize(r.note()),
+                r.legacyPlaytimeMinutes());
     }
     private void validateRequest(GameLibraryRequest r) {
         if (r.completedAt() != null && r.startedAt() != null && r.completedAt().isBefore(r.startedAt()))
@@ -94,7 +95,7 @@ public class GameLibraryService {
         playthroughs.findByLibraryEntryIdAndPlaythroughNumber(game.getId(), 1).ifPresentOrElse(
                 item -> item.updateCompletedAt(request.completedAt()),
                 () -> playthroughs.save(new GamePlaythrough(game, 1, request.completedAt(),
-                        sessions.totalMinutes(game.getId(), userId), null)));
+                        game.getLegacyPlaytimeMinutes() + sessions.totalMinutes(game.getId(), userId), null)));
     }
     private GameLibraryResponse response(UserGame g) {
         UserContent u = g.getUserContent();
@@ -102,6 +103,7 @@ public class GameLibraryService {
                 new ReferenceResponse(g.getPlatform().getId(), g.getPlatform().getCode(), g.getPlatform().getName(), null),
                 new ReferenceResponse(g.getSource().getId(), g.getSource().getCode(), g.getSource().getName(), g.getSource().getSourceType().name()),
                 g.getAccessType(), g.getEdition(), g.getAcquiredAt(), g.getNote(), u.getStatus(), u.getRating(),
-                u.isFavorite(), u.getStartedAt(), u.getCompletedAt(), u.getPersonalNote());
+                u.isFavorite(), u.getStartedAt(), u.getCompletedAt(), u.getPersonalNote(),
+                g.getLegacyPlaytimeMinutes());
     }
 }

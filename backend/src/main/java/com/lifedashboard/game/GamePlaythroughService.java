@@ -30,7 +30,7 @@ public class GamePlaythroughService {
         Instant completedAt = request.completedAt() == null ? Instant.now() : request.completedAt();
         String note = request.note() == null || request.note().isBlank() ? null : request.note().trim();
         GamePlaythrough result = new GamePlaythrough(game, playthroughs.maxNumber(libraryId) + 1,
-                completedAt, sessions.totalMinutes(libraryId, userId), note);
+                completedAt, game.getLegacyPlaytimeMinutes() + sessions.totalMinutes(libraryId, userId), note);
         return response(playthroughs.save(result));
     }
     @Transactional public void delete(Long id) {
