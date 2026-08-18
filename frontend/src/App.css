@@ -114,6 +114,14 @@
 .async-error button:hover { background: #3b5972; }
 .async-empty { min-height: 430px; border-style: dashed; text-align: center; }
 .async-empty > div { display: grid; justify-items: center; }
+.toast-viewport { position: fixed; right: 22px; bottom: 22px; z-index: 100; display: grid; gap: 10px; width: min(360px, calc(100vw - 32px)); pointer-events: none; }
+.toast { display: grid; grid-template-columns: 30px 1fr 24px; align-items: center; gap: 10px; padding: 13px 12px; border: 1px solid #c9d9d0; border-radius: 14px; color: #3f5147; background: #f7fcf8; box-shadow: 0 16px 42px #263b3030; pointer-events: auto; animation: toast-in .22s ease-out; }
+.toast > span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: #fff; background: #628b72; font-weight: 900; }
+.toast p { margin: 0; font-size: 12px; font-weight: 700; line-height: 1.4; }
+.toast button { border: 0; color: #7b8980; background: transparent; cursor: pointer; font-size: 19px; }
+.toast.error { border-color: #e4c3bd; color: #75483f; background: #fff8f6; }
+.toast.error > span { background: #a76154; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(10px); } }
 
 .habits-page { display: grid; gap: 18px; max-width: 1280px; margin: 0 auto; }
 .habits-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
