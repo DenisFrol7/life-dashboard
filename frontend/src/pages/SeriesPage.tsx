@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { useNavigate } from 'react-router'
 import { createSeries, deleteSeries, getSeriesCatalog, putSeriesLibrary, updateSeries, type Series, type SeriesFormat, type SeriesInput, type SeriesLibraryEntry } from '../api/series'
 import type { LibraryInput, LibraryStatus, ReleaseStatus } from '../api/movies'
+import { ErrorState, LoadingState } from '../components/AsyncState'
 
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
 const releaseLabels: Record<ReleaseStatus, string> = { ANNOUNCED: 'Анонсирован', ONGOING: 'Выходит', RELEASED: 'Вышел', ENDED: 'Завершён', CANCELLED: 'Отменён' }
@@ -27,6 +28,8 @@ export function SeriesPage() {
   const watchedEpisodeCount = Object.values(progress).reduce((sum, item) => sum + item.watchedEpisodeCount, 0)
   const watchedMinutes = Object.values(progress).reduce((sum, item) => sum + item.watchedMinutes, 0)
   const watchTime = `${Math.floor(watchedMinutes / 60)} ч ${watchedMinutes % 60} мин`
+  if (loading) return <LoadingState message="Загружаем сериалы…" />
+  if (error) return <ErrorState title="Не удалось загрузить сериалы" message={error} onRetry={() => void load()} />
   return <div className="movies-page series-page"><section className="media-toolbar series-media-toolbar"><div className="series-status-tabs" aria-label="Фильтр сериалов по статусу">{([
       ['', 'Все'],
       ['IN_PROGRESS', 'Смотрю'],

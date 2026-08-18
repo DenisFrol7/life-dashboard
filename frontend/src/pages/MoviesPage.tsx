@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { createMovie, deleteMovie, getMovieCatalog, putInLibrary, updateMovie, type ContentFormat, type LibraryEntry, type LibraryInput, type LibraryStatus, type Movie, type MovieInput } from '../api/movies'
+import { ErrorState, LoadingState } from '../components/AsyncState'
 
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
 const movieStatuses: LibraryStatus[] = ['PLANNED', 'COMPLETED']
@@ -22,6 +23,8 @@ export function MoviesPage() {
   useEffect(() => { void load() }, [load])
   const visible = useMemo(() => { const normalized = query.trim().toLocaleLowerCase('ru-RU'); return movies.filter((movie) => (!normalized || `${movie.title} ${movie.originalTitle ?? ''}`.toLocaleLowerCase('ru-RU').includes(normalized)) && (!status || library[movie.id]?.status === status)) }, [library, movies, query, status])
 
+  if (loading) return <LoadingState message="Загружаем фильмы…" />
+  if (error) return <ErrorState title="Не удалось загрузить фильмы" message={error} onRetry={() => void load()} />
   return <div className="movies-page series-page movie-catalog-page">
     <section className="media-toolbar series-media-toolbar"><div className="series-status-tabs movie-status-tabs" aria-label="Фильтр фильмов по статусу">{([['', 'Все'], ['PLANNED', 'В планах'], ['COMPLETED', 'Просмотрено']] as const).map(([value, label]) => <button key={value || 'all'} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><div className="journal-search series-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти фильм" /></div><button className="primary-button series-add-button media-add-button" onClick={() => setEditing('new')}>+ Добавить фильм</button></section>
     <section className="series-catalog-layout"><div className="series-catalog-main">
