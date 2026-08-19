@@ -90,4 +90,35 @@ class AnalyticsControllerIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.current.animeEpisodesWatched").value(1));
     }
+
+    @Test
+    void doesNotTreatCompletedLibraryEntriesAsCurrentActivityWithoutHistory() throws Exception {
+        addCompletedLibraryEntry("Historical movie without watch history", "MOVIE", "LIVE_ACTION");
+        addCompletedLibraryEntry("Historical series without watch history", "SERIES", "LIVE_ACTION");
+        addCompletedLibraryEntry("Historical anime without watch history", "ANIME", "ANIME");
+        addCompletedLibraryEntry("Historical game without sessions", "GAME", null);
+        addCompletedLibraryEntry("Historical book without sessions", "BOOK", null);
+
+        mockMvc.perform(get("/api/analytics").param("from", FROM.toString()).param("to", TO.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.current.moviesWatched").value(0))
+                .andExpect(jsonPath("$.current.seriesEpisodesWatched").value(0))
+                .andExpect(jsonPath("$.current.animeEpisodesWatched").value(0))
+                .andExpect(jsonPath("$.current.gameMinutes").value(0))
+                .andExpect(jsonPath("$.current.gameSessions").value(0))
+                .andExpect(jsonPath("$.current.unlockedAchievements").value(0))
+                .andExpect(jsonPath("$.current.pagesRead").value(0))
+                .andExpect(jsonPath("$.current.readingMinutes").value(0));
+    }
+
+    private void addCompletedLibraryEntry(String title, String itemType, String format) {
+        Long contentId = jdbc.queryForObject("""
+                INSERT INTO content_items(title, item_type, format, release_status)
+                VALUES (?, ?, ?, 'ENDED') RETURNING id
+                """, Long.class, title, itemType, format);
+        jdbc.update("""
+                INSERT INTO user_content(user_id, content_id, status, completed_at)
+                VALUES (1, ?, 'COMPLETED', ?::date + time '12:00')
+                """, contentId, FROM);
+    }
 }
