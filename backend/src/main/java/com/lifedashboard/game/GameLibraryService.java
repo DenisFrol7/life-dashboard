@@ -93,7 +93,11 @@ public class GameLibraryService {
     private void syncFirstPlaythrough(UserGame game, GameLibraryRequest request) {
         if (request.status() != UserContentStatus.COMPLETED || request.completedAt() == null) return;
         playthroughs.findByLibraryEntryIdAndPlaythroughNumber(game.getId(), 1).ifPresentOrElse(
-                item -> item.updateCompletedAt(request.completedAt()),
+                item -> {
+                    item.updateCompletedAt(request.completedAt());
+                    if (item.getPlaytimeMinutes() == 0 && game.getLegacyPlaytimeMinutes() > 0)
+                        item.updatePlaytimeMinutes(game.getLegacyPlaytimeMinutes());
+                },
                 () -> playthroughs.save(new GamePlaythrough(game, 1, request.completedAt(),
                         game.getLegacyPlaytimeMinutes() + sessions.totalMinutes(game.getId(), userId), null)));
     }

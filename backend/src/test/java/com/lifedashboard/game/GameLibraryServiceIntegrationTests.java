@@ -7,6 +7,7 @@ import com.lifedashboard.game.dto.GameLibraryRequest;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -17,6 +18,7 @@ class GameLibraryServiceIntegrationTests {
     @Autowired ContentService contentService;
     @Autowired ContentItemRepository contentRepository;
     @Autowired GameLibraryService gameService;
+    @Autowired GamePlaythroughService playthroughService;
     @Autowired GamingPlatformRepository platforms;
     @Autowired GameSourceRepository sources;
 
@@ -75,6 +77,28 @@ class GameLibraryServiceIntegrationTests {
             assertNotEquals(steam.id(), xbox.id());
             assertTrue(copies.stream().anyMatch(entry -> entry.source().code().equals("STEAM")));
             assertTrue(copies.stream().anyMatch(entry -> entry.source().code().equals("XBOX_STORE")));
+        } finally { cleanup(); }
+    }
+
+    @Test
+    void backfillsEmptyFirstPlaythroughFromLegacyPlaytime() {
+        try {
+            long contentId = create(GAME, ContentType.GAME, null);
+            long platformId = platforms.findByCode("PC").orElseThrow().getId();
+            long sourceId = sources.findByCode("STEAM").orElseThrow().getId();
+            Instant completedAt = Instant.parse("2025-08-12T09:00:00Z");
+            var initial = new GameLibraryRequest(platformId, sourceId, GameAccessType.OWNED,
+                    null, null, null, UserContentStatus.COMPLETED, null, false,
+                    null, completedAt, null, 0L);
+            long libraryId = gameService.create(contentId, initial).id();
+            assertEquals(0, playthroughService.getAll(libraryId).getFirst().playtimeMinutes());
+
+            var withLegacyTime = new GameLibraryRequest(platformId, sourceId, GameAccessType.OWNED,
+                    null, null, null, UserContentStatus.COMPLETED, null, false,
+                    null, completedAt, null, 600L);
+            gameService.update(libraryId, withLegacyTime);
+
+            assertEquals(600, playthroughService.getAll(libraryId).getFirst().playtimeMinutes());
         } finally { cleanup(); }
     }
 
