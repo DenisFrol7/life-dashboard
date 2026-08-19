@@ -3,6 +3,7 @@ import {
   createHabit, deleteHabit, deleteHabitEntry, getHabitEntries, getHabits, putHabitEntry, updateHabit,
   type Habit, type HabitEntry, type HabitInput, type HabitStatus,
 } from '../api/habits'
+import { useToast } from '../components/ToastContext'
 
 const today = new Date().toLocaleDateString('en-CA')
 const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
@@ -15,6 +16,7 @@ const emptyHabit: HabitInput = {
 }
 
 export function HabitsPage() {
+  const { showToast } = useToast()
   const [status, setStatus] = useState<HabitStatus>('ACTIVE')
   const [habits, setHabits] = useState<Habit[]>([])
   const [entries, setEntries] = useState<Record<number, HabitEntry | undefined>>({})
@@ -54,7 +56,7 @@ export function HabitsPage() {
 
   const remove = async (habit: Habit) => {
     if (!window.confirm(`Удалить привычку «${habit.name}» вместе с историей?`)) return
-    try { await deleteHabit(habit.id); await load() }
+    try { await deleteHabit(habit.id); showToast('Привычка удалена'); await load() }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить привычку') }
   }
 
@@ -112,6 +114,7 @@ function HabitCard({ habit, entry, onToggle, onValue, onEdit, onDelete }: {
 }
 
 function HabitForm({ habit, onClose, onSaved }: { habit?: Habit; onClose: () => void; onSaved: () => void }) {
+  const { showToast } = useToast()
   const [form, setForm] = useState<HabitInput>(habit ? { ...habit } : emptyHabit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -120,7 +123,7 @@ function HabitForm({ habit, onClose, onSaved }: { habit?: Habit; onClose: () => 
     event.preventDefault(); setSaving(true); setError(null)
     const input = { ...form, description: form.description || null, unit: form.unit || null, endDate: form.endDate || null,
       scheduleDays: form.scheduleType === 'DAILY' ? [] : form.scheduleDays }
-    try { if (habit) await updateHabit(habit.id, input); else await createHabit(input); onSaved() }
+    try { if (habit) await updateHabit(habit.id, input); else await createHabit(input); showToast(habit ? 'Привычка обновлена' : 'Привычка добавлена'); onSaved() }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить привычку') }
     finally { setSaving(false) }
   }
