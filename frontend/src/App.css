@@ -496,6 +496,7 @@
 .series-statistics .series-stat-total { margin-top: 8px; border-top: 1px solid #d9dddf; }
 .series-list-card { display: grid; grid-template-columns: 132px minmax(0, 1fr) 150px; gap: 15px; min-height: 94px; padding: 8px; border-bottom: 1px solid #dfe3e5; background: var(--paper); }
 .series-list-cover { position: relative; display: grid; place-items: center; width: 132px; height: 82px; overflow: hidden; border: 0; border-radius: 5px; color: #ffffff35; background: linear-gradient(145deg, #3d455f, #202536) center/cover; cursor: pointer; font-family: Georgia, serif; font-size: 32px; font-weight: 800; }
+.series-list-cover[style] { background-color: transparent; background-position: center; background-repeat: no-repeat; background-size: contain; }
 .series-list-cover i { position: absolute; top: 5px; right: 6px; color: #e07078; font-size: 12px; font-style: normal; text-shadow: 0 1px 3px #0008; }
 .series-list-content { display: grid; align-content: center; min-width: 0; }
 .series-list-heading { display: flex; align-items: center; gap: 7px; min-width: 0; }
