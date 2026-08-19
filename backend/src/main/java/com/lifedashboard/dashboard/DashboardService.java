@@ -82,7 +82,7 @@ public class DashboardService {
             ||h.getScheduleDays().contains((short)d.getDayOfWeek().getValue()));}
     private boolean completed(Habit h,HabitEntry e){if(e.getValue()==null)return false;if(h.getTrackingType()==TrackingType.BOOLEAN)return e.getValue().compareTo(BigDecimal.ONE)==0;
         BigDecimal target=e.getTargetValueSnapshot()!=null?e.getTargetValueSnapshot():h.getTargetValue();return target==null||e.getValue().compareTo(target)>=0;}
-    private DashboardResponse.CalendarSummary calendar(LocalDate date){List<CalendarEvent> day=events.findAllByUserIdOrderByStartDateAscIdAsc(userId).stream().filter(e->scheduled(e,date)).toList();
+    private DashboardResponse.CalendarSummary calendar(LocalDate date){List<CalendarEvent> day=events.findCandidatesForDate(userId,date).stream().filter(e->scheduled(e,date)).toList();
         Map<Long,CalendarEventOccurrence> occurrencesByEvent=new HashMap<>();
         for(CalendarEventOccurrence occurrence:occurrences.findAllByEventUserIdAndOccurrenceDate(userId,date))
             occurrencesByEvent.put(occurrence.getEvent().getId(),occurrence);
