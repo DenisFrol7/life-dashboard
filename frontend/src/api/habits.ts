@@ -47,6 +47,9 @@ export const deleteHabit = (id: number) =>
 export const getHabitEntries = (id: number) =>
   apiRequest<HabitEntry[]>(`/api/habits/${id}/entries`)
 
+export const getHabitEntriesForDate = (date: string) =>
+  apiRequest<{ habitId: number; entry: HabitEntry }[]>(`/api/habits/entries?date=${date}`)
+
 export const putHabitEntry = (id: number, date: string, value: number | null, skipped = false) =>
   apiRequest<HabitEntry>(`/api/habits/${id}/entries/${date}`, {
     method: 'PUT', body: JSON.stringify({ value, skipped, note: null }),

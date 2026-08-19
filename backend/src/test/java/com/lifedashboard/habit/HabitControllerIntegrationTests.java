@@ -73,6 +73,11 @@ class HabitControllerIntegrationTests {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].entryDate").value("2026-08-05"));
 
+            mockMvc.perform(get("/api/habits/entries").param("date", "2026-08-05"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].habitId").value(id))
+                    .andExpect(jsonPath("$[0].entry.entryDate").value("2026-08-05"));
+
             mockMvc.perform(delete(location)).andExpect(status().isNoContent());
             mockMvc.perform(get(location)).andExpect(status().isNotFound());
         } finally {

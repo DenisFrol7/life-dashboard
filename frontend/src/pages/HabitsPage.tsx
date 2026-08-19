@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import {
-  createHabit, deleteHabit, deleteHabitEntry, getHabitEntries, getHabits, putHabitEntry, updateHabit,
+  createHabit, deleteHabit, deleteHabitEntry, getHabitEntriesForDate, getHabits, putHabitEntry, updateHabit,
   type Habit, type HabitEntry, type HabitInput, type HabitStatus,
 } from '../api/habits'
 import { useToast } from '../components/ToastContext'
@@ -27,13 +27,9 @@ export function HabitsPage() {
   const load = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const result = await getHabits(status)
+      const [result, datedEntries] = await Promise.all([getHabits(status), getHabitEntriesForDate(today)])
       setHabits(result)
-      const pairs = await Promise.all(result.map(async (habit) => {
-        const all = await getHabitEntries(habit.id)
-        return [habit.id, all.find((entry) => entry.entryDate === today)] as const
-      }))
-      setEntries(Object.fromEntries(pairs))
+      setEntries(Object.fromEntries(datedEntries.map((item) => [item.habitId, item.entry])))
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Не удалось загрузить привычки')
     } finally { setLoading(false) }

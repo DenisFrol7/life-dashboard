@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { completeOccurrence, createCalendarEvent, deleteCalendarEvent, deleteOccurrence, getCalendarEvents, getOccurrences, updateCalendarEvent, type CalendarEvent, type CalendarEventInput, type EventType, type Occurrence } from '../api/calendar'
+import { completeOccurrence, createCalendarEvent, deleteCalendarEvent, deleteOccurrence, getCalendarEvents, getOccurrencesForRange, updateCalendarEvent, type CalendarEvent, type CalendarEventInput, type EventType, type Occurrence } from '../api/calendar'
 import { useToast } from '../components/ToastContext'
 
 const iso = (date: Date) => date.toLocaleDateString('en-CA')
@@ -37,10 +37,10 @@ export function CalendarPage() {
 
   const load = useCallback(async () => {
     setLoading(true); setError(null)
-    try { const result = await getCalendarEvents(); setEvents(result); const pairs = await Promise.all(result.map(async (event) => [event.id, await getOccurrences(event.id)] as const)); setOccurrences(Object.fromEntries(pairs)) }
+    try { const cells = monthCells(month); const [result, rangeOccurrences] = await Promise.all([getCalendarEvents(), getOccurrencesForRange(iso(cells[0]), iso(cells.at(-1)!))]); setEvents(result); const grouped: Record<number, Occurrence[]> = {}; for (const item of rangeOccurrences) (grouped[item.eventId] ??= []).push(item.occurrence); setOccurrences(grouped) }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить календарь') }
     finally { setLoading(false) }
-  }, [])
+  }, [month])
   useEffect(() => { void load() }, [load])
 
   const cells = useMemo(() => monthCells(month), [month])

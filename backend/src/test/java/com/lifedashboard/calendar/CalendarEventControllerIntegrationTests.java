@@ -73,6 +73,13 @@ class CalendarEventControllerIntegrationTests {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].occurrenceDate").value("2026-08-05"));
 
+            mockMvc.perform(get("/api/calendar/occurrences")
+                            .param("from", "2026-08-05")
+                            .param("to", "2026-08-05"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].eventId").value(id))
+                    .andExpect(jsonPath("$[0].occurrence.occurrenceDate").value("2026-08-05"));
+
             mockMvc.perform(delete(location)).andExpect(status().isNoContent());
             mockMvc.perform(get(location)).andExpect(status().isNotFound());
         } finally {

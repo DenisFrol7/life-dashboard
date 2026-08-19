@@ -14,5 +14,9 @@ public interface CalendarEventOccurrenceRepository extends JpaRepository<Calenda
     List<CalendarEventOccurrence> findAllByEventIdOrderByOccurrenceDateAsc(Long eventId);
 
     @EntityGraph(attributePaths = "event")
+    List<CalendarEventOccurrence> findAllByEventUserIdAndOccurrenceDateBetweenOrderByOccurrenceDateAsc(
+            Long userId, LocalDate from, LocalDate to);
+
+    @EntityGraph(attributePaths = "event")
     List<CalendarEventOccurrence> findAllByEventUserIdAndOccurrenceDate(Long userId, LocalDate occurrenceDate);
 }
