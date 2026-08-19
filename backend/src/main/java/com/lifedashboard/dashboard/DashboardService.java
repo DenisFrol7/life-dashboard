@@ -67,9 +67,13 @@ public class DashboardService {
     }
     private DashboardResponse.HabitSummary habit(LocalDate date) {
         List<Habit> scheduled=habits.findAllByUserIdOrderByStartDateAscIdAsc(userId).stream()
-                .filter(h->scheduled(h,date)).toList(); int completed=0,skipped=0;
-        for(Habit h:scheduled){Optional<HabitEntry> entry=habitEntries.findByHabitIdAndEntryDate(h.getId(),date);
-            if(entry.isPresent()&&entry.get().isSkipped())skipped++; else if(entry.isPresent()&&completed(h,entry.get()))completed++;}
+                .filter(h->scheduled(h,date)).toList();
+        Map<Long,HabitEntry> entriesByHabit=new HashMap<>();
+        for(HabitEntry entry:habitEntries.findAllByHabitUserIdAndEntryDate(userId,date))
+            entriesByHabit.put(entry.getHabit().getId(),entry);
+        int completed=0,skipped=0;
+        for(Habit h:scheduled){HabitEntry entry=entriesByHabit.get(h.getId());
+            if(entry!=null&&entry.isSkipped())skipped++; else if(entry!=null&&completed(h,entry))completed++;}
         double percent=scheduled.isEmpty()?0.0:Math.round(completed*10000.0/scheduled.size())/100.0;
         return new DashboardResponse.HabitSummary(scheduled.size(),completed,skipped,percent);
     }
@@ -79,8 +83,11 @@ public class DashboardService {
     private boolean completed(Habit h,HabitEntry e){if(e.getValue()==null)return false;if(h.getTrackingType()==TrackingType.BOOLEAN)return e.getValue().compareTo(BigDecimal.ONE)==0;
         BigDecimal target=e.getTargetValueSnapshot()!=null?e.getTargetValueSnapshot():h.getTargetValue();return target==null||e.getValue().compareTo(target)>=0;}
     private DashboardResponse.CalendarSummary calendar(LocalDate date){List<CalendarEvent> day=events.findAllByUserIdOrderByStartDateAscIdAsc(userId).stream().filter(e->scheduled(e,date)).toList();
+        Map<Long,CalendarEventOccurrence> occurrencesByEvent=new HashMap<>();
+        for(CalendarEventOccurrence occurrence:occurrences.findAllByEventUserIdAndOccurrenceDate(userId,date))
+            occurrencesByEvent.put(occurrence.getEvent().getId(),occurrence);
         int eventCount=0,reminders=0,done=0,pending=0;for(CalendarEvent e:day){if(e.getEventType()==EventType.EVENT)eventCount++;else if(e.getEventType()==EventType.REMINDER)reminders++;
-            else {boolean complete=occurrences.findByEventIdAndOccurrenceDate(e.getId(),date).map(o->o.getStatus()==OccurrenceStatus.COMPLETED).orElse(false);if(complete)done++;else pending++;}}
+            else {CalendarEventOccurrence occurrence=occurrencesByEvent.get(e.getId());boolean complete=occurrence!=null&&occurrence.getStatus()==OccurrenceStatus.COMPLETED;if(complete)done++;else pending++;}}
         return new DashboardResponse.CalendarSummary(day.size(),eventCount,reminders,done,pending);}
     private boolean scheduled(CalendarEvent e,LocalDate d){if(e.getStatus()!=CalendarEventStatus.ACTIVE||d.isBefore(e.getStartDate())||(e.getRepeatUntil()!=null&&d.isAfter(e.getRepeatUntil())))return false;
         return switch(e.getScheduleType()){case ONCE->d.equals(e.getStartDate());case DAILY->true;case WEEKLY->d.getDayOfWeek()==e.getStartDate().getDayOfWeek();case SELECTED_DAYS->e.getScheduleDays().contains((short)d.getDayOfWeek().getValue());};}
