@@ -103,7 +103,7 @@ public class TimelineService {
         for (CalendarEventOccurrence occurrence : occurrences.findAllByEventUserIdAndOccurrenceDate(userId, date)) {
             byEvent.put(occurrence.getEvent().getId(), occurrence);
         }
-        for (CalendarEvent event : calendarEvents.findAllByUserIdOrderByStartDateAscIdAsc(userId)) {
+        for (CalendarEvent event : calendarEvents.findCandidatesForDate(userId, date)) {
             if (!scheduled(event, date)) continue;
             CalendarEventOccurrence occurrence = byEvent.get(event.getId());
             if (occurrence != null && (occurrence.getStatus() == OccurrenceStatus.CANCELLED
