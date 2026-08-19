@@ -57,10 +57,16 @@ public class AnimeService {
 
     private AnimeDetailsResponse details(ContentItem item) {
         UserContent entry = library.findByUserIdAndContentId(userId, item.getId()).orElse(null);
+        Map<Long, List<ContentEpisode>> episodesBySeason = new HashMap<>();
+        for (ContentEpisode episode : episodes.findAllByContentId(item.getId()))
+            episodesBySeason.computeIfAbsent(episode.getSeason().getId(), ignored -> new ArrayList<>()).add(episode);
+        Map<Long, Long> watchCountsByEpisode = new HashMap<>();
+        for (EpisodeWatch watch : watches.findAllByUserIdAndContentId(userId, item.getId()))
+            watchCountsByEpisode.merge(watch.getEpisode().getId(), 1L, Long::sum);
         List<AnimeSeasonResponse> seasonResponses = seasons.findAllByContentIdOrderBySeasonNumber(item.getId()).stream()
                 .map(season -> new AnimeSeasonResponse(season.getId(), season.getSeasonNumber(), season.getTitle(),
-                        season.getReleaseYear(), episodes.findAllBySeasonIdOrderByEpisodeNumber(season.getId()).stream()
-                        .map(episode -> { long count = watches.countByEpisodeIdAndUserId(episode.getId(), userId);
+                        season.getReleaseYear(), episodesBySeason.getOrDefault(season.getId(), List.of()).stream()
+                        .map(episode -> { long count = watchCountsByEpisode.getOrDefault(episode.getId(), 0L);
                             return new AnimeEpisodeResponse(episode.getId(), episode.getEpisodeNumber(), episode.getTitle(),
                                     episode.getDurationMinutes(), episode.getReleaseDate(), count > 0, count); })
                         .toList())).toList();
