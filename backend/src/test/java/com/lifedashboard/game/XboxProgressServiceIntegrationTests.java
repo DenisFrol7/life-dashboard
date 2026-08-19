@@ -19,6 +19,7 @@ class XboxProgressServiceIntegrationTests {
     @Autowired GameLibraryService gameLibraryService;
     @Autowired XboxProgressService progressService;
     @Autowired XboxAchievementGroupService groupService;
+    @Autowired XboxLibrarySummaryService summaryService;
     @Autowired GamingPlatformRepository platforms;
     @Autowired GameSourceRepository sources;
 
@@ -81,6 +82,22 @@ class XboxProgressServiceIntegrationTests {
             groupService.delete(dlc.id());
             assertEquals(50, progressService.get(entryId).totalAchievements());
             assertEquals(1000, progressService.get(entryId).totalGamerscore());
+        } finally { cleanup(); }
+    }
+
+    @Test
+    void loadsProgressAndBaseGameInOneCatalogSummary() {
+        try {
+            long entryId = createLibraryEntry("XBOX_SERIES");
+            progressService.put(entryId, new XboxProgressRequest(50, 25, 1000, 300));
+
+            var summary = summaryService.getAll().stream()
+                    .filter(item -> item.libraryEntryId().equals(entryId)).findFirst().orElseThrow();
+
+            assertEquals(25, summary.progress().unlockedAchievements());
+            assertNotNull(summary.baseGame());
+            assertEquals(XboxAchievementGroupType.BASE_GAME, summary.baseGame().groupType());
+            assertEquals(300, summary.baseGame().earnedGamerscore());
         } finally { cleanup(); }
     }
 
