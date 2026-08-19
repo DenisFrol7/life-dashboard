@@ -28,3 +28,9 @@ To restore a backup, stop the backend first and run:
 ```
 
 Restoring replaces the current development database contents and requires typing `RESTORE` explicitly. Create a fresh backup before applying a new Flyway migration or restoring an older archive.
+
+## Data export and import
+
+The **Settings** page can download all application data as a portable JSON archive. Import accepts an archive only when its format version, Flyway schema version and complete table set match the running application.
+
+Before replacing any rows, the backend automatically writes the current data to `backups/life-dashboard_before-import_*.json`. The replacement runs in one database transaction, so a failed import leaves the database unchanged. These logical JSON archives complement the PostgreSQL `.dump` disaster-recovery backups; they do not replace them.

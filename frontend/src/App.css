@@ -1067,6 +1067,28 @@
   .book-status-tabs { flex-basis: 100%; min-width: 0; }
 }
 
+.settings-page { display: grid; gap: 18px; }
+.settings-intro, .settings-card, .settings-safety { border: 1px solid #dce3df; border-radius: 16px; background: #fff; }
+.settings-intro { padding: 24px; }
+.settings-intro h2 { margin: 5px 0 8px; font-family: Georgia, serif; font-size: 28px; color: #21323d; }
+.settings-intro > p:last-child { max-width: 720px; margin: 0; color: #6e7d77; line-height: 1.6; }
+.settings-transfer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.settings-card { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 16px; align-items: start; padding: 22px; }
+.settings-card-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 13px; background: #eaf0f5; color: #4c6d87; font-size: 25px; font-weight: 700; }
+.settings-card h3, .settings-safety h3 { margin: 0 0 7px; color: #273a45; font-size: 18px; }
+.settings-card p { min-height: 48px; margin: 0; color: #718079; line-height: 1.5; }
+.settings-card button { grid-column: 2; justify-self: start; min-width: 160px; }
+.settings-card input[type='file'] { display: none; }
+.settings-card.danger { border-color: #ead8d8; }
+.settings-card.danger .settings-card-icon { background: #f8eaea; color: #a75a5a; }
+.danger-button { border: 1px solid #ddbcbc; border-radius: 10px; background: #f7e9e9; color: #984e4e; padding: 10px 16px; font-weight: 700; cursor: pointer; }
+.danger-button:hover { background: #f2dede; }
+.danger-button:disabled { cursor: wait; opacity: .65; }
+.settings-safety { padding: 22px 24px; }
+.settings-safety ul { display: grid; gap: 9px; margin: 12px 0 0; padding-left: 20px; color: #63736c; line-height: 1.5; }
+.settings-safety code { border-radius: 5px; background: #edf1ef; padding: 2px 5px; color: #3d554a; }
+.settings-success { border-color: #bcd8c4; background: #eff8f1; color: #386044; }
+
 @media (max-width: 420px) {
   .movies-page .movie-card,
   .movies-page .book-card { grid-template-columns: 78px minmax(0, 1fr); min-height: 124px; }
