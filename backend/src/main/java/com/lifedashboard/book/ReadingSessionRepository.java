@@ -8,6 +8,8 @@ import java.util.Optional;
 
 public interface ReadingSessionRepository extends JpaRepository<ReadingSession, Long> {
     List<ReadingSession> findAllByUserContentIdOrderByStartedAtDesc(Long userContentId);
+    @EntityGraph(attributePaths = "userContent")
+    List<ReadingSession> findAllByUserContentUserIdOrderByStartedAtDesc(Long userId);
     Optional<ReadingSession> findByIdAndUserContentUserId(Long id, Long userId);
 
     @EntityGraph(attributePaths = {"userContent", "userContent.content"})

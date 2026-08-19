@@ -8,7 +8,7 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
+import java.util.*;
 
 @Service
 @Transactional(readOnly = true)
@@ -28,8 +28,23 @@ public class BookService {
         this.library=library; this.contentService=contentService; this.userId=userId;
     }
 
-    public List<BookResponse> getAll() { return books.findCatalog().stream()
-            .map((@NonNull Book book) -> response(book)).toList(); }
+    public List<BookResponse> getAll() {
+        Map<Long,UserContent> libraryByContent=new HashMap<>();
+        for(UserContent entry:library.findAllByUserIdOrderByIdDesc(userId))
+            libraryByContent.put(entry.getContent().getId(),entry);
+        Map<Long,BookProgress> progressByLibrary=new HashMap<>();
+        for(BookProgress value:progress.findAllByUserContentUserId(userId))
+            progressByLibrary.put(value.getUserContent().getId(),value);
+        Map<Long,List<ReadingSession>> sessionsByLibrary=new HashMap<>();
+        for(ReadingSession session:sessions.findAllByUserContentUserIdOrderByStartedAtDesc(userId))
+            sessionsByLibrary.computeIfAbsent(session.getUserContent().getId(),ignored->new ArrayList<>()).add(session);
+        return books.findCatalog().stream().map((@NonNull Book book)->{
+            UserContent entry=libraryByContent.get(book.getContent().getId());
+            BookProgress current=entry==null?null:progressByLibrary.get(entry.getId());
+            List<ReadingSession> history=entry==null?List.of():sessionsByLibrary.getOrDefault(entry.getId(),List.of());
+            return response(book,entry,current,history);
+        }).toList();
+    }
     public BookResponse get(Long id) { return response(find(id)); }
 
     @Transactional public BookResponse create(BookRequest request) {
@@ -115,14 +130,18 @@ public class BookService {
     private BookResponse response(Book book) {
         UserContent entry=library.findByUserIdAndContentId(userId,book.getContent().getId()).orElse(null);
         BookProgress current=entry==null?null:progress.findByUserContentId(entry.getId()).orElse(null);
+        List<ReadingSession> history=entry==null?List.of():sessions.findAllByUserContentIdOrderByStartedAtDesc(entry.getId());
+        return response(book,entry,current,history);
+    }
+    private BookResponse response(Book book,UserContent entry,BookProgress current,List<ReadingSession> history) {
         int page=current==null?0:current.getCurrentPage(), minute=current==null?0:current.getCurrentMinute();
         int value=book.getBookFormat()==BookFormat.AUDIOBOOK?minute:page;
         int total=book.getBookFormat()==BookFormat.AUDIOBOOK?book.getDurationMinutes():book.getPageCount();
         double percent=Math.round(value*10000.0/total)/100.0;
-        List<ReadingSessionResponse> history=entry==null?List.of():sessions.findAllByUserContentIdOrderByStartedAtDesc(entry.getId()).stream()
+        List<ReadingSessionResponse> sessionHistory=history.stream()
                 .map((@NonNull ReadingSession session)->sessionResponse(session)).toList();
         ContentItem c=book.getContent();
-        return new BookResponse(book.getId(),c.getId(),c.getTitle(),book.getAuthor(),book.getBookFormat(),book.getPageCount(),book.getDurationMinutes(),c.getReleaseYear(),c.getGenre(),c.getCoverUrl(),c.getDescription(),entry==null?null:entry.getId(),entry==null?null:entry.getStatus(),entry==null?null:entry.getRating(),entry!=null&&entry.isFavorite(),entry==null?null:entry.getPersonalNote(),entry==null?null:entry.getStartedAt(),entry==null?null:entry.getCompletedAt(),entry==null?null:page,entry==null?null:minute,percent,history);
+        return new BookResponse(book.getId(),c.getId(),c.getTitle(),book.getAuthor(),book.getBookFormat(),book.getPageCount(),book.getDurationMinutes(),c.getReleaseYear(),c.getGenre(),c.getCoverUrl(),c.getDescription(),entry==null?null:entry.getId(),entry==null?null:entry.getStatus(),entry==null?null:entry.getRating(),entry!=null&&entry.isFavorite(),entry==null?null:entry.getPersonalNote(),entry==null?null:entry.getStartedAt(),entry==null?null:entry.getCompletedAt(),entry==null?null:page,entry==null?null:minute,percent,sessionHistory);
     }
     private ReadingSessionResponse sessionResponse(ReadingSession value) { return new ReadingSessionResponse(value.getId(),value.getStartedAt(),value.getDurationMinutes(),value.getPagesRead(),value.getListenedMinutes(),value.getNote()); }
 }
