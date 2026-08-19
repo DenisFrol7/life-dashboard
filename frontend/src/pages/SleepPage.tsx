@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { createSleepSession, deleteSleepSession, getSleepSessions, updateSleepSession, type SleepSession, type SleepSessionInput } from '../api/sleep'
+import { useToast } from '../components/ToastContext'
 
 const sleepGoalMinutes = 8 * 60
 const localDate = (value: string | Date) => new Date(value).toLocaleDateString('en-CA')
@@ -10,6 +11,7 @@ const formatTime = (value: string) => new Intl.DateTimeFormat('ru-RU', { hour: '
 const formatDate = (value: string) => new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', weekday: 'short' }).format(new Date(value))
 
 export function SleepPage() {
+  const { showToast } = useToast()
   const [sessions, setSessions] = useState<SleepSession[]>([])
   const [editing, setEditing] = useState<SleepSession | 'new' | null>(null)
   const [loading, setLoading] = useState(true)
@@ -40,7 +42,7 @@ export function SleepPage() {
 
   const remove = async (session: SleepSession) => {
     if (!window.confirm(`Удалить сессию сна за ${formatDate(session.endedAt)}?`)) return
-    try { await deleteSleepSession(session.id); await load() }
+    try { await deleteSleepSession(session.id); showToast('Сессия сна удалена'); await load() }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить сессию') }
   }
 
@@ -86,6 +88,7 @@ function toLocalInput(instant: string) { const date = new Date(instant); const o
 function defaultTimes() { const end = new Date(); end.setHours(7, 0, 0, 0); const start = new Date(end); start.setDate(start.getDate() - 1); start.setHours(23, 0, 0, 0); return { start: toLocalInput(start.toISOString()), end: toLocalInput(end.toISOString()) } }
 
 function SleepForm({ session, onClose, onSaved }: { session?: SleepSession; onClose: () => void; onSaved: () => void }) {
+  const { showToast } = useToast()
   const defaults = defaultTimes()
   const [start, setStart] = useState(session ? toLocalInput(session.startedAt) : defaults.start)
   const [end, setEnd] = useState(session ? toLocalInput(session.endedAt) : defaults.end)
@@ -98,7 +101,7 @@ function SleepForm({ session, onClose, onSaved }: { session?: SleepSession; onCl
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const numberOrNull = (value: string) => value === '' ? null : Number(value)
-  const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); setError(null); const input: SleepSessionInput = { startedAt: new Date(start).toISOString(), endedAt: new Date(end).toISOString(), deepSleepMinutes: numberOrNull(deep), lightSleepMinutes: numberOrNull(light), remSleepMinutes: numberOrNull(rem), awakeMinutes: numberOrNull(awake), qualityRating: numberOrNull(quality), note: note || null }; try { if (session) await updateSleepSession(session.id, input); else await createSleepSession(input); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить сессию') } finally { setSaving(false) } }
+  const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); setError(null); const input: SleepSessionInput = { startedAt: new Date(start).toISOString(), endedAt: new Date(end).toISOString(), deepSleepMinutes: numberOrNull(deep), lightSleepMinutes: numberOrNull(light), remSleepMinutes: numberOrNull(rem), awakeMinutes: numberOrNull(awake), qualityRating: numberOrNull(quality), note: note || null }; try { if (session) await updateSleepSession(session.id, input); else await createSleepSession(input); showToast(session ? 'Сессия сна обновлена' : 'Сессия сна добавлена'); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить сессию') } finally { setSaving(false) } }
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><form className="habit-form sleep-form" onSubmit={(event) => void submit(event)}>
     <div className="form-heading"><div><p className="eyebrow">Сон</p><h2>{session ? 'Редактирование' : 'Новая сессия'}</h2></div><button type="button" onClick={onClose}>×</button></div>
     {error && <div className="form-error">{error}</div>}

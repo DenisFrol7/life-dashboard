@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { completeOccurrence, createCalendarEvent, deleteCalendarEvent, deleteOccurrence, getCalendarEvents, getOccurrences, updateCalendarEvent, type CalendarEvent, type CalendarEventInput, type EventType, type Occurrence } from '../api/calendar'
+import { useToast } from '../components/ToastContext'
 
 const iso = (date: Date) => date.toLocaleDateString('en-CA')
 const today = iso(new Date())
@@ -25,6 +26,7 @@ const monthCells = (month: Date) => {
 }
 
 export function CalendarPage() {
+  const { showToast } = useToast()
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12))
   const [selectedDate, setSelectedDate] = useState(today)
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -46,7 +48,7 @@ export function CalendarPage() {
   const occurrenceFor = (event: CalendarEvent, date: string) => occurrences[event.id]?.find((item) => item.occurrenceDate === date)
   const changeMonth = (delta: number) => { const next = new Date(month); next.setMonth(next.getMonth() + delta); setMonth(next); setSelectedDate(iso(new Date(next.getFullYear(), next.getMonth(), 1, 12))) }
   const toggleTask = async (event: CalendarEvent) => { try { if (occurrenceFor(event, selectedDate)) await deleteOccurrence(event.id, selectedDate); else await completeOccurrence(event.id, selectedDate); await load() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось изменить задачу') } }
-  const remove = async (event: CalendarEvent) => { if (!window.confirm(`Удалить «${event.title}»${event.scheduleType === 'ONCE' ? '' : ' и все повторения'}?`)) return; try { await deleteCalendarEvent(event.id); await load() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить запись') } }
+  const remove = async (event: CalendarEvent) => { if (!window.confirm(`Удалить «${event.title}»${event.scheduleType === 'ONCE' ? '' : ' и все повторения'}?`)) return; try { await deleteCalendarEvent(event.id); showToast('Запись календаря удалена'); await load() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить запись') } }
 
   return <div className="calendar-page">
     <section className="calendar-toolbar"><div><button onClick={() => changeMonth(-1)}>‹</button><h2>{new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(month)}</h2><button onClick={() => changeMonth(1)}>›</button><button className="today-button" onClick={() => { const now = new Date(); setMonth(new Date(now.getFullYear(), now.getMonth(), 1, 12)); setSelectedDate(today) }}>Сегодня</button></div><button className="primary-button" onClick={() => setEditing('new')}>+ Добавить</button></section>
@@ -70,11 +72,12 @@ export function CalendarPage() {
 }
 
 function CalendarForm({ event, initialDate, onClose, onSaved }: { event?: CalendarEvent; initialDate: string; onClose: () => void; onSaved: () => void }) {
+  const { showToast } = useToast()
   const [form, setForm] = useState<CalendarEventInput>(event ? { ...event } : emptyEvent(initialDate))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const set = <K extends keyof CalendarEventInput>(key: K, value: CalendarEventInput[K]) => setForm((current) => ({ ...current, [key]: value }))
-  const submit = async (submitEvent: FormEvent) => { submitEvent.preventDefault(); setSaving(true); setError(null); const input = { ...form, description: form.description || null, location: form.location || null, repeatUntil: form.scheduleType === 'ONCE' ? null : form.repeatUntil || null, startTime: form.allDay ? null : form.startTime || null, endTime: form.allDay ? null : form.endTime || null, scheduleDays: form.scheduleType === 'SELECTED_DAYS' ? form.scheduleDays : [] }; try { if (event) await updateCalendarEvent(event.id, input); else await createCalendarEvent(input); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить запись') } finally { setSaving(false) } }
+  const submit = async (submitEvent: FormEvent) => { submitEvent.preventDefault(); setSaving(true); setError(null); const input = { ...form, description: form.description || null, location: form.location || null, repeatUntil: form.scheduleType === 'ONCE' ? null : form.repeatUntil || null, startTime: form.allDay ? null : form.startTime || null, endTime: form.allDay ? null : form.endTime || null, scheduleDays: form.scheduleType === 'SELECTED_DAYS' ? form.scheduleDays : [] }; try { if (event) await updateCalendarEvent(event.id, input); else await createCalendarEvent(input); showToast(event ? 'Запись календаря обновлена' : 'Запись календаря добавлена'); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить запись') } finally { setSaving(false) } }
   return <div className="modal-backdrop" onMouseDown={(mouseEvent) => { if (mouseEvent.target === mouseEvent.currentTarget) onClose() }}><form className="habit-form calendar-form" onSubmit={(submitEvent) => void submit(submitEvent)}>
     <div className="form-heading"><div><p className="eyebrow">Календарь</p><h2>{event ? 'Редактирование' : 'Новая запись'}</h2></div><button type="button" onClick={onClose}>×</button></div>{error && <div className="form-error">{error}</div>}
     <label>Название<input required maxLength={300} value={form.title} onChange={(inputEvent) => set('title', inputEvent.target.value)} /></label>

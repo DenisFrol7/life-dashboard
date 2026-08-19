@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { deleteActivity, getActivityRange, putActivity, type DailyActivity } from '../api/activity'
+import { useToast } from '../components/ToastContext'
 
 const stepGoal = 7_000
 const activeDayThreshold = 1_000
@@ -75,14 +76,15 @@ export function ActivityPage() {
 }
 
 function ActivityForm({ date, activity, onDate, onSaved, onDeleted }: { date: string; activity?: DailyActivity; onDate: (date: string) => void; onSaved: () => void; onDeleted: () => void }) {
+  const { showToast } = useToast()
   const [steps, setSteps] = useState('')
   const [distance, setDistance] = useState('')
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   useEffect(() => { setSteps(activity?.steps?.toString() ?? ''); setDistance(activity?.distanceMeters == null ? '' : (activity.distanceMeters / 1000).toString()); setNote(activity?.note ?? ''); setError(null) }, [activity, date])
-  const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); setError(null); try { await putActivity(date, { steps: steps === '' ? null : Number(steps), distanceMeters: distance === '' ? null : Math.round(Number(distance) * 1000), note: note || null }); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить запись') } finally { setSaving(false) } }
-  const remove = async () => { if (!activity || !window.confirm(`Удалить активность за ${formatDate(date)}?`)) return; try { await deleteActivity(date); onDeleted() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить запись') } }
+  const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); setError(null); try { await putActivity(date, { steps: steps === '' ? null : Number(steps), distanceMeters: distance === '' ? null : Math.round(Number(distance) * 1000), note: note || null }); showToast('Активность сохранена'); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить запись') } finally { setSaving(false) } }
+  const remove = async () => { if (!activity || !window.confirm(`Удалить активность за ${formatDate(date)}?`)) return; try { await deleteActivity(date); showToast('Запись активности удалена'); onDeleted() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить запись') } }
   return <form className="activity-panel activity-form" onSubmit={(event) => void submit(event)}>
     <div className="panel-heading"><div><p className="eyebrow">Данные за день</p><h3>{date === today ? 'Сегодня' : formatDate(date, { day: 'numeric', month: 'long' })}</h3></div><input aria-label="Дата активности" max={today} type="date" value={date} onChange={(event) => onDate(event.target.value)} /></div>
     {error && <div className="form-error">{error}</div>}
