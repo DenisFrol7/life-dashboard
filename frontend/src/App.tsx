@@ -16,6 +16,7 @@ import { GamesPage } from './pages/GamesPage'
 import { GameDetailsPage } from './pages/GameDetailsPage'
 import { BooksPage } from './pages/BooksPage'
 import { BookDetailsPage } from './pages/BookDetailsPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import './App.css'
 
@@ -34,6 +35,7 @@ const navigation: NavItem[] = [
   { path: '/anime', label: 'Аниме', short: '◇', description: 'Многосерийное аниме' },
   { path: '/games', label: 'Игры', short: '＋', description: 'Игровая библиотека и Xbox' },
   { path: '/books', label: 'Книги', short: '▥', description: 'Книжная библиотека и прогресс чтения' },
+  { path: '/settings', label: 'Настройки', short: '⚙', description: 'Экспорт, импорт и параметры приложения' },
 ]
 
 function App() {
@@ -101,7 +103,8 @@ function App() {
           <Route path="/games/:id" element={<GameDetailsPage />} />
           <Route path="/books" element={<BooksPage />} />
           <Route path="/books/:id" element={<BookDetailsPage />} />
-          {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies', '/series', '/anime', '/games', '/books'].includes(item.path)).map((item) => (
+          <Route path="/settings" element={<SettingsPage />} />
+          {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies', '/series', '/anime', '/games', '/books', '/settings'].includes(item.path)).map((item) => (
             <Route
               key={item.path}
               path={item.path}

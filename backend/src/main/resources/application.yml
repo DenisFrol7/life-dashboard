@@ -18,12 +18,17 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
 
 server:
   port: ${SERVER_PORT:8080}
 
 app:
   default-user-id: ${DEFAULT_USER_ID:1}
+  backup-directory: ${BACKUP_DIRECTORY:../backups}
 
 springdoc:
   api-docs:
