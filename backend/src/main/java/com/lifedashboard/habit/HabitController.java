@@ -2,6 +2,7 @@ package com.lifedashboard.habit;
 
 import com.lifedashboard.habit.dto.HabitEntryRequest;
 import com.lifedashboard.habit.dto.HabitEntryResponse;
+import com.lifedashboard.habit.dto.DatedHabitEntryResponse;
 import com.lifedashboard.habit.dto.HabitRequest;
 import com.lifedashboard.habit.dto.HabitResponse;
 import jakarta.validation.Valid;
@@ -70,6 +71,11 @@ public class HabitController {
     @GetMapping("/{id}/entries")
     public List<HabitEntryResponse> getEntries(@PathVariable Long id) {
         return habitService.getEntries(id);
+    }
+
+    @GetMapping("/entries")
+    public List<DatedHabitEntryResponse> getEntries(@RequestParam LocalDate date) {
+        return habitService.getEntries(date);
     }
 
     @DeleteMapping("/{id}/entries/{date}")

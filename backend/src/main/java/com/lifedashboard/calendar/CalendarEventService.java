@@ -4,6 +4,7 @@ import com.lifedashboard.calendar.dto.CalendarEventRequest;
 import com.lifedashboard.calendar.dto.CalendarEventResponse;
 import com.lifedashboard.calendar.dto.OccurrenceRequest;
 import com.lifedashboard.calendar.dto.OccurrenceResponse;
+import com.lifedashboard.calendar.dto.CalendarOccurrenceSummaryResponse;
 import com.lifedashboard.common.error.InvalidRequestException;
 import com.lifedashboard.common.error.ResourceNotFoundException;
 import com.lifedashboard.user.User;
@@ -94,6 +95,14 @@ public class CalendarEventService {
         return occurrenceRepository.findAllByEventIdOrderByOccurrenceDateAsc(eventId).stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    public List<CalendarOccurrenceSummaryResponse> getOccurrences(LocalDate from, LocalDate to) {
+        if (to.isBefore(from)) throw new InvalidRequestException("to must not be before from");
+        return occurrenceRepository
+                .findAllByEventUserIdAndOccurrenceDateBetweenOrderByOccurrenceDateAsc(defaultUserId, from, to)
+                .stream().map(occurrence -> new CalendarOccurrenceSummaryResponse(
+                        occurrence.getEvent().getId(), toResponse(occurrence))).toList();
     }
 
     @Transactional

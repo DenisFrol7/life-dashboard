@@ -18,5 +18,7 @@ export const createCalendarEvent = (input: CalendarEventInput) => apiRequest<Cal
 export const updateCalendarEvent = (id: number, input: CalendarEventInput) => apiRequest<CalendarEvent>(`/api/calendar/events/${id}`, { method: 'PUT', body: JSON.stringify(input) })
 export const deleteCalendarEvent = (id: number) => apiRequest<void>(`/api/calendar/events/${id}`, { method: 'DELETE' })
 export const getOccurrences = (id: number) => apiRequest<Occurrence[]>(`/api/calendar/events/${id}/occurrences`)
+export const getOccurrencesForRange = (from: string, to: string) =>
+  apiRequest<{ eventId: number; occurrence: Occurrence }[]>(`/api/calendar/occurrences?from=${from}&to=${to}`)
 export const completeOccurrence = (id: number, date: string) => apiRequest<Occurrence>(`/api/calendar/events/${id}/occurrences/${date}`, { method: 'PUT', body: JSON.stringify({ status: 'COMPLETED', completedAt: null, note: null }) })
 export const deleteOccurrence = (id: number, date: string) => apiRequest<void>(`/api/calendar/events/${id}/occurrences/${date}`, { method: 'DELETE' })

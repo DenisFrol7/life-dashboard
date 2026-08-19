@@ -4,6 +4,7 @@ import com.lifedashboard.common.error.InvalidRequestException;
 import com.lifedashboard.common.error.ResourceNotFoundException;
 import com.lifedashboard.habit.dto.HabitEntryRequest;
 import com.lifedashboard.habit.dto.HabitEntryResponse;
+import com.lifedashboard.habit.dto.DatedHabitEntryResponse;
 import com.lifedashboard.habit.dto.HabitRequest;
 import com.lifedashboard.habit.dto.HabitResponse;
 import com.lifedashboard.user.User;
@@ -94,6 +95,11 @@ public class HabitService {
         return entryRepository.findAllByHabitIdOrderByEntryDateAsc(habitId).stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    public List<DatedHabitEntryResponse> getEntries(LocalDate date) {
+        return entryRepository.findAllByHabitUserIdAndEntryDate(defaultUserId, date).stream()
+                .map(entry -> new DatedHabitEntryResponse(entry.getHabit().getId(), toResponse(entry))).toList();
     }
 
     @Transactional
