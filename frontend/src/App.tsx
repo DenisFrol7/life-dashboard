@@ -17,6 +17,7 @@ import { GameDetailsPage } from './pages/GameDetailsPage'
 import { BooksPage } from './pages/BooksPage'
 import { BookDetailsPage } from './pages/BookDetailsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { AnalyticsPage } from './pages/AnalyticsPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import './App.css'
 
@@ -24,6 +25,7 @@ type NavItem = { path: string; label: string; short: string; description: string
 
 const navigation: NavItem[] = [
   { path: '/', label: 'Обзор', short: '⌂', description: 'Главная сводка на сегодня' },
+  { path: '/analytics', label: 'Статистика', short: '⌁', description: 'Динамика и сравнение показателей' },
   { path: '/habits', label: 'Привычки', short: '✓', description: 'Расписание и прогресс привычек' },
   { path: '/activity', label: 'Активность', short: '↗', description: 'Шаги и пройденная дистанция' },
   { path: '/sleep', label: 'Сон', short: '☾', description: 'История и качество сна' },
@@ -87,6 +89,7 @@ function App() {
 
         <Routes>
           <Route index element={<DashboardPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/habits" element={<HabitsPage />} />
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/sleep" element={<SleepPage />} />
@@ -104,7 +107,7 @@ function App() {
           <Route path="/books" element={<BooksPage />} />
           <Route path="/books/:id" element={<BookDetailsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
-          {navigation.slice(1).filter((item) => !['/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies', '/series', '/anime', '/games', '/books', '/settings'].includes(item.path)).map((item) => (
+          {navigation.slice(1).filter((item) => !['/analytics', '/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies', '/series', '/anime', '/games', '/books', '/settings'].includes(item.path)).map((item) => (
             <Route
               key={item.path}
               path={item.path}
