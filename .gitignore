@@ -3,4 +3,5 @@
 .vscode/
 backend/target/
 backend/*.log
+backups/
 *.iml
