@@ -6,6 +6,12 @@ import { ErrorState, LoadingState } from '../components/AsyncState'
 
 const formatDistance = (meters: number | null) => meters == null ? 'Нет данных' : `${(meters / 1000).toFixed(1)} км`
 const formatDuration = (minutes: number) => minutes > 0 ? `${Math.floor(minutes / 60)} ч ${minutes % 60} мин` : 'Нет данных'
+const getGreeting = (hour: number) => {
+  if (hour >= 5 && hour < 12) return 'Доброе утро!'
+  if (hour >= 12 && hour < 18) return 'Добрый день!'
+  if (hour >= 18 && hour < 23) return 'Добрый вечер!'
+  return 'Доброй ночи!'
+}
 
 export function DashboardPage() {
   const [data, setData] = useState<Dashboard | null>(null)
@@ -25,13 +31,14 @@ export function DashboardPage() {
 
   const date = new Intl.DateTimeFormat('ru-RU', { dateStyle: 'full' }).format(new Date(`${data.date}T12:00:00`))
   const mediaTotal = data.media.currentMovies + data.media.currentSeries + data.media.currentAnime + data.media.currentGames
+  const greeting = getGreeting(new Date().getHours())
 
   return (
     <div className="page-stack dashboard-page">
       <section className="welcome-card">
         <div className="dashboard-welcome-copy">
           <p className="eyebrow">Сегодня, {date}</p>
-          <h2>Добрый день!</h2>
+          <h2>{greeting}</h2>
           <p>Короткая сводка активности, планов и отдыха за сегодняшний день.</p>
           <Link className="dashboard-text-link" to="/journal">Открыть журнал активности →</Link>
         </div>
