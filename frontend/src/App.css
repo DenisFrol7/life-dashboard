@@ -502,7 +502,7 @@ html[data-theme="dark"] .theme-selector button.active > span { color: #fff; back
 .new-tag input { flex: 1; min-width: 0; padding: 9px; border: 1px solid #dcdcd5; border-radius: 7px; font-size: 12px; }
 .new-tag button { padding: 8px 10px; border: 0; border-radius: 7px; color: #496985; background: #e4edf4; cursor: pointer; font-size: 11px; font-weight: 800; }
 
-.timeline-page { display: grid; gap: 14px; max-width: 1120px; margin: 0 auto; }
+.timeline-page { display: grid; gap: 14px; max-width: 1280px; margin: 0 auto; }
 .timeline-toolbar { display: flex; align-items: center; justify-content: space-between; }
 .timeline-toolbar > div { display: flex; align-items: center; gap: 5px; }
 .timeline-toolbar button { height: 38px; padding: 0 14px; border: 1px solid var(--line); border-radius: 9px; color: #536a79; background: var(--paper); cursor: pointer; font-size: 13px; }
@@ -710,7 +710,7 @@ html[data-theme="dark"] .theme-selector button.active > span { color: #fff; back
 .book-list-side { min-width: 150px; }
 .book-no-rating { color: #8a9498; font-size: 10px; }
 .book-details-page { display: grid; gap: 14px; max-width: 1280px; margin: 0 auto; }
-.movie-details-page { display: grid; gap: 14px; max-width: 1180px; margin: 0 auto; }
+.movie-details-page { display: grid; gap: 14px; max-width: 1280px; margin: 0 auto; }
 .series-details-page { display: grid; gap: 14px; max-width: 1280px; margin: 0 auto; }
 .series-hero-card { display: grid; grid-template-columns: 210px minmax(0,1fr) minmax(300px,34%); gap: 14px; padding: 18px; border: 1px solid #dde4e7; border-radius: 15px; background: var(--paper); box-shadow: 0 8px 24px #2a39430d; }
 .series-hero-card .movie-detail-poster { min-height: 300px; }
@@ -1194,7 +1194,7 @@ html[data-theme="dark"] .theme-selector button.active > span { color: #fff; back
   .book-status-tabs { flex-basis: 100%; min-width: 0; }
 }
 
-.analytics-page { display: grid; gap: 16px; }
+.analytics-page { display: grid; gap: 16px; width: 100%; max-width: 1280px; margin: 0 auto; }
 .analytics-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 16px; border: 1px solid #dce3df; border-radius: 14px; background: #fff; }
 .analytics-dates { display: flex; gap: 10px; }
 .analytics-dates label { display: flex; align-items: center; gap: 7px; color: #74827c; font-size: 12px; font-weight: 700; }
@@ -1224,7 +1224,7 @@ html[data-theme="dark"] .theme-selector button.active > span { color: #fff; back
 .analytics-detail-card dt { color: #6f7e77; }
 .analytics-detail-card dd { margin: 0; color: #2f454f; font-weight: 800; }
 
-.settings-page { display: grid; gap: 18px; }
+.settings-page { display: grid; gap: 18px; width: 100%; max-width: 1280px; margin: 0 auto; }
 .settings-intro, .settings-card, .settings-safety { border: 1px solid #dce3df; border-radius: 16px; background: #fff; }
 .settings-intro { padding: 24px; }
 .settings-intro h2 { margin: 5px 0 8px; font-family: Georgia, serif; font-size: 28px; color: #21323d; }
