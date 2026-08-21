@@ -1,5 +1,6 @@
 package com.lifedashboard.data;
 
+import org.jspecify.annotations.NonNull;
 import com.lifedashboard.common.error.InvalidRequestException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -199,7 +200,8 @@ public class DataTransferService {
         });
 
         ArrayDeque<String> ready = new ArrayDeque<>();
-        tables.stream().filter(table -> dependencies.get(table) == 0).forEach(ready::add);
+        tables.stream().filter(table -> dependencies.get(table) == 0)
+                .forEach((@NonNull String table) -> ready.add(table));
         List<String> result = new ArrayList<>(tables.size());
         while (!ready.isEmpty()) {
             String parent = ready.removeFirst();
@@ -230,8 +232,9 @@ public class DataTransferService {
             Long maximum = jdbc.queryForObject(
                     "SELECT MAX(" + quote(column) + ") FROM " + quote(table), Long.class);
             boolean hasRows = maximum != null;
+            long sequenceValue = maximum == null ? 1L : maximum.longValue();
             jdbc.queryForObject("SELECT setval(CAST(? AS regclass), ?, ?)", Long.class,
-                    sequenceName, hasRows ? maximum : 1L, hasRows);
+                    sequenceName, sequenceValue, hasRows);
         }
     }
 

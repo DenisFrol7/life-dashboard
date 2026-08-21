@@ -1,5 +1,6 @@
 package com.lifedashboard.content;
 
+import org.jspecify.annotations.NonNull;
 import com.lifedashboard.common.error.*;
 import com.lifedashboard.content.dto.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -62,7 +63,8 @@ public class AnimeService {
             episodesBySeason.computeIfAbsent(episode.getSeason().getId(), ignored -> new ArrayList<>()).add(episode);
         Map<Long, Long> watchCountsByEpisode = new HashMap<>();
         for (EpisodeWatch watch : watches.findAllByUserIdAndContentId(userId, item.getId()))
-            watchCountsByEpisode.merge(watch.getEpisode().getId(), 1L, Long::sum);
+            watchCountsByEpisode.merge(watch.getEpisode().getId(), 1L,
+                    (@NonNull Long current, @NonNull Long increment) -> current + increment);
         List<AnimeSeasonResponse> seasonResponses = seasons.findAllByContentIdOrderBySeasonNumber(item.getId()).stream()
                 .map(season -> new AnimeSeasonResponse(season.getId(), season.getSeasonNumber(), season.getTitle(),
                         season.getReleaseYear(), episodesBySeason.getOrDefault(season.getId(), List.of()).stream()

@@ -1,5 +1,6 @@
 package com.lifedashboard.sleep;
 
+import org.jspecify.annotations.NonNull;
 import com.lifedashboard.common.error.InvalidRequestException;
 import com.lifedashboard.common.error.ResourceNotFoundException;
 import com.lifedashboard.habit.HabitAutomationService;
@@ -55,7 +56,7 @@ public class SleepSessionService {
             throw new InvalidRequestException("to must be after from");
         }
         return sessionRepository.findOverlapping(defaultUserId, from, to).stream()
-                .map(this::toResponse)
+                .map((@NonNull SleepSession session) -> toResponse(session))
                 .toList();
     }
 

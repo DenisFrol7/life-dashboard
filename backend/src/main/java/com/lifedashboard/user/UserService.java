@@ -1,5 +1,6 @@
 package com.lifedashboard.user;
 
+import org.jspecify.annotations.NonNull;
 import com.lifedashboard.common.error.DuplicateResourceException;
 import com.lifedashboard.common.error.ResourceNotFoundException;
 import com.lifedashboard.user.dto.CreateUserRequest;
@@ -48,7 +49,7 @@ public class UserService {
     public List<UserResponse> getAll() {
         return userRepository.findAll(Sort.by(Sort.Direction.ASC, "id"))
                 .stream()
-                .map(this::toResponse)
+                .map((@NonNull User user) -> toResponse(user))
                 .toList();
     }
 

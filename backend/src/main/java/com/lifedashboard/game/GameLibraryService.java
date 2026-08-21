@@ -1,5 +1,6 @@
 package com.lifedashboard.game;
 
+import org.jspecify.annotations.NonNull;
 import com.lifedashboard.common.error.*;
 import com.lifedashboard.content.*;
 import com.lifedashboard.content.dto.LibraryEntryRequest;
@@ -51,7 +52,8 @@ public class GameLibraryService {
         return response(saved);
     }
     public List<GameLibraryResponse> getAll(UserContentStatus status, Long platformId) {
-        return games.findLibrary(userId, status, platformId).stream().map(this::response).toList();
+        return games.findLibrary(userId, status, platformId).stream()
+                .map((@NonNull UserGame game) -> response(game)).toList();
     }
     public GameLibraryResponse get(Long id) { return response(findGame(id)); }
     @Transactional

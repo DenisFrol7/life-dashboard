@@ -1,5 +1,6 @@
 package com.lifedashboard.activity;
 
+import org.jspecify.annotations.NonNull;
 import com.lifedashboard.activity.dto.DailyActivityRequest;
 import com.lifedashboard.activity.dto.DailyActivityResponse;
 import com.lifedashboard.common.error.InvalidRequestException;
@@ -52,7 +53,7 @@ public class DailyActivityService {
         }
         return activityRepository.findAllByUserIdAndActivityDateBetweenOrderByActivityDateAsc(defaultUserId, from, to)
                 .stream()
-                .map(this::toResponse)
+                .map((@NonNull DailyActivity activity) -> toResponse(activity))
                 .toList();
     }
 

@@ -58,7 +58,7 @@ public class HabitService {
     public List<HabitResponse> getAll(HabitStatus status) {
         return habitRepository.findAllByUserIdOrderByStartDateAscIdAsc(defaultUserId).stream()
                 .filter(habit -> status == null || habit.getStatus() == status)
-                .map(this::toResponse)
+                .map((@NonNull Habit habit) -> toResponse(habit))
                 .toList();
     }
 
@@ -93,7 +93,7 @@ public class HabitService {
     public List<HabitEntryResponse> getEntries(Long habitId) {
         findHabit(habitId);
         return entryRepository.findAllByHabitIdOrderByEntryDateAsc(habitId).stream()
-                .map(this::toResponse)
+                .map((@NonNull HabitEntry entry) -> toResponse(entry))
                 .toList();
     }
 

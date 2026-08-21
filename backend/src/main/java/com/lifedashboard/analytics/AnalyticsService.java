@@ -1,5 +1,6 @@
 package com.lifedashboard.analytics;
 
+import org.jspecify.annotations.NonNull;
 import com.lifedashboard.common.error.InvalidRequestException;
 import com.lifedashboard.common.error.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Value;
@@ -65,7 +66,8 @@ public class AnalyticsService {
                 .addValue("userId", userId).addValue("fromDate", from).addValue("toDate", to)
                 .addValue("fromInstant", Timestamp.from(fromInstant)).addValue("toInstant", Timestamp.from(toInstant))
                 .addValue("timezone", zone.getId());
-        return jdbc.query(DAILY_SQL, parameters, this::dailyPoint);
+        return jdbc.query(DAILY_SQL, parameters,
+                (@NonNull ResultSet result, int rowNumber) -> dailyPoint(result, rowNumber));
     }
 
     private AnalyticsResponse.DailyPoint dailyPoint(ResultSet result, int rowNumber) throws SQLException {
@@ -82,28 +84,29 @@ public class AnalyticsService {
     }
 
     private AnalyticsResponse.Overview overview(List<AnalyticsResponse.DailyPoint> daily) {
-        long totalSteps = daily.stream().mapToLong(AnalyticsResponse.DailyPoint::steps).sum();
-        long distance = daily.stream().mapToLong(AnalyticsResponse.DailyPoint::distanceMeters).sum();
+        long totalSteps = daily.stream().mapToLong((AnalyticsResponse.@NonNull DailyPoint point) -> point.steps()).sum();
+        long distance = daily.stream().mapToLong((AnalyticsResponse.@NonNull DailyPoint point) -> point.distanceMeters()).sum();
         int activeDays = (int) daily.stream().filter(day -> day.steps() >= ACTIVE_DAY_STEPS).count();
-        long sleepMinutes = daily.stream().mapToLong(AnalyticsResponse.DailyPoint::sleepMinutes).sum();
-        long sleepSessions = daily.stream().mapToLong(AnalyticsResponse.DailyPoint::sleepSessions).sum();
+        long sleepMinutes = daily.stream().mapToLong((AnalyticsResponse.@NonNull DailyPoint point) -> point.sleepMinutes()).sum();
+        long sleepSessions = daily.stream().mapToLong((AnalyticsResponse.@NonNull DailyPoint point) -> point.sleepSessions()).sum();
         double qualityTotal = daily.stream().filter(day -> day.sleepQuality() != null)
-                .mapToDouble(AnalyticsResponse.DailyPoint::sleepQuality).sum();
+                .mapToDouble((AnalyticsResponse.@NonNull DailyPoint point) ->
+                        java.util.Objects.requireNonNull(point.sleepQuality())).sum();
         long qualityDays = daily.stream().filter(day -> day.sleepQuality() != null).count();
-        long completed = daily.stream().mapToLong(AnalyticsResponse.DailyPoint::completedHabitEntries).sum();
-        long tracked = daily.stream().mapToLong(AnalyticsResponse.DailyPoint::trackedHabitEntries).sum();
+        long completed = daily.stream().mapToLong((AnalyticsResponse.@NonNull DailyPoint point) -> point.completedHabitEntries()).sum();
+        long tracked = daily.stream().mapToLong((AnalyticsResponse.@NonNull DailyPoint point) -> point.trackedHabitEntries()).sum();
         return new AnalyticsResponse.Overview(totalSteps, distance, activeDays,
                 sleepSessions == 0 ? 0 : (int) Math.round((double) sleepMinutes / sleepSessions),
                 qualityDays == 0 ? 0 : Math.round(qualityTotal / qualityDays * 10.0) / 10.0,
                 completed, tracked, tracked == 0 ? 0 : (int) Math.round(completed * 100.0 / tracked),
-                daily.stream().mapToLong(AnalyticsResponse.DailyPoint::gameMinutes).sum(),
-                daily.stream().mapToLong(AnalyticsResponse.DailyPoint::gameSessions).sum(),
-                daily.stream().mapToLong(AnalyticsResponse.DailyPoint::unlockedAchievements).sum(),
-                daily.stream().mapToLong(AnalyticsResponse.DailyPoint::moviesWatched).sum(),
-                daily.stream().mapToLong(AnalyticsResponse.DailyPoint::seriesEpisodesWatched).sum(),
-                daily.stream().mapToLong(AnalyticsResponse.DailyPoint::animeEpisodesWatched).sum(),
-                daily.stream().mapToLong(AnalyticsResponse.DailyPoint::pagesRead).sum(),
-                daily.stream().mapToLong(AnalyticsResponse.DailyPoint::readingMinutes).sum());
+                daily.stream().mapToLong((AnalyticsResponse.@NonNull DailyPoint point) -> point.gameMinutes()).sum(),
+                daily.stream().mapToLong((AnalyticsResponse.@NonNull DailyPoint point) -> point.gameSessions()).sum(),
+                daily.stream().mapToLong((AnalyticsResponse.@NonNull DailyPoint point) -> point.unlockedAchievements()).sum(),
+                daily.stream().mapToLong((AnalyticsResponse.@NonNull DailyPoint point) -> point.moviesWatched()).sum(),
+                daily.stream().mapToLong((AnalyticsResponse.@NonNull DailyPoint point) -> point.seriesEpisodesWatched()).sum(),
+                daily.stream().mapToLong((AnalyticsResponse.@NonNull DailyPoint point) -> point.animeEpisodesWatched()).sum(),
+                daily.stream().mapToLong((AnalyticsResponse.@NonNull DailyPoint point) -> point.pagesRead()).sum(),
+                daily.stream().mapToLong((AnalyticsResponse.@NonNull DailyPoint point) -> point.readingMinutes()).sum());
     }
 
     private static final String DAILY_SQL = """

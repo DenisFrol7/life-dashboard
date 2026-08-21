@@ -1,5 +1,6 @@
 package com.lifedashboard.content;
 
+import org.jspecify.annotations.NonNull;
 import com.lifedashboard.common.error.*;
 import com.lifedashboard.content.dto.*;
 import com.lifedashboard.user.*;
@@ -32,7 +33,7 @@ public class ContentService {
     public List<ContentItemResponse> getAll(ContentType type) {
         List<ContentItem> items = type == null ? contentRepository.findAllByOrderByTitleAsc()
                 : contentRepository.findAllByItemTypeOrderByTitleAsc(type);
-        return items.stream().map(this::toResponse).toList();
+        return items.stream().map((@NonNull ContentItem item) -> toResponse(item)).toList();
     }
     public ContentItemResponse get(Long id) { return toResponse(findContent(id)); }
     @Transactional
@@ -54,7 +55,7 @@ public class ContentService {
     public List<LibraryEntryResponse> getLibrary(UserContentStatus status) {
         List<UserContent> entries = status == null ? libraryRepository.findAllByUserIdOrderByIdDesc(defaultUserId)
                 : libraryRepository.findAllByUserIdAndStatusOrderByIdDesc(defaultUserId, status);
-        return entries.stream().map(this::toResponse).toList();
+        return entries.stream().map((@NonNull UserContent entry) -> toResponse(entry)).toList();
     }
     @Transactional
     public void removeFromLibrary(Long contentId) {
