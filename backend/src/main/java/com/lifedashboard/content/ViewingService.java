@@ -220,7 +220,7 @@ public class ViewingService {
         if (episodeWatches.individualWatchCount(userId, content.getId()) > 0) return Instant.now();
         return seasonCompletions.findAllByUserIdAndSeasonContentId(userId, content.getId()).stream()
                 .map((@NonNull SeasonCompletion completion) -> completion.getCompletedAt())
-                .filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(null);
+                .filter(value -> value != null).max(Comparator.naturalOrder()).orElse(null);
     }
     private void moveCompletedLibraryToProgress(ContentItem content) { library.findAllByContentId(content.getId()).stream()
             .filter((@NonNull UserContent entry) -> entry.getStatus() == UserContentStatus.PAUSED || entry.getStatus() == UserContentStatus.COMPLETED)

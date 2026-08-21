@@ -1,5 +1,6 @@
 package com.lifedashboard.tag;
 
+import org.jspecify.annotations.NonNull;
 import com.lifedashboard.common.error.DuplicateResourceException;
 import com.lifedashboard.common.error.ResourceNotFoundException;
 import com.lifedashboard.tag.dto.TagRequest;
@@ -45,7 +46,7 @@ public class TagService {
 
     public List<TagResponse> getAll() {
         return tagRepository.findAllByUserIdOrderByNameAscIdAsc(defaultUserId).stream()
-                .map(this::toResponse)
+                .map((@NonNull Tag tag) -> toResponse(tag))
                 .toList();
     }
 

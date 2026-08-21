@@ -57,7 +57,7 @@ public class CalendarEventService {
         return eventRepository.findAllByUserIdOrderByStartDateAscIdAsc(defaultUserId).stream()
                 .filter(event -> eventType == null || event.getEventType() == eventType)
                 .filter(event -> status == null || event.getStatus() == status)
-                .map(this::toResponse)
+                .map((@NonNull CalendarEvent event) -> toResponse(event))
                 .toList();
     }
 
@@ -93,7 +93,7 @@ public class CalendarEventService {
     public List<OccurrenceResponse> getOccurrences(Long eventId) {
         findEvent(eventId);
         return occurrenceRepository.findAllByEventIdOrderByOccurrenceDateAsc(eventId).stream()
-                .map(this::toResponse)
+                .map((@NonNull CalendarEventOccurrence occurrence) -> toResponse(occurrence))
                 .toList();
     }
 

@@ -1,5 +1,6 @@
 package com.lifedashboard.habit;
 
+import org.jspecify.annotations.NonNull;
 import com.lifedashboard.sleep.SleepSession;
 import com.lifedashboard.sleep.SleepSessionRepository;
 import com.lifedashboard.user.User;
@@ -46,7 +47,7 @@ public class HabitAutomationService {
                 .findAllByUserIdAndEndedAtGreaterThanEqualAndEndedAtLessThan(userId, from, to);
 
         BigDecimal totalMinutes = sessions.isEmpty() ? null : BigDecimal.valueOf(sessions.stream()
-                .mapToLong(this::sleepMinutes)
+                .mapToLong((@NonNull SleepSession session) -> sleepMinutes(session))
                 .sum());
         syncValue(userId, HabitDataSource.SLEEP_DURATION, date, totalMinutes);
     }
@@ -65,7 +66,7 @@ public class HabitAutomationService {
             }
             var existing = entryRepository.findByHabitIdAndEntryDate(habit.getId(), date);
             if (value == null) {
-                existing.ifPresent(entryRepository::delete);
+                existing.ifPresent((@NonNull HabitEntry entry) -> entryRepository.delete(entry));
                 continue;
             }
             HabitEntry entry = existing.orElseGet(() -> new HabitEntry(habit, date, habit.getTargetValue()));

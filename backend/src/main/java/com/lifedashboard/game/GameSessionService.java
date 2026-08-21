@@ -1,5 +1,6 @@
 package com.lifedashboard.game;
 
+import org.jspecify.annotations.NonNull;
 import com.lifedashboard.common.error.ResourceNotFoundException;
 import com.lifedashboard.common.error.InvalidRequestException;
 import com.lifedashboard.game.dto.*;
@@ -29,7 +30,7 @@ public class GameSessionService {
         else if (from != null) result = sessions.findAllByLibraryEntryUserContentUserIdAndStartedAtGreaterThanEqualOrderByStartedAtDesc(userId, from);
         else if (to != null) result = sessions.findAllByLibraryEntryUserContentUserIdAndStartedAtLessThanOrderByStartedAtDesc(userId, to);
         else result = sessions.findAllByLibraryEntryUserContentUserIdOrderByStartedAtDesc(userId);
-        return result.stream().map(this::response).toList();
+        return result.stream().map((@NonNull GameSession session) -> response(session)).toList();
     }
     @Transactional
     public GameSessionResponse create(Long libraryId, GameSessionRequest request) {

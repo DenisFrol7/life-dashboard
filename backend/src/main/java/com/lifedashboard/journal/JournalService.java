@@ -83,7 +83,7 @@ public class JournalService {
         }
         Sort sort = Sort.by(Sort.Order.desc("entryDate"), Sort.Order.desc("id"));
         return entryRepository.findAll(specification, sort).stream()
-                .map(this::toResponse)
+                .map((@NonNull JournalEntry entry) -> toResponse(entry))
                 .toList();
     }
 

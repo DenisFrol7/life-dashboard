@@ -1,5 +1,6 @@
 package com.lifedashboard.game;
 
+import org.jspecify.annotations.NonNull;
 import com.lifedashboard.common.error.ResourceNotFoundException;
 import com.lifedashboard.game.dto.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,7 +23,8 @@ public class GamePlaythroughService {
     public List<GamePlaythroughResponse> getAll(Long libraryId) {
         findGame(libraryId);
         return playthroughs.findAllByLibraryEntryIdAndLibraryEntryUserContentUserIdOrderByPlaythroughNumberDesc(
-                libraryId, userId).stream().map(this::response).toList();
+                libraryId, userId).stream()
+                .map((@NonNull GamePlaythrough playthrough) -> response(playthrough)).toList();
     }
     @Transactional
     public GamePlaythroughResponse create(Long libraryId, GamePlaythroughRequest request) {

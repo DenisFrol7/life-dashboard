@@ -1,5 +1,6 @@
 package com.lifedashboard.blog;
 
+import org.jspecify.annotations.NonNull;
 import com.lifedashboard.blog.dto.BlogPostFromJournalRequest;
 import com.lifedashboard.blog.dto.BlogPostRequest;
 import com.lifedashboard.blog.dto.BlogPostResponse;
@@ -108,7 +109,8 @@ public class BlogPostService {
             });
         }
         Sort sort = Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("id"));
-        return postRepository.findAll(specification, sort).stream().map(this::toResponse).toList();
+        return postRepository.findAll(specification, sort).stream()
+                .map((@NonNull BlogPost post) -> toResponse(post)).toList();
     }
 
     @Transactional
