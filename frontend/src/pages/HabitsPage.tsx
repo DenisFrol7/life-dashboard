@@ -4,6 +4,7 @@ import {
   type Habit, type HabitEntry, type HabitInput, type HabitStatus,
 } from '../api/habits'
 import { useToast } from '../components/ToastContext'
+import { Check, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react'
 
 const today = new Date().toLocaleDateString('en-CA')
 const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
@@ -63,12 +64,12 @@ export function HabitsPage() {
           {(Object.keys(statusLabels) as HabitStatus[]).map((value) =>
             <button className={status === value ? 'active' : ''} key={value} onClick={() => setStatus(value)}>{statusLabels[value]}</button>)}
         </div>
-        <button className="primary-button" onClick={() => setEditing('new')}>+ Новая привычка</button>
+        <button className="primary-button icon-button" onClick={() => setEditing('new')}><Plus />Новая привычка</button>
       </section>
 
       {error && <div className="notice error habit-error"><strong>Ошибка</strong><span>{error}</span></div>}
       {loading ? <div className="loading"><span />Загружаем привычки…</div> : habits.length === 0 ? (
-        <section className="habits-empty"><span>✓</span><h2>Здесь пока пусто</h2><p>Создайте первую привычку и начните отмечать прогресс.</p></section>
+        <section className="habits-empty"><span><Check /></span><h2>Здесь пока пусто</h2><p>Создайте первую привычку и начните отмечать прогресс.</p></section>
       ) : (
         <section className="habit-list">
           {habits.map((habit) => <HabitCard key={habit.id} habit={habit} entry={entries[habit.id]}
@@ -93,11 +94,11 @@ function HabitCard({ habit, entry, onToggle, onValue, onEdit, onDelete }: {
     <article className={entry && !entry.skipped ? 'habit-card completed' : 'habit-card'}>
       <div className="habit-card-main">
         {habit.trackingType === 'BOOLEAN' && !automated ?
-          <button className="habit-check" aria-label="Отметить выполнение" onClick={onToggle}>{entry ? '✓' : ''}</button> :
-          <span className="habit-source-icon">{automated ? '↻' : '#'}</span>}
+          <button className="habit-check" aria-label="Отметить выполнение" onClick={onToggle}>{entry && <Check />}</button> :
+          <span className="habit-source-icon">{automated ? <RefreshCw /> : '#'}</span>}
         <div className="habit-copy"><h3>{habit.name}</h3>{habit.description && <p>{habit.description}</p>}
           <div className="habit-meta"><span>{schedule}</span><span>{sourceLabels[habit.dataSource]}</span></div></div>
-        <div className="habit-actions"><button onClick={onEdit} title="Редактировать">✎</button><button onClick={onDelete} title="Удалить">×</button></div>
+        <div className="habit-actions"><button onClick={onEdit} aria-label="Редактировать" title="Редактировать"><Pencil /></button><button onClick={onDelete} aria-label="Удалить" title="Удалить"><Trash2 /></button></div>
       </div>
       {habit.trackingType !== 'BOOLEAN' && !automated && <form className="value-form" onSubmit={(event) => { event.preventDefault(); if (value !== '') onValue(Number(value)) }}>
         <input type="number" min="0" step="0.01" value={value} onChange={(event) => setValue(event.target.value)} placeholder="0" />
@@ -125,7 +126,7 @@ function HabitForm({ habit, onClose, onSaved }: { habit?: Habit; onClose: () => 
   }
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
     <form className="habit-form habits-form" onSubmit={(event) => void submit(event)}>
-      <div className="form-heading"><div><p className="eyebrow">Привычки</p><h2>{habit ? 'Редактирование' : 'Новая привычка'}</h2></div><button type="button" onClick={onClose}>×</button></div>
+      <div className="form-heading"><div><p className="eyebrow">Привычки</p><h2>{habit ? 'Редактирование' : 'Новая привычка'}</h2></div><button type="button" aria-label="Закрыть" onClick={onClose}><X /></button></div>
       {error && <div className="form-error">{error}</div>}
       <label>Название<input required maxLength={200} value={form.name} onChange={(event) => set('name', event.target.value)} /></label>
       <label>Описание<textarea rows={2} value={form.description ?? ''} onChange={(event) => set('description', event.target.value)} /></label>

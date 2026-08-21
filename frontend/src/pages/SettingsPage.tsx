@@ -3,6 +3,13 @@ import { exportData, importData, type DataTransferResult } from '../api/dataTran
 import { getApiErrorMessage } from '../api/client'
 import { useToast } from '../components/ToastContext'
 import { useTheme, type ThemeMode } from '../components/ThemeContext'
+import { Download, Laptop, Moon, Sun, Upload } from 'lucide-react'
+
+const themeOptions = [
+  { value: 'light' as ThemeMode, icon: Sun, label: 'Светлая' },
+  { value: 'dark' as ThemeMode, icon: Moon, label: 'Тёмная' },
+  { value: 'system' as ThemeMode, icon: Laptop, label: 'Системная' },
+]
 
 export function SettingsPage() {
   const { showToast } = useToast()
@@ -35,14 +42,14 @@ export function SettingsPage() {
   return <div className="settings-page">
     <section className="settings-intro"><p className="eyebrow">Внешний вид</p><h2>Тема оформления</h2><p>Выберите комфортное оформление. Системный режим следует настройкам Windows.</p></section>
     <section className="theme-selector" aria-label="Тема оформления">
-      {([['light', '☀', 'Светлая'], ['dark', '☾', 'Тёмная'], ['system', '◐', 'Системная']] as [ThemeMode, string, string][]).map(([value, icon, label]) => <button className={mode === value ? 'active' : ''} type="button" onClick={() => setMode(value)} key={value}><span>{icon}</span><strong>{label}</strong></button>)}
+      {themeOptions.map(({ value, icon: Icon, label }) => <button className={mode === value ? 'active' : ''} type="button" onClick={() => setMode(value)} key={value}><span><Icon /></span><strong>{label}</strong></button>)}
     </section>
     <section className="settings-intro"><p className="eyebrow">Данные</p><h2>Экспорт и импорт</h2><p>Сохраните все записи Life Dashboard в переносимый JSON-архив или восстановите ранее экспортированные данные.</p></section>
     {error && <div className="notice error settings-error"><strong>Ошибка</strong><span>{error}</span></div>}
     {result && <div className="notice settings-success"><strong>Импорт завершён</strong><span>Восстановлено строк: {result.rowCount}. Автоматическая копия прежних данных: {result.backupFile}</span></div>}
     <section className="settings-transfer-grid">
-      <article className="settings-card"><span className="settings-card-icon">↓</span><div><h3>Экспорт данных</h3><p>Скачивает записи всех разделов, справочники и историю. Схема Flyway в архив не включается.</p></div><button className="primary-button" disabled={exporting || importing} onClick={() => void download()}>{exporting ? 'Создаём файл…' : 'Скачать JSON'}</button></article>
-      <article className="settings-card danger"><span className="settings-card-icon">↑</span><div><h3>Импорт данных</h3><p>Полностью заменяет текущие записи. Подходит только архив от этой же версии схемы базы данных.</p></div><input ref={inputRef} type="file" accept="application/json,.json" onChange={(event) => void upload(event)} /><button className="danger-button" disabled={exporting || importing} onClick={() => inputRef.current?.click()}>{importing ? 'Импортируем…' : 'Выбрать архив'}</button></article>
+      <article className="settings-card"><span className="settings-card-icon"><Download /></span><div><h3>Экспорт данных</h3><p>Скачивает записи всех разделов, справочники и историю. Схема Flyway в архив не включается.</p></div><button className="primary-button icon-button" disabled={exporting || importing} onClick={() => void download()}><Download />{exporting ? 'Создаём файл…' : 'Скачать JSON'}</button></article>
+      <article className="settings-card danger"><span className="settings-card-icon"><Upload /></span><div><h3>Импорт данных</h3><p>Полностью заменяет текущие записи. Подходит только архив от этой же версии схемы базы данных.</p></div><input ref={inputRef} type="file" accept="application/json,.json" onChange={(event) => void upload(event)} /><button className="danger-button icon-button" disabled={exporting || importing} onClick={() => inputRef.current?.click()}><Upload />{importing ? 'Импортируем…' : 'Выбрать архив'}</button></article>
     </section>
     <section className="settings-safety"><h3>Как защищены данные</h3><ul><li>Архив проверяется до начала замены данных.</li><li>Версия Flyway и набор таблиц должны полностью совпадать.</li><li>Перед импортом в папке <code>backups</code> автоматически создаётся JSON-копия.</li><li>Импорт выполняется одной транзакцией: при ошибке база возвращается в прежнее состояние.</li></ul></section>
   </div>

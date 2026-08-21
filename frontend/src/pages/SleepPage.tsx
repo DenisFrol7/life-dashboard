@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { createSleepSession, deleteSleepSession, getSleepSessions, updateSleepSession, type SleepSession, type SleepSessionInput } from '../api/sleep'
 import { useToast } from '../components/ToastContext'
+import { Pencil, Plus, Trash2, X } from 'lucide-react'
 
 const sleepGoalMinutes = 8 * 60
 const localDate = (value: string | Date) => new Date(value).toLocaleDateString('en-CA')
@@ -51,7 +52,7 @@ export function SleepPage() {
       <div><p className="eyebrow">Последняя ночь</p><strong>{formatDuration(todayMinutes)}</strong><span>цель — {formatDuration(sleepGoalMinutes)}</span></div>
       <div className="sleep-goal-ring" style={{ '--sleep-progress': `${Math.min(360, todayMinutes / sleepGoalMinutes * 360)}deg` } as React.CSSProperties}><span>{Math.round(todayMinutes / sleepGoalMinutes * 100)}%</span></div>
       <dl><div><dt>Средняя длительность</dt><dd>{formatDuration(averageDuration)}</dd></div><div><dt>Средняя оценка</dt><dd>{averageQuality ? `${averageQuality.toFixed(1)} из 5` : '—'}</dd></div><div><dt>Сессий за 30 дней</dt><dd>{sessions.length}</dd></div></dl>
-      <button className="primary-button" onClick={() => setEditing('new')}>+ Добавить сон</button>
+      <button className="primary-button icon-button" onClick={() => setEditing('new')}><Plus />Добавить сон</button>
     </section>
     {error && <div className="notice error sleep-error"><strong>Ошибка</strong><span>{error}</span></div>}
     <section className="sleep-grid">
@@ -69,7 +70,7 @@ export function SleepPage() {
     <section className="sleep-panel sleep-history">
       <div className="panel-heading"><div><p className="eyebrow">История</p><h3>Сессии сна</h3></div></div>
       <div className="sleep-table"><div className="sleep-table-head"><span>Пробуждение</span><span>Период</span><span>Сон</span><span>Качество</span><span>Заметка</span><span /></div>
-        {[...sessions].reverse().map((session) => <div key={session.id}><span>{formatDate(session.endedAt)}</span><span>{formatTime(session.startedAt)} — {formatTime(session.endedAt)}</span><strong>{formatDuration(sleepMinutes(session))}</strong><span className="quality-stars">{'●'.repeat(session.qualityRating ?? 0)}{'○'.repeat(5 - (session.qualityRating ?? 0))}</span><span>{session.note ?? '—'}</span><span><button onClick={() => setEditing(session)} title="Редактировать">✎</button><button onClick={() => void remove(session)} title="Удалить">×</button></span></div>)}
+        {[...sessions].reverse().map((session) => <div key={session.id}><span>{formatDate(session.endedAt)}</span><span>{formatTime(session.startedAt)} — {formatTime(session.endedAt)}</span><strong>{formatDuration(sleepMinutes(session))}</strong><span className="quality-stars">{'●'.repeat(session.qualityRating ?? 0)}{'○'.repeat(5 - (session.qualityRating ?? 0))}</span><span>{session.note ?? '—'}</span><span><button onClick={() => setEditing(session)} aria-label="Редактировать" title="Редактировать"><Pencil /></button><button onClick={() => void remove(session)} aria-label="Удалить" title="Удалить"><Trash2 /></button></span></div>)}
         {!loading && sessions.length === 0 && <p className="table-empty">Сессий сна пока нет.</p>}
       </div>
     </section>
@@ -103,7 +104,7 @@ function SleepForm({ session, onClose, onSaved }: { session?: SleepSession; onCl
   const numberOrNull = (value: string) => value === '' ? null : Number(value)
   const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); setError(null); const input: SleepSessionInput = { startedAt: new Date(start).toISOString(), endedAt: new Date(end).toISOString(), deepSleepMinutes: numberOrNull(deep), lightSleepMinutes: numberOrNull(light), remSleepMinutes: numberOrNull(rem), awakeMinutes: numberOrNull(awake), qualityRating: numberOrNull(quality), note: note || null }; try { if (session) await updateSleepSession(session.id, input); else await createSleepSession(input); showToast(session ? 'Сессия сна обновлена' : 'Сессия сна добавлена'); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить сессию') } finally { setSaving(false) } }
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><form className="habit-form sleep-form" onSubmit={(event) => void submit(event)}>
-    <div className="form-heading"><div><p className="eyebrow">Сон</p><h2>{session ? 'Редактирование' : 'Новая сессия'}</h2></div><button type="button" onClick={onClose}>×</button></div>
+    <div className="form-heading"><div><p className="eyebrow">Сон</p><h2>{session ? 'Редактирование' : 'Новая сессия'}</h2></div><button type="button" aria-label="Закрыть" onClick={onClose}><X /></button></div>
     {error && <div className="form-error">{error}</div>}
     <div className="form-grid"><label>Заснул<input required type="datetime-local" value={start} onChange={(event) => setStart(event.target.value)} /></label><label>Проснулся<input required type="datetime-local" value={end} onChange={(event) => setEnd(event.target.value)} /></label><label>Глубокий сон, мин<input min="0" type="number" value={deep} onChange={(event) => setDeep(event.target.value)} /></label><label>Лёгкий сон, мин<input min="0" type="number" value={light} onChange={(event) => setLight(event.target.value)} /></label><label>REM, мин<input min="0" type="number" value={rem} onChange={(event) => setRem(event.target.value)} /></label><label>Бодрствование, мин<input min="0" type="number" value={awake} onChange={(event) => setAwake(event.target.value)} /></label></div>
     <label>Качество сна<select value={quality} onChange={(event) => setQuality(event.target.value)}><option value="">Без оценки</option>{[1, 2, 3, 4, 5].map((value) => <option key={value} value={value}>{value} из 5</option>)}</select></label>
