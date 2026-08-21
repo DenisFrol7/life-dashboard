@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { ArrowLeft, Pencil } from 'lucide-react'
 import { createGameLibrary, createGamePlaythrough, createXboxAchievementGroup, deleteGameLibrary, deleteGamePlaythrough, deleteXboxAchievementGroup,
   getGameCatalog, getGameLibrary, getGamePlaythroughs, getGameSessions, getPlatforms, getSources, getXboxAchievementGroups,
   getXboxProgress, putXboxProgress, updateGameLibrary, updateGamePlaythrough, updateXboxAchievementGroup, type Game, type GameLibrary, type GameLibraryInput,
@@ -54,7 +55,7 @@ export function GameDetailsPage() {
   const dlcSummary = dlcAchievements.reduce((sum, item) => ({ totalAchievements: sum.totalAchievements + item.totalAchievements, unlockedAchievements: sum.unlockedAchievements + item.unlockedAchievements, totalGamerscore: sum.totalGamerscore + item.totalGamerscore, earnedGamerscore: sum.earnedGamerscore + item.earnedGamerscore }), { totalAchievements: 0, unlockedAchievements: 0, totalGamerscore: 0, earnedGamerscore: 0 })
 
   return <div className="game-details-page">
-    <div className="game-details-toolbar"><Link to="/games">← Назад к играм</Link><button className="secondary-button" onClick={() => navigate(`/games?edit=${game.id}`)}>✎ Редактировать</button></div>
+    <div className="game-details-toolbar"><Link to="/games"><ArrowLeft />Назад к играм</Link><button className="secondary-button icon-button" onClick={() => navigate(`/games?edit=${game.id}`)}><Pencil />Редактировать</button></div>
     <section className="game-hero-card">
       <div className="game-detail-cover" style={game.coverUrl ? { backgroundImage: `url(${game.coverUrl})` } : undefined}><span>{game.title.slice(0, 1)}</span></div>
       <div className="game-main-info"><h1>{game.title}</h1><div className="platform-badges">{hasXbox && <span className="platform-badge xbox">◉ Xbox</span>}{hasPc && <span className="platform-badge pc">▣ PC</span>}</div><dl><div><dt>Разработчик</dt><dd>{game.developer ?? '—'}</dd></div><div><dt>Жанр</dt><dd>{game.genre ?? '—'}</dd></div><div><dt>Дата выхода</dt><dd>{game.releaseDate ? formatDate(game.releaseDate) : game.releaseYear ?? '—'}</dd></div></dl></div>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
+import { Plus, Search } from 'lucide-react'
 import { createSeries, deleteSeries, getSeriesCatalog, putSeriesLibrary, updateSeries, type Series, type SeriesFormat, type SeriesInput, type SeriesLibraryEntry } from '../api/series'
 import type { LibraryInput, LibraryStatus, ReleaseStatus } from '../api/movies'
 import { ErrorState, LoadingState } from '../components/AsyncState'
@@ -38,7 +39,7 @@ export function SeriesPage() {
       ['COMPLETED', 'Просмотрено'],
       ['PAUSED', 'На паузе'],
       ['DROPPED', 'Брошено'],
-    ] as const).map(([value, label]) => <button key={value || 'all'} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><div className="journal-search series-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти сериал" /></div><button className="primary-button series-add-button media-add-button" onClick={() => setEditing('new')}>+ Добавить сериал</button></section>
+    ] as const).map(([value, label]) => <button key={value || 'all'} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><div className="journal-search series-search"><span><Search /></span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти сериал" /></div><button className="primary-button series-add-button media-add-button icon-button" onClick={() => setEditing('new')}><Plus />Добавить сериал</button></section>
     <section className="series-catalog-layout"><div className="series-catalog-main">
     {error && <div className="notice error movies-error"><strong>Ошибка</strong><span>{error}</span></div>}
     {loading ? <div className="loading"><span />Загружаем сериалы…</div> : visible.length === 0 ? <div className="media-empty"><span>▤</span><h2>Сериалов пока нет</h2><p>Добавьте первый сериал в каталог.</p></div> : <section className="movie-grid series-catalog-grid">{visible.map((item) => {
