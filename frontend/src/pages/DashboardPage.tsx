@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router'
+import {
+  AlarmClock, ArrowRight, CalendarDays, CheckSquare2, Clapperboard, Clock3, Film,
+  Footprints, Gamepad2, ListChecks, Moon, NotebookPen, Tv,
+} from 'lucide-react'
 import { getDashboard, type Dashboard } from '../api/dashboard'
 import { getApiErrorMessage } from '../api/client'
 import { ErrorState, LoadingState } from '../components/AsyncState'
@@ -40,7 +44,7 @@ export function DashboardPage() {
           <p className="eyebrow">Сегодня, {date}</p>
           <h2>{greeting}</h2>
           <p>Короткая сводка активности, планов и отдыха за сегодняшний день.</p>
-          <Link className="dashboard-text-link" to="/journal">Открыть журнал активности →</Link>
+          <Link className="dashboard-text-link" to="/journal">Открыть журнал активности <ArrowRight /></Link>
         </div>
         <div className="progress-ring" style={{ '--progress': `${data.habits.completionPercent * 3.6}deg` } as CSSProperties}>
           <span>{Math.round(data.habits.completionPercent)}%</span><small>привычек</small>
@@ -49,21 +53,21 @@ export function DashboardPage() {
 
       <section className="metrics-grid" aria-label="Показатели за сегодня">
         <div className="metrics-column">
-          <Metric to="/activity" icon="↗" tone="mint" label="Шаги" value={data.activity.steps?.toLocaleString('ru-RU') ?? '—'} note={formatDistance(data.activity.distanceMeters)} />
-          <Metric to="/sleep" icon="☾" tone="violet" label="Сон" value={formatDuration(data.sleep.durationMinutes)} note={data.sleep.qualityRating ? `Качество ${data.sleep.qualityRating}/10` : 'Нет оценки'} />
+          <Metric to="/activity" icon={<Footprints />} tone="mint" label="Шаги" value={data.activity.steps?.toLocaleString('ru-RU') ?? '—'} note={formatDistance(data.activity.distanceMeters)} />
+          <Metric to="/sleep" icon={<Moon />} tone="violet" label="Сон" value={formatDuration(data.sleep.durationMinutes)} note={data.sleep.qualityRating ? `Качество ${data.sleep.qualityRating}/10` : 'Нет оценки'} />
         </div>
         <div className="metrics-column">
-          <Metric to="/habits" icon="✓" tone="amber" label="Привычки" value={`${data.habits.completed} из ${data.habits.scheduled}`} note={data.habits.skipped ? `Пропущено: ${data.habits.skipped}` : 'Без пропусков'} />
-          <Metric to="/games" icon="◇" tone="blue" label="Игровое время" value={formatDuration(data.gaming.durationMinutes)} note={`${data.gaming.sessions} ${sessionWord(data.gaming.sessions)}`} />
+          <Metric to="/habits" icon={<ListChecks />} tone="amber" label="Привычки" value={`${data.habits.completed} из ${data.habits.scheduled}`} note={data.habits.skipped ? `Пропущено: ${data.habits.skipped}` : 'Без пропусков'} />
+          <Metric to="/games" icon={<Gamepad2 />} tone="blue" label="Игровое время" value={formatDuration(data.gaming.durationMinutes)} note={`${data.gaming.sessions} ${sessionWord(data.gaming.sessions)}`} />
         </div>
       </section>
 
       <section className="dashboard-main-grid">
         <article className="panel dashboard-schedule">
           <PanelHeading eyebrow="Расписание" title="Сегодня" count={data.calendar.scheduled} to="/calendar" />
-          <ScheduleRow icon="□" tone="blue" title="События" note="Запланировано на сегодня" value={data.calendar.events} />
-          <ScheduleRow icon="✓" tone="amber" title="Задачи" note={`Выполнено: ${data.calendar.completedTasks}`} value={data.calendar.pendingTasks} suffix="осталось" />
-          <ScheduleRow icon="!" tone="violet" title="Напоминания" note="Требуют внимания сегодня" value={data.calendar.reminders} />
+          <ScheduleRow icon={<CalendarDays />} tone="blue" title="События" note="Запланировано на сегодня" value={data.calendar.events} />
+          <ScheduleRow icon={<CheckSquare2 />} tone="amber" title="Задачи" note={`Выполнено: ${data.calendar.completedTasks}`} value={data.calendar.pendingTasks} suffix="осталось" />
+          <ScheduleRow icon={<AlarmClock />} tone="violet" title="Напоминания" note="Требуют внимания сегодня" value={data.calendar.reminders} />
         </article>
         <article className="panel dashboard-media">
           <PanelHeading eyebrow="Медиатека" title="Сейчас в процессе" count={mediaTotal} />
@@ -79,24 +83,26 @@ export function DashboardPage() {
   )
 }
 
-function Metric({ to, icon, tone, label, value, note }: { to: string; icon: string; tone: string; label: string; value: string; note: string }) {
-  return <Link className="metric-card dashboard-card-link" to={to}><span className={`metric-icon ${tone}`}>{icon}</span><div><small>{label}</small><strong>{value}</strong><p>{note}</p></div><span className="dashboard-arrow">→</span></Link>
+function Metric({ to, icon, tone, label, value, note }: { to: string; icon: ReactNode; tone: string; label: string; value: string; note: string }) {
+  return <Link className="metric-card dashboard-card-link" to={to}><span className={`metric-icon ${tone}`}>{icon}</span><div><small>{label}</small><strong>{value}</strong><p>{note}</p></div><ArrowRight className="dashboard-arrow" /></Link>
 }
 
 function PanelHeading({ eyebrow, title, count, to }: { eyebrow: string; title: string; count: number; to?: string }) {
-  return <div className="panel-heading"><div><p className="eyebrow">{eyebrow}</p><h3>{title}</h3></div><div className="dashboard-heading-actions"><span className="pill">{count}</span>{to && <Link to={to}>Открыть →</Link>}</div></div>
+  return <div className="panel-heading"><div><p className="eyebrow">{eyebrow}</p><h3>{title}</h3></div><div className="dashboard-heading-actions"><span className="pill">{count}</span>{to && <Link to={to}>Открыть <ArrowRight /></Link>}</div></div>
 }
 
-function ScheduleRow({ icon, tone, title, note, value, suffix }: { icon: string; tone: string; title: string; note: string; value: number; suffix?: string }) {
+function ScheduleRow({ icon, tone, title, note, value, suffix }: { icon: ReactNode; tone: string; title: string; note: string; value: number; suffix?: string }) {
   return <div className="list-row"><span className={`list-icon ${tone}`}>{icon}</span><div><strong>{title}</strong><small>{note}</small></div><b>{value}{suffix && <small>{suffix}</small>}</b></div>
 }
 
 function MediaRow({ to, label, value, paused, color }: { to: string; label: string; value: number; paused?: number; color: string }) {
-  return <Link className="media-row" to={to}><span className={`media-dot ${color}`} /><strong>{label}</strong><span>{value} активно{paused ? ` · ${paused} на паузе` : ''}</span><b>→</b></Link>
+  const Icon = label === 'Фильмы' ? Film : label === 'Сериалы' ? Tv : label === 'Игры' ? Gamepad2 : Clapperboard
+  return <Link className="media-row" to={to}><span className={`media-type-icon ${color}`}><Icon /></span><strong>{label}</strong><span>{value} активно{paused ? ` · ${paused} на паузе` : ''}</span><ArrowRight /></Link>
 }
 
 function DashboardShortcut({ to, eyebrow, title, text, action, accent = false }: { to: string; eyebrow: string; title: string; text: string; action: string; accent?: boolean }) {
-  return <Link className={`dashboard-shortcut${accent ? ' accent' : ''}`} to={to}><div><p className="eyebrow">{eyebrow}</p><h3>{title}</h3><p>{text}</p></div><span>{action} →</span></Link>
+  const Icon = accent ? NotebookPen : Clock3
+  return <Link className={`dashboard-shortcut${accent ? ' accent' : ''}`} to={to}><span className="dashboard-shortcut-icon"><Icon /></span><div><p className="eyebrow">{eyebrow}</p><h3>{title}</h3><p>{text}</p></div><span>{action} <ArrowRight /></span></Link>
 }
 
 function sessionWord(count: number): ReactNode {
