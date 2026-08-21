@@ -19,6 +19,7 @@ import { BookDetailsPage } from './pages/BookDetailsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { useTheme } from './components/ThemeContext'
 import './App.css'
 
 type NavItem = { path: string; label: string; short: string; description: string }
@@ -42,6 +43,7 @@ const navigation: NavItem[] = [
 
 function App() {
   const { pathname } = useLocation()
+  const { resolvedTheme, setMode } = useTheme()
   const current = navigation.find((item) => item.path === pathname)
     ?? (pathname.startsWith('/games/') ? navigation.find((item) => item.path === '/games') : undefined)
     ?? (pathname.startsWith('/books/') ? navigation.find((item) => item.path === '/books') : undefined)
@@ -71,7 +73,11 @@ function App() {
           ))}
         </nav>
         <div className="sidebar-footer">
-          <span className="status-dot" /> Backend подключён
+          <button className="sidebar-theme-toggle" type="button" onClick={() => setMode(resolvedTheme === 'dark' ? 'light' : 'dark')} aria-label={resolvedTheme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'}>
+            <span>{resolvedTheme === 'dark' ? '☀' : '☾'}</span>
+            {resolvedTheme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+          </button>
+          <div><span className="status-dot" /> Backend подключён</div>
         </div>
       </aside>
 

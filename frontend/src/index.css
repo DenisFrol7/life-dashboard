@@ -13,8 +13,20 @@
   --accent-dark: #334f68;
 }
 
+:root[data-theme="dark"] {
+  color: #e7edf5;
+  background: #070d14;
+  --ink: #e7edf5;
+  --muted: #8f9baa;
+  --line: #1d2b38;
+  --paper: #0f1924;
+  --accent: #8578f6;
+  --accent-dark: #9a8fff;
+}
+
 * { box-sizing: border-box; }
 html { min-width: 320px; background: #f4f2ec; }
+html[data-theme="dark"] { background: #070d14; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input, textarea, select { font: inherit; }
 a { color: inherit; }

@@ -14,7 +14,6 @@ import com.lifedashboard.tag.TagRepository;
 import com.lifedashboard.tag.dto.TagResponse;
 import com.lifedashboard.user.User;
 import com.lifedashboard.user.UserRepository;
-import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;

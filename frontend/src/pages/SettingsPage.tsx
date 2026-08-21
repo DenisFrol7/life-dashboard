@@ -2,9 +2,11 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { exportData, importData, type DataTransferResult } from '../api/dataTransfer'
 import { getApiErrorMessage } from '../api/client'
 import { useToast } from '../components/ToastContext'
+import { useTheme, type ThemeMode } from '../components/ThemeContext'
 
 export function SettingsPage() {
   const { showToast } = useToast()
+  const { mode, setMode } = useTheme()
   const inputRef = useRef<HTMLInputElement>(null)
   const [exporting, setExporting] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -31,6 +33,10 @@ export function SettingsPage() {
   }
 
   return <div className="settings-page">
+    <section className="settings-intro"><p className="eyebrow">Внешний вид</p><h2>Тема оформления</h2><p>Выберите комфортное оформление. Системный режим следует настройкам Windows.</p></section>
+    <section className="theme-selector" aria-label="Тема оформления">
+      {([['light', '☀', 'Светлая'], ['dark', '☾', 'Тёмная'], ['system', '◐', 'Системная']] as [ThemeMode, string, string][]).map(([value, icon, label]) => <button className={mode === value ? 'active' : ''} type="button" onClick={() => setMode(value)} key={value}><span>{icon}</span><strong>{label}</strong></button>)}
+    </section>
     <section className="settings-intro"><p className="eyebrow">Данные</p><h2>Экспорт и импорт</h2><p>Сохраните все записи Life Dashboard в переносимый JSON-архив или восстановите ранее экспортированные данные.</p></section>
     {error && <div className="notice error settings-error"><strong>Ошибка</strong><span>{error}</span></div>}
     {result && <div className="notice settings-success"><strong>Импорт завершён</strong><span>Восстановлено строк: {result.rowCount}. Автоматическая копия прежних данных: {result.backupFile}</span></div>}
