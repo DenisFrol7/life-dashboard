@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowLeft, Pencil } from 'lucide-react'
+import { PlatformBadge } from '../components/PlatformBadge'
 import { createGameLibrary, createGamePlaythrough, createXboxAchievementGroup, deleteGameLibrary, deleteGamePlaythrough, deleteXboxAchievementGroup,
   getGameCatalog, getGameLibrary, getGamePlaythroughs, getGameSessions, getPlatforms, getSources, getXboxAchievementGroups,
   getXboxProgress, putXboxProgress, updateGameLibrary, updateGamePlaythrough, updateXboxAchievementGroup, type Game, type GameLibrary, type GameLibraryInput,
@@ -58,7 +59,7 @@ export function GameDetailsPage() {
     <div className="game-details-toolbar"><Link to="/games"><ArrowLeft />Назад к играм</Link><button className="secondary-button icon-button" onClick={() => navigate(`/games?edit=${game.id}`)}><Pencil />Редактировать</button></div>
     <section className="game-hero-card">
       <div className="game-detail-cover" style={game.coverUrl ? { backgroundImage: `url(${game.coverUrl})` } : undefined}><span>{game.title.slice(0, 1)}</span></div>
-      <div className="game-main-info"><h1>{game.title}</h1><div className="platform-badges">{hasXbox && <span className="platform-badge xbox">◉ Xbox</span>}{hasPc && <span className="platform-badge pc">▣ PC</span>}</div><dl><div><dt>Разработчик</dt><dd>{game.developer ?? '—'}</dd></div><div><dt>Жанр</dt><dd>{game.genre ?? '—'}</dd></div><div><dt>Дата выхода</dt><dd>{game.releaseDate ? formatDate(game.releaseDate) : game.releaseYear ?? '—'}</dd></div></dl></div>
+      <div className="game-main-info"><h1>{game.title}</h1><div className="platform-badges">{hasXbox && <PlatformBadge name="Xbox" />}{hasPc && <PlatformBadge name="PC" />}</div><dl><div><dt>Разработчик</dt><dd>{game.developer ?? '—'}</dd></div><div><dt>Жанр</dt><dd>{game.genre ?? '—'}</dd></div><div><dt>Дата выхода</dt><dd>{game.releaseDate ? formatDate(game.releaseDate) : game.releaseYear ?? '—'}</dd></div></dl></div>
       <div className="game-personal-info"><div><small>Статус</small><strong className="detail-status">● {library ? statusLabels[library.status] : 'Не в библиотеке'}</strong>{library?.status === 'COMPLETED' && <span>Дата прохождения: {formatDate(library.completedAt ?? playthroughs[0]?.completedAt)}</span>}</div><div><small>Моя оценка</small><div className="detail-rating">{library?.rating ? `${library.rating}/10` : '—'}</div></div><div><small>Заметки</small><p>{library?.personalNote ?? 'Заметок пока нет.'}</p></div></div>
     </section>
 

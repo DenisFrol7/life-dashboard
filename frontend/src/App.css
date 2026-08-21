@@ -301,8 +301,9 @@ html[data-theme="dark"] .library-copy-list em,
 html[data-theme="dark"] .library-card-heading button,
 html[data-theme="dark"] .total-playtime span { color: #b9d7ec; }
 html[data-theme="dark"] .achievement-summary strong { color: #67e98e; }
-html[data-theme="dark"] .platform-badge.xbox { color: #7cef91; background: #153922; }
-html[data-theme="dark"] .platform-badge.pc { color: #9fd2f4; background: #173248; }
+html[data-theme="dark"] .platform-logo-badge { border-color: #294052; color: #dce5ee; background: #111e2a; }
+html[data-theme="dark"] .platform-logo-badge.xbox > svg { color: #42dc70; }
+html[data-theme="dark"] .platform-logo-badge.pc > svg { color: #76bfff; }
 html[data-theme="dark"] .achievement-details-button { color: #c3cfdb; background: #172532; }
 html[data-theme="dark"] .achievement-groups-modal { color: var(--ink); background: #0f1924; box-shadow: 0 24px 70px #0009; }
 html[data-theme="dark"] .achievement-group-list article,
@@ -978,10 +979,13 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .game-detail-cover[style] > span { display: none; }
 .game-main-info { padding-left: 12px; }
 .game-main-info h1 { margin: 5px 0 12px; color: #23323c; font-size: 29px; }
-.platform-badge { display: inline-flex; padding: 7px 11px; border-radius: 8px; font-size: 12px; font-weight: 700; }
 .platform-badges { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.platform-badge.xbox { color: #2e6f24; background: #e1f1dc; }
-.platform-badge.pc { color: #425f73; background: #e4edf3; }
+.platform-logo-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px 6px 7px; border: 1px solid #dbe3df; border-radius: 8px; color: #42534a; background: #fff; font-size: 12px; font-weight: 700; line-height: 1; }
+.platform-logo-badge > svg { width: 20px; height: 20px; flex: 0 0 auto; stroke-width: 2; }
+.platform-logo-badge.xbox > svg { color: #299447; }
+.platform-logo-badge.pc > svg { color: #426f91; }
+.platform-logo-badge.compact { gap: 4px; padding: 3px 6px 3px 4px; border-radius: 5px; font-size: 9px; }
+.platform-logo-badge.compact > svg { width: 14px; height: 14px; }
 .game-main-info dl { display: grid; gap: 15px; margin: 23px 0 0; }
 .game-main-info dl div, .game-personal-info > div { display: grid; gap: 4px; }
 .game-main-info dt, .game-personal-info small { color: #849098; font-size: 11px; }
