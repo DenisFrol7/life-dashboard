@@ -124,7 +124,7 @@ function HabitForm({ habit, onClose, onSaved }: { habit?: Habit; onClose: () => 
     finally { setSaving(false) }
   }
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-    <form className="habit-form" onSubmit={(event) => void submit(event)}>
+    <form className="habit-form habits-form" onSubmit={(event) => void submit(event)}>
       <div className="form-heading"><div><p className="eyebrow">Привычки</p><h2>{habit ? 'Редактирование' : 'Новая привычка'}</h2></div><button type="button" onClick={onClose}>×</button></div>
       {error && <div className="form-error">{error}</div>}
       <label>Название<input required maxLength={200} value={form.name} onChange={(event) => set('name', event.target.value)} /></label>
