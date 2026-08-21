@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -91,6 +92,18 @@ public class SleepSessionService {
         if (!request.endedAt().isAfter(request.startedAt())) {
             throw new InvalidRequestException("endedAt must be after startedAt");
         }
+        long durationMinutes = Duration.between(request.startedAt(), request.endedAt()).toMinutes();
+        long sleepStageMinutes = nullableMinutes(request.deepSleepMinutes())
+                + nullableMinutes(request.lightSleepMinutes())
+                + nullableMinutes(request.remSleepMinutes())
+                + nullableMinutes(request.awakeMinutes());
+        if (sleepStageMinutes > durationMinutes) {
+            throw new InvalidRequestException("Sleep stages must not exceed the session duration");
+        }
+    }
+
+    private long nullableMinutes(Integer value) {
+        return value == null ? 0 : value;
     }
 
     private void apply(SleepSession session, SleepSessionRequest request) {

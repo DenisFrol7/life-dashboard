@@ -92,6 +92,22 @@ class SleepSessionControllerIntegrationTests {
                 .andExpect(jsonPath("$.fieldErrors.deepSleepMinutes").exists())
                 .andExpect(jsonPath("$.fieldErrors.qualityRating").exists());
 
+        mockMvc.perform(post("/api/sleep-sessions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "startedAt": "2099-02-01T21:00:00Z",
+                                  "endedAt": "2099-02-02T05:00:00Z",
+                                  "deepSleepMinutes": 120,
+                                  "lightSleepMinutes": 300,
+                                  "remSleepMinutes": 100,
+                                  "awakeMinutes": 60,
+                                  "qualityRating": 4
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Sleep stages must not exceed the session duration"));
+
         mockMvc.perform(get("/api/sleep-sessions")
                         .param("from", "2099-02-02T05:00:00Z")
                         .param("to", "2099-02-02T05:00:00Z"))
