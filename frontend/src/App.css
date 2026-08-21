@@ -262,6 +262,65 @@ html[data-theme="dark"] .theme-selector button > span { color: #b7afff; backgrou
 html[data-theme="dark"] .theme-selector button.active { border-color: #8174ef; box-shadow: 0 0 0 2px #8174ef26; }
 html[data-theme="dark"] .theme-selector button.active > span { color: #fff; background: #6659d7; }
 
+/* Game details: complete dark treatment for nested surfaces and content. */
+html[data-theme="dark"] .game-details-page .game-hero-card,
+html[data-theme="dark"] .game-details-page .detail-card { border-color: #1d2b38; background: #0f1924; box-shadow: 0 10px 30px #0004; }
+html[data-theme="dark"] .game-details-toolbar a { color: #9fb0bf; }
+html[data-theme="dark"] .game-main-info h1,
+html[data-theme="dark"] .game-main-info dd,
+html[data-theme="dark"] .detail-card h2,
+html[data-theme="dark"] .detail-progress strong,
+html[data-theme="dark"] .detail-rating,
+html[data-theme="dark"] .total-playtime > strong,
+html[data-theme="dark"] .achievement-compact-list b { color: #e7edf5; }
+html[data-theme="dark"] .game-main-info dt,
+html[data-theme="dark"] .game-personal-info small,
+html[data-theme="dark"] .game-personal-info span,
+html[data-theme="dark"] .game-personal-info p,
+html[data-theme="dark"] .detail-progress small,
+html[data-theme="dark"] .detail-progress em,
+html[data-theme="dark"] .achievement-summary span,
+html[data-theme="dark"] .achievement-summary p,
+html[data-theme="dark"] .library-copy-list small,
+html[data-theme="dark"] .total-playtime small,
+html[data-theme="dark"] .playthrough-list small,
+html[data-theme="dark"] .playthrough-list em { color: #8f9baa; }
+html[data-theme="dark"] .game-personal-info { border-color: #273746; }
+html[data-theme="dark"] .game-personal-info > div + div,
+html[data-theme="dark"] .library-detail-list > div,
+html[data-theme="dark"] .sessions-table > div { border-color: #1d2b38; }
+html[data-theme="dark"] .detail-progress,
+html[data-theme="dark"] .achievement-compact-list > div,
+html[data-theme="dark"] .library-copy-list > button,
+html[data-theme="dark"] .playthrough-list > button { border-color: #253746; background: #111e2a; }
+html[data-theme="dark"] .detail-progress > div { background: #263746; }
+html[data-theme="dark"] .library-copy-list > button:hover,
+html[data-theme="dark"] .playthrough-list > button:hover { background: #172735; }
+html[data-theme="dark"] .library-copy-list > button.active { border-color: #52718a; background: #172a39; box-shadow: inset 3px 0 #6e93ae; }
+html[data-theme="dark"] .library-copy-list em,
+html[data-theme="dark"] .library-card-heading button,
+html[data-theme="dark"] .total-playtime span { color: #b9d7ec; }
+html[data-theme="dark"] .achievement-summary strong { color: #67e98e; }
+html[data-theme="dark"] .platform-badge.xbox { color: #7cef91; background: #153922; }
+html[data-theme="dark"] .platform-badge.pc { color: #9fd2f4; background: #173248; }
+html[data-theme="dark"] .achievement-details-button { color: #c3cfdb; background: #172532; }
+html[data-theme="dark"] .achievement-groups-modal { color: var(--ink); background: #0f1924; box-shadow: 0 24px 70px #0009; }
+html[data-theme="dark"] .achievement-group-list article,
+html[data-theme="dark"] .achievement-group-form { border-color: #263746; }
+html[data-theme="dark"] .achievement-group-list b { color: #e7edf5; }
+html[data-theme="dark"] .achievement-group-list small,
+html[data-theme="dark"] .achievement-group-list span,
+html[data-theme="dark"] .achievement-group-form label { color: #8f9baa; }
+html[data-theme="dark"] .achievement-group-list button { color: #c3cfdb; background: #172532; }
+html[data-theme="dark"] .achievement-group-list .group-delete { color: #efb8b5; background: #321d20; }
+html[data-theme="dark"] .sessions-table > div { color: #c3cfdb; }
+html[data-theme="dark"] .sessions-table .sessions-head { color: #8f9baa; background: #111e2a; }
+html[data-theme="dark"] .sessions-table .positive { color: #67e98e; }
+html[data-theme="dark"] .all-sessions-link { color: #b9d7ec; background: #172532; }
+html[data-theme="dark"] .xbox-fields { border-color: #285037; background: #10291a; }
+html[data-theme="dark"] .xbox-fields legend,
+html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
+
 @media (max-width: 720px) {
   .theme-selector { grid-template-columns: 1fr; }
 }
@@ -691,11 +750,11 @@ html[data-theme="dark"] .theme-selector button.active > span { color: #fff; back
 .series-list-content > p { margin: 4px 0; overflow: hidden; color: #919895; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .series-list-inline-status { min-height: 22px; margin: 5px 0 4px; }
 .series-list-inline-status .media-status { padding: 5px 8px; font-size: 9px; }
-.series-list-progress-row { display: grid; gap: 2px; }
+.series-list-progress-row { display: grid; gap: 5px; margin-top: 3px; }
 .series-list-progress { height: 4px; overflow: hidden; border-radius: 5px; background: #e5e8e9; }
 .series-list-progress span { display: block; height: 100%; border-radius: inherit; background: #6689a4; }
-.series-list-progress-row > strong { justify-self: end; color: #496985; font-size: 12px; line-height: 1; white-space: nowrap; }
-.series-list-progress-row > strong small { color: #8d969a; font-size: 10px; font-weight: 500; }
+.series-list-progress-row > strong { justify-self: end; color: #496985; font-size: 15px; line-height: 1; white-space: nowrap; }
+.series-list-progress-row > strong small { color: #8d969a; font-size: 11px; font-weight: 500; }
 .series-list-side { display: grid; justify-items: end; align-content: center; gap: 7px; text-align: right; }
 .series-list-score { color: #496985; font-family: Georgia, serif; font-size: 21px; }
 .movie-status-tabs { flex-grow: 0; flex-basis: 52%; }
@@ -762,7 +821,7 @@ html[data-theme="dark"] .theme-selector button.active > span { color: #fff; back
 .book-list-cover { width: 92px; height: 110px; border-radius: 5px; background: linear-gradient(145deg,#6c7f88,#344952) center/cover; }
 .book-list-cover > em { position: absolute; right: 5px; bottom: 5px; left: 5px; padding: 3px 4px; overflow: hidden; border-radius: 4px; color: #fff; background: #172633c7; font-size: 7px; font-style: normal; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .book-list-author { margin: 4px 0 5px !important; color: #65747c !important; font-size: 12px !important; }
-.book-list-progress { margin-top: 2px; }
+.book-list-progress { margin-top: 3px; }
 .book-list-add { align-self: start; width: auto; margin: 6px 0 4px; padding-right: 12px; padding-left: 12px; }
 .book-list-side { min-width: 150px; }
 .book-no-rating { color: #8a9498; font-size: 10px; }
@@ -888,10 +947,10 @@ html[data-theme="dark"] .theme-selector button.active > span { color: #fff; back
 .game-catalog-card { min-height: 118px; }
 .game-catalog-card .series-list-cover { height: 102px; }
 .game-platform-badge { background: #557d62; }
-.game-catalog-progress { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 4px 10px; margin-top: 5px; }
-.game-catalog-progress > strong { color: #486753; font-size: 12px; }
+.game-catalog-progress { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 6px 10px; margin-top: 4px; }
+.game-catalog-progress > strong { color: #486753; font-size: 15px; line-height: 1; }
 .game-catalog-progress > strong small,
-.game-catalog-progress > small { color: #7e8a83; font-size: 9px; font-weight: 500; }
+.game-catalog-progress > small { color: #7e8a83; font-size: 11px; font-weight: 500; line-height: 1; }
 .game-catalog-progress > small { grid-column: 2; grid-row: 1; text-align: right; }
 .game-catalog-progress .series-list-progress { grid-column: 1 / -1; }
 .game-catalog-progress .series-list-progress span { background: #65906b; }
