@@ -40,7 +40,7 @@ export function ActivityPage() {
     const date = shiftDate(today, index - period + 1)
     return { date, steps: items.find((item) => item.activityDate === date)?.steps ?? 0 }
   }), [items, period])
-  const maxSteps = Math.max(stepGoal, ...chartData.map((item) => item.steps))
+  const chartMaximum = Math.max(10_000, Math.ceil(Math.max(...chartData.map((item) => item.steps)) / 2_500) * 2_500)
 
   return <div className="activity-page">
     <section className="activity-summary">
@@ -55,8 +55,14 @@ export function ActivityPage() {
       <article className="activity-panel chart-panel">
         <div className="panel-heading"><div><p className="eyebrow">Динамика</p><h3>Шаги по дням</h3></div><div className="period-switch"><button className={period === 7 ? 'active' : ''} onClick={() => setPeriod(7)}>7 дней</button><button className={period === 30 ? 'active' : ''} onClick={() => setPeriod(30)}>30 дней</button></div></div>
         {loading ? <div className="loading"><span />Загружаем историю…</div> : <div className={`step-chart period-${period}`}>
+          <div className="step-chart-scale" aria-hidden="true">
+            <span style={{ top: '0%' }}><b>{chartMaximum.toLocaleString('ru-RU')}</b></span>
+            <span className="goal" style={{ top: `${(1 - stepGoal / chartMaximum) * 100}%` }}><b>{stepGoal.toLocaleString('ru-RU')}</b></span>
+            <span style={{ top: `${(1 - 5_000 / chartMaximum) * 100}%` }}><b>5 000</b></span>
+            <span style={{ top: `${(1 - 2_500 / chartMaximum) * 100}%` }}><b>2 500</b></span>
+          </div>
           {chartData.map((item) => <button className={item.date === selectedDate ? 'selected' : ''} key={item.date} onClick={() => setSelectedDate(item.date)} title={`${formatDate(item.date)}: ${item.steps.toLocaleString('ru-RU')} шагов`}>
-            <span className="bar-value">{period === 7 && item.steps ? item.steps.toLocaleString('ru-RU') : ''}</span><i style={{ height: `${Math.max(2, item.steps / maxSteps * 100)}%` }} /><small>{period === 7 ? formatDate(item.date, { weekday: 'short' }) : new Date(`${item.date}T12:00:00`).getDate()}</small>
+            <span className="bar-value">{period === 7 && item.steps ? item.steps.toLocaleString('ru-RU') : ''}</span><i className={item.steps >= stepGoal ? 'goal-reached' : ''} style={{ height: `${Math.max(2, item.steps / chartMaximum * 100)}%` }} /><small>{period === 7 ? formatDate(item.date, { weekday: 'short' }) : new Date(`${item.date}T12:00:00`).getDate()}</small>
           </button>)}
         </div>}
         <div className="chart-goal"><span />Цель — {stepGoal.toLocaleString('ru-RU')} шагов в день</div>
