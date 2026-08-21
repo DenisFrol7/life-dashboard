@@ -224,6 +224,16 @@ html[data-theme="dark"] .filter-tabs button.active,
 html[data-theme="dark"] .series-status-tabs button.active { color: #ddd8ff; background: #26214c; box-shadow: none; }
 
 html[data-theme="dark"] .mint { color: #55d985; background: #123322; }
+html[data-theme="dark"] .series-list-progress span,
+html[data-theme="dark"] .series-progress span,
+html[data-theme="dark"] .book-progress span,
+html[data-theme="dark"] .game-catalog-progress .series-list-progress span,
+html[data-theme="dark"] .xbox-progress span,
+html[data-theme="dark"] .detail-progress > div span,
+html[data-theme="dark"] .activity-progress span { background: linear-gradient(90deg, #20c957, var(--success)); box-shadow: 0 0 9px #2ddd6340; }
+html[data-theme="dark"] .media-status.completed { color: #75ee98; background: #123923; }
+html[data-theme="dark"] .game-catalog-progress > strong,
+html[data-theme="dark"] .series-list-progress-row > strong { color: #67e98e; }
 html[data-theme="dark"] .violet { color: #a99dff; background: #28224b; }
 html[data-theme="dark"] .amber { color: #f0a45d; background: #3b2817; }
 html[data-theme="dark"] .blue { color: #62b7ff; background: #102d45; }
@@ -901,7 +911,8 @@ html[data-theme="dark"] .theme-selector button.active > span { color: #fff; back
 
 .game-details-page { display: grid; gap: 14px; max-width: 1280px; margin: 0 auto; }
 .game-details-toolbar { display: flex; align-items: center; justify-content: space-between; }
-.game-details-toolbar a { color: #536b7c; font-size: 13px; text-decoration: none; }
+.game-details-toolbar a { display: inline-flex; align-items: center; gap: 7px; color: #536b7c; font-size: 13px; text-decoration: none; }
+.game-details-toolbar a svg { width: 16px; height: 16px; stroke-width: 2; }
 .game-hero-card, .detail-card { border: 1px solid #dde4e7; border-radius: 15px; background: #fff; box-shadow: 0 8px 24px rgba(42, 57, 67, .05); }
 .game-hero-card { display: grid; grid-template-columns: 210px minmax(0, 1fr) minmax(300px, 34%); gap: 14px; padding: 18px; }
 .game-detail-cover { display: grid; min-height: 290px; border-radius: 11px; color: #fff; font-size: 70px; font-weight: 800; place-items: center; background: linear-gradient(145deg, #526d7d, #263d4c) center/cover; }

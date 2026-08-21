@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router'
+import { ArrowLeft, Pencil } from 'lucide-react'
 import { getAnimeDetails, type AnimeDetails } from '../api/anime'
 import {
   clearSeasonWatches, getViewingStructure, watchEpisode,
@@ -54,7 +55,7 @@ export function AnimeDetailsPage() {
   if (error || !anime) return <div className="notice error"><strong>Не удалось открыть аниме</strong><span>{error}</span></div>
 
   return <div className="series-details-page anime-details-page">
-    <div className="game-details-toolbar"><Link to="/anime">← Назад к аниме</Link><button className="secondary-button" onClick={() => setEditing(true)}>✎ Редактировать</button></div>
+    <div className="game-details-toolbar"><Link to="/anime"><ArrowLeft />Назад к аниме</Link><button className="secondary-button icon-button" onClick={() => setEditing(true)}><Pencil />Редактировать</button></div>
     <section className="series-hero-card"><div className="movie-detail-poster anime-detail-poster" style={anime.coverUrl ? { backgroundImage: `url(${anime.coverUrl})` } : undefined}><span>{anime.title.slice(0, 1)}</span></div><div className="movie-main-info"><p className="eyebrow">Многосерийное аниме</p><h1>{anime.title}</h1>{anime.originalTitle && <h2>{anime.originalTitle}</h2>}<dl><div><dt>Год</dt><dd>{anime.releaseYear ?? '—'}</dd></div><div><dt>Статус выпуска</dt><dd>{releaseLabels[anime.releaseStatus]}</dd></div><div><dt>Формат</dt><dd>TV-сериал</dd></div></dl></div><div className="movie-personal-info series-personal-info"><div><small>Мой статус</small><strong className="detail-status">● {anime.userStatus ? statusLabels[anime.userStatus] : 'Не в библиотеке'}</strong>{anime.userStatus === 'COMPLETED' && anime.completedAt && <span>Завершено: {formatDate(anime.completedAt)}</span>}</div><div><small>Моя оценка</small><strong className="series-detail-rating">{anime.rating ? `${anime.rating}/10` : '—'}</strong></div><div><small>Заметки</small><p>{anime.personalNote ?? 'Заметок пока нет.'}</p></div></div></section>
     <section className="series-summary-grid"><article className="detail-card series-progress-card"><div><h2>Прогресс просмотра</h2><strong>{watched.length} из {episodes.length} эпизодов</strong></div><b>{Math.round(progress)}%</b><div className="series-progress anime-progress"><span style={{ width: `${progress}%` }} /></div></article><article className="detail-card series-count-card"><h2>Сезоны и эпизоды</h2><strong>{seasons.length}<small>сезонов</small></strong><strong>{episodes.length}<small>эпизодов</small></strong></article><article className="detail-card series-last-watch"><h2>Последний просмотр</h2>{lastWatch ? <><strong>{lastWatch.label}</strong><span>{lastWatch.detail}</span><small>{formatDate(lastWatch.occurredAt)}</small></> : <span>{watched.length ? 'Дата исторического просмотра не указана' : 'Просмотров пока нет'}</span>}</article></section>
     {anime.description && <section className="detail-card movie-description"><h2>Описание</h2><p>{anime.description}</p></section>}

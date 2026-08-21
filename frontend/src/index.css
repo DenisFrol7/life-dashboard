@@ -11,6 +11,7 @@
   --paper: #fffefa;
   --accent: #9db7cf;
   --accent-dark: #334f68;
+  --success: #5b9a67;
 }
 
 :root[data-theme="dark"] {
@@ -22,6 +23,7 @@
   --paper: #0f1924;
   --accent: #8578f6;
   --accent-dark: #9a8fff;
+  --success: #2ddd63;
 }
 
 * { box-sizing: border-box; }

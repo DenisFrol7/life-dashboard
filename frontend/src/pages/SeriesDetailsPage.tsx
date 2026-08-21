@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router'
+import { ArrowLeft, Pencil } from 'lucide-react'
 import {
   createEpisode,
   createEpisodes,
@@ -69,7 +70,7 @@ export function SeriesDetailsPage() {
   if (error || !series) return <div className="notice error"><strong>Не удалось открыть сериал</strong><span>{error}</span></div>
 
   return <div className="series-details-page">
-    <div className="game-details-toolbar"><Link to="/series">← Назад к сериалам</Link><button className="secondary-button" onClick={() => setEditing(true)}>✎ Редактировать</button></div>
+    <div className="game-details-toolbar"><Link to="/series"><ArrowLeft />Назад к сериалам</Link><button className="secondary-button icon-button" onClick={() => setEditing(true)}><Pencil />Редактировать</button></div>
     <section className="series-hero-card">
       <div className="movie-detail-poster" style={series.coverUrl ? { backgroundImage: `url(${series.coverUrl})` } : undefined}><span>{series.title.slice(0, 1)}</span></div>
       <div className="movie-main-info"><p className="eyebrow">{series.format === 'ANIMATION' ? 'Мультсериал' : 'Сериал'}</p><h1>{series.title}</h1>{series.originalTitle && <h2>{series.originalTitle}</h2>}<dl><div><dt>Год</dt><dd>{series.releaseYear ?? '—'}</dd></div><div><dt>Жанр</dt><dd>{series.genre ?? '—'}</dd></div><div><dt>Статус выпуска</dt><dd>{releaseLabels[series.releaseStatus]}</dd></div></dl></div>

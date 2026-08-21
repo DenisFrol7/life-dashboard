@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router'
+import { ArrowLeft, Pencil } from 'lucide-react'
 import {
   deleteMovieWatch,
   getLibrary,
@@ -46,7 +47,7 @@ export function MovieDetailsPage() {
   if (error || !movie) return <div className="notice error"><strong>Не удалось открыть фильм</strong><span>{error}</span></div>
 
   return <div className="movie-details-page">
-    <div className="game-details-toolbar"><Link to="/movies">← Назад к фильмам</Link><button className="secondary-button" onClick={() => setEditing(true)}>✎ Редактировать</button></div>
+    <div className="game-details-toolbar"><Link to="/movies"><ArrowLeft />Назад к фильмам</Link><button className="secondary-button icon-button" onClick={() => setEditing(true)}><Pencil />Редактировать</button></div>
     <section className="movie-hero-card">
       <div className="movie-detail-poster" style={movie.coverUrl ? { backgroundImage: `url(${movie.coverUrl})` } : undefined}><span>{movie.title.slice(0, 1)}</span></div>
       <div className="movie-main-info"><p className="eyebrow">{movie.format === 'ANIMATION' ? 'Мультфильм' : 'Фильм'}</p><h1>{movie.title}</h1>{movie.originalTitle && <h2>{movie.originalTitle}</h2>}<dl><div><dt>Год</dt><dd>{movie.releaseYear ?? '—'}</dd></div><div><dt>Жанр</dt><dd>{movie.genre ?? '—'}</dd></div><div><dt>Длительность</dt><dd>{duration(movie.durationMinutes)}</dd></div></dl></div>
