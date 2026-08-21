@@ -1,4 +1,10 @@
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router'
+import {
+  BarChart3, BookOpen, CalendarDays, Clapperboard, Clock3, Film, Footprints,
+  Gamepad2, Gauge, Home, Moon, NotebookPen, Settings, Sparkles, Sun,
+  Tv, UserRound,
+  type LucideIcon,
+} from 'lucide-react'
 import { DashboardPage } from './pages/DashboardPage'
 import { HabitsPage } from './pages/HabitsPage'
 import { ActivityPage } from './pages/ActivityPage'
@@ -41,6 +47,23 @@ const navigation: NavItem[] = [
   { path: '/settings', label: 'Настройки', short: '⚙', description: 'Экспорт, импорт и параметры приложения' },
 ]
 
+const navigationIcons: Record<string, LucideIcon> = {
+  '/': Home,
+  '/analytics': BarChart3,
+  '/habits': Gauge,
+  '/activity': Footprints,
+  '/sleep': Moon,
+  '/calendar': CalendarDays,
+  '/journal': Clock3,
+  '/blog': NotebookPen,
+  '/movies': Film,
+  '/series': Tv,
+  '/anime': Sparkles,
+  '/games': Gamepad2,
+  '/books': BookOpen,
+  '/settings': Settings,
+}
+
 function App() {
   const { pathname } = useLocation()
   const { resolvedTheme, setMode } = useTheme()
@@ -56,25 +79,26 @@ function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark">L</span>
+          <span className="brand-mark"><BarChart3 /></span>
           <span><strong>Life</strong> Dashboard</span>
         </div>
         <nav aria-label="Основная навигация">
-          {navigation.map((item) => (
-            <NavLink
+          {navigation.map((item) => {
+            const Icon = navigationIcons[item.path] ?? Clapperboard
+            return <NavLink
               className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
               end={item.path === '/'}
               to={item.path}
               key={item.path}
             >
-              <span className="nav-icon" aria-hidden="true">{item.short}</span>
+              <span className="nav-icon" aria-hidden="true"><Icon /></span>
               <span>{item.label}</span>
             </NavLink>
-          ))}
+          })}
         </nav>
         <div className="sidebar-footer">
           <button className="sidebar-theme-toggle" type="button" onClick={() => setMode(resolvedTheme === 'dark' ? 'light' : 'dark')} aria-label={resolvedTheme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'}>
-            <span>{resolvedTheme === 'dark' ? '☀' : '☾'}</span>
+            <span>{resolvedTheme === 'dark' ? <Sun /> : <Moon />}</span>
             {resolvedTheme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
           </button>
           <div><span className="status-dot" /> Backend подключён</div>
@@ -88,7 +112,7 @@ function App() {
             <h1>{current.label}</h1>
           </div>
           <div className="profile-chip" title="Пользователь по умолчанию">
-            <span>LD</span>
+            <span><UserRound /></span>
             <div><strong>Владелец</strong><small>Домашний профиль</small></div>
           </div>
         </header>
