@@ -740,7 +740,8 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .series-list-card { position: relative; display: grid; grid-template-columns: 132px minmax(0, 1fr) 150px; gap: 15px; min-height: 94px; padding: 8px; border-bottom: 1px solid #dfe3e5; background: var(--paper); }
 .series-list-cover { position: relative; display: grid; place-items: center; width: 132px; height: 82px; overflow: hidden; border: 0; border-radius: 5px; color: #ffffff35; background: linear-gradient(145deg, #3d455f, #202536) center/cover; cursor: pointer; font-family: Georgia, serif; font-size: 32px; font-weight: 800; }
 .series-list-cover[style] { background-color: transparent; background-position: center; background-repeat: no-repeat; background-size: contain; }
-.series-list-cover i { position: absolute; top: 5px; right: 6px; color: #e07078; font-size: 12px; font-style: normal; text-shadow: 0 1px 3px #0008; }
+.series-list-cover i { display: none; }
+.series-list-card:has(.series-list-cover i)::after { position: absolute; top: 50%; right: 11px; z-index: 1; display: grid; width: 25px; height: 25px; border-radius: 50%; color: #d96673; background: #f8e8eb; content: '♥'; font-size: 13px; line-height: 1; transform: translateY(-50%); place-items: center; box-shadow: 0 3px 10px #26364414; }
 .series-list-content { display: grid; align-content: center; min-width: 0; }
 .series-list-heading { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .series-list-heading > button { min-width: 0; padding: 0; overflow: hidden; border: 0; color: #426f91; background: none; cursor: pointer; font-family: Georgia, serif; font-size: 17px; font-weight: 700; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
@@ -762,6 +763,18 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .series-list-card .movie-list-meta { position: relative; transform: translateY(-9px); }
 .series-list-card .series-list-inline-status { position: absolute; top: 10px; right: 10px; z-index: 1; min-height: 0; margin: 0; }
 .series-list-card .series-list-side { align-content: end; align-self: stretch; padding: 0 2px 5px 0; }
+.series-catalog-page .series-list-content { align-content: start; padding-top: 1px; }
+.series-catalog-page .series-list-heading,
+.series-catalog-page .series-list-content > p,
+.series-catalog-page .movie-list-meta { transform: none; }
+.anime-page .series-list-content { align-content: start; padding-top: 1px; }
+.anime-page .series-list-heading,
+.anime-page .series-list-content > p,
+.anime-page .movie-list-meta { transform: none; }
+.games-page .series-list-content { align-content: start; padding-top: 1px; }
+.games-page .series-list-heading,
+.games-page .series-list-content > p,
+.games-page .movie-list-meta { margin-top: 6px; transform: none; }
 .series-list-score { color: #496985; font-family: Georgia, serif; font-size: 21px; }
 .movie-status-tabs { flex-grow: 0; flex-basis: 52%; }
 .movie-list-cover { background: linear-gradient(145deg, #324a5c, #182733) center/cover; }
@@ -825,7 +838,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .books-page .series-search { flex-basis: 220px; width: 220px; }
 .book-list-card { min-height: 126px; }
 .book-list-cover { width: 92px; height: 110px; border-radius: 5px; background: linear-gradient(145deg,#6c7f88,#344952) center/cover; }
-.book-list-cover > em { position: absolute; right: 5px; bottom: 5px; left: 5px; padding: 3px 4px; overflow: hidden; border-radius: 4px; color: #fff; background: #172633c7; font-size: 7px; font-style: normal; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.book-list-cover > em { display: none; }
 .book-list-author { margin: 4px 0 5px !important; color: #65747c !important; font-size: 14px !important; }
 .book-list-progress { margin-top: 3px; }
 .book-list-add { align-self: start; width: auto; margin: 6px 0 4px; padding-right: 12px; padding-left: 12px; }
@@ -960,6 +973,10 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .game-catalog-progress > small { grid-column: 2; grid-row: 1; text-align: right; }
 .game-catalog-progress .series-list-progress { grid-column: 1 / -1; }
 .game-catalog-progress .series-list-progress span { background: #65906b; }
+@media (min-width: 901px) {
+  .series-list-card .series-list-progress-row,
+  .series-list-card .game-catalog-progress { position: absolute; right: 173px; bottom: 14px; left: 155px; margin: 0; }
+}
 .game-sessions-bottom { margin-top: 22px; margin-bottom: 0; }
 .game-session-list > button { display: grid; grid-template-columns: minmax(0, 1fr) auto 100px; gap: 18px; }
 .game-session-achievements { display: flex !important; flex-wrap: wrap; justify-content: flex-end; gap: 3px 10px; color: #4e8756; font-size: 10px; font-weight: 800; }
@@ -1459,6 +1476,7 @@ html[data-theme="dark"] .book-progress-detail > b { color: #b9d7ec; }
 html[data-theme="dark"] .media-empty h2,
 html[data-theme="dark"] .series-list-heading > button,
 html[data-theme="dark"] .series-list-score { color: #b9d7ec; }
+html[data-theme="dark"] .series-list-card:has(.series-list-cover i)::after { color: #ff8292; background: #3a202c; box-shadow: 0 3px 12px #0005; }
 html[data-theme="dark"] .media-empty > span { color: #b2a5ff; background: #29234b; }
 html[data-theme="dark"] .media-status.not_started,
 html[data-theme="dark"] .media-status.planned { color: #a9c9e3; background: #172b3b; }
