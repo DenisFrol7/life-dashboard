@@ -9,8 +9,11 @@
   --muted: #777d77;
   --line: #e2e1da;
   --paper: #fffefa;
+  --paper-soft: #f6f8f9;
   --accent: #9db7cf;
   --accent-dark: #334f68;
+  --accent-strong: #496985;
+  --accent-soft: #e4edf4;
   --success: #5b9a67;
 }
 
@@ -21,8 +24,11 @@
   --muted: #8f9baa;
   --line: #1d2b38;
   --paper: #0f1924;
+  --paper-soft: #111e2a;
   --accent: #8578f6;
   --accent-dark: #9a8fff;
+  --accent-strong: #a99dff;
+  --accent-soft: #28224b;
   --success: #2ddd63;
 }
 
