@@ -737,7 +737,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .series-statistics dt { color: #6e797d; font-size: 10px; }
 .series-statistics dd { margin: 0; color: #3e5f76; font-family: Georgia, serif; font-size: 16px; font-weight: 700; text-align: right; }
 .series-statistics .series-stat-total { margin-top: 8px; border-top: 1px solid #d9dddf; }
-.series-list-card { display: grid; grid-template-columns: 132px minmax(0, 1fr) 150px; gap: 15px; min-height: 94px; padding: 8px; border-bottom: 1px solid #dfe3e5; background: var(--paper); }
+.series-list-card { position: relative; display: grid; grid-template-columns: 132px minmax(0, 1fr) 150px; gap: 15px; min-height: 94px; padding: 8px; border-bottom: 1px solid #dfe3e5; background: var(--paper); }
 .series-list-cover { position: relative; display: grid; place-items: center; width: 132px; height: 82px; overflow: hidden; border: 0; border-radius: 5px; color: #ffffff35; background: linear-gradient(145deg, #3d455f, #202536) center/cover; cursor: pointer; font-family: Georgia, serif; font-size: 32px; font-weight: 800; }
 .series-list-cover[style] { background-color: transparent; background-position: center; background-repeat: no-repeat; background-size: contain; }
 .series-list-cover i { position: absolute; top: 5px; right: 6px; color: #e07078; font-size: 12px; font-style: normal; text-shadow: 0 1px 3px #0008; }
@@ -748,7 +748,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .release-badge { flex: 0 0 auto; padding: 3px 5px; border-radius: 3px; color: #fff; background: #899197; font-size: 8px; font-weight: 900; text-transform: uppercase; }
 .release-badge.ongoing { background: #6d9a54; }
 .release-badge.cancelled { background: #a4675b; }
-.series-list-content > p { margin: 4px 0; overflow: hidden; color: #919895; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.series-list-content > p { margin: 4px 0; overflow: hidden; color: #919895; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .series-list-inline-status { min-height: 22px; margin: 5px 0 4px; }
 .series-list-inline-status .media-status { padding: 5px 8px; font-size: 9px; }
 .series-list-progress-row { display: grid; gap: 5px; margin-top: 3px; }
@@ -757,6 +757,11 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .series-list-progress-row > strong { justify-self: end; color: #496985; font-size: 15px; line-height: 1; white-space: nowrap; }
 .series-list-progress-row > strong small { color: #8d969a; font-size: 11px; font-weight: 500; }
 .series-list-side { display: grid; justify-items: end; align-content: center; gap: 7px; text-align: right; }
+.series-list-card .series-list-heading,
+.series-list-card .series-list-content > p,
+.series-list-card .movie-list-meta { position: relative; transform: translateY(-9px); }
+.series-list-card .series-list-inline-status { position: absolute; top: 10px; right: 10px; z-index: 1; min-height: 0; margin: 0; }
+.series-list-card .series-list-side { align-content: end; align-self: stretch; padding: 0 2px 5px 0; }
 .series-list-score { color: #496985; font-family: Georgia, serif; font-size: 21px; }
 .movie-status-tabs { flex-grow: 0; flex-basis: 52%; }
 .movie-list-cover { background: linear-gradient(145deg, #324a5c, #182733) center/cover; }
@@ -821,7 +826,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .book-list-card { min-height: 126px; }
 .book-list-cover { width: 92px; height: 110px; border-radius: 5px; background: linear-gradient(145deg,#6c7f88,#344952) center/cover; }
 .book-list-cover > em { position: absolute; right: 5px; bottom: 5px; left: 5px; padding: 3px 4px; overflow: hidden; border-radius: 4px; color: #fff; background: #172633c7; font-size: 7px; font-style: normal; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
-.book-list-author { margin: 4px 0 5px !important; color: #65747c !important; font-size: 12px !important; }
+.book-list-author { margin: 4px 0 5px !important; color: #65747c !important; font-size: 14px !important; }
 .book-list-progress { margin-top: 3px; }
 .book-list-add { align-self: start; width: auto; margin: 6px 0 4px; padding-right: 12px; padding-left: 12px; }
 .book-list-side { min-width: 150px; }
