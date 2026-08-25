@@ -961,8 +961,8 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .game-session-list small { color: #78807c; }
 .game-session-list b { color: #536b7c; font-size: 12px; }
 .game-status-tabs { flex: 1 1 100%; min-width: 0; }
-.game-catalog-search { flex: 1 1 220px; width: auto; min-width: 180px; }
-.game-platform-filter { flex: 0 0 170px; min-height: 40px; padding: 9px 30px 9px 11px; border: 1px solid #d9ddda; border-radius: 9px; color: #52616a; background: #fff; font-size: 11px; }
+.game-catalog-search { flex: 1 1 180px; width: auto; min-width: 160px; }
+.game-platform-filter { flex: 0 0 155px; min-height: 40px; padding: 9px 30px 9px 11px; border: 1px solid #d9ddda; border-radius: 9px; color: #52616a; background: #fff; font-size: 11px; }
 .game-catalog-card { min-height: 118px; }
 .game-catalog-card .series-list-cover { height: 102px; }
 .game-platform-badge { background: #557d62; }
