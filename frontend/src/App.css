@@ -736,7 +736,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .series-statistics dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 9px 0; border-bottom: 1px solid #eceeec; }
 .series-statistics dt { color: #6e797d; font-size: 10px; }
 .series-statistics dd { margin: 0; color: #3e5f76; font-family: Georgia, serif; font-size: 16px; font-weight: 700; text-align: right; }
-.series-statistics .series-stat-total { margin-top: 8px; border-top: 1px solid #d9dddf; }
+.series-statistics .series-stat-total { margin-top: 8px; border-top: 0; }
 .series-list-card { position: relative; display: grid; grid-template-columns: 132px minmax(0, 1fr) 150px; gap: 15px; min-height: 94px; padding: 8px; border-bottom: 1px solid #dfe3e5; background: var(--paper); }
 .series-list-cover { position: relative; display: grid; place-items: center; width: 132px; height: 82px; overflow: hidden; border: 0; border-radius: 5px; color: #ffffff35; background: linear-gradient(145deg, #3d455f, #202536) center/cover; cursor: pointer; font-family: Georgia, serif; font-size: 32px; font-weight: 800; }
 .series-list-cover[style] { background-color: transparent; background-position: center; background-repeat: no-repeat; background-size: contain; }
@@ -1435,7 +1435,7 @@ html[data-theme="dark"] .series-page .series-statistics h2 { color: #e7edf5; }
 html[data-theme="dark"] .series-page .series-statistics dl > div { border-color: #253442; }
 html[data-theme="dark"] .series-page .series-statistics dt { color: #8f9baa; }
 html[data-theme="dark"] .series-page .series-statistics dd { color: #83b9df; white-space: nowrap; }
-html[data-theme="dark"] .series-page .series-statistics .series-stat-total { border-color: #344553; }
+html[data-theme="dark"] .series-page .series-statistics .series-stat-total { border-top: 0; }
 
 /* Complete dark treatment for media detail pages. */
 html[data-theme="dark"] .series-hero-card,

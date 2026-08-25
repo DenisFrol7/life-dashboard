@@ -21,7 +21,7 @@ export function BooksPage(){
  if(loading)return <LoadingState message="Загружаем книги…"/>
  if(error)return <ErrorState title="Не удалось загрузить книги" message={error} onRetry={()=>void load()}/>
  return <div className="movies-page series-page books-page"><section className="media-toolbar series-media-toolbar"><div className="series-status-tabs book-status-tabs" aria-label="Фильтр книг по статусу">{([
-   ['', 'Все'], ['NOT_STARTED', 'Не начата'], ['IN_PROGRESS', 'Читаю'], ['PLANNED', 'В планах'], ['COMPLETED', 'Прочитано'],
+   ['', 'Все'], ['NOT_STARTED', 'Не начато'], ['IN_PROGRESS', 'Читаю'], ['PLANNED', 'В планах'], ['COMPLETED', 'Прочитано'],
   ] as const).map(([value,label])=><button key={value||'all'} className={status===value?'active':''} onClick={()=>setStatus(value)}>{label}</button>)}</div><div className="journal-search series-search"><span><Search /></span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Найти книгу или автора"/></div><button className="primary-button series-add-button media-add-button icon-button" onClick={()=>setEditing('new')}><Plus />Добавить книгу</button></section>
  <section className="series-catalog-layout"><div className="series-catalog-main">
  {error&&<div className="notice error movies-error"><strong>Ошибка</strong><span>{error}</span></div>}

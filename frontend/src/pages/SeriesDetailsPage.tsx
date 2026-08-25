@@ -27,7 +27,12 @@ import { SeriesForm } from './SeriesPage'
 type SeasonDetails = Season & { episodes: Array<Episode & { watches: Watch[] }>; completion?: SeasonCompletion }
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
 const releaseLabels: Record<ReleaseStatus, string> = { ANNOUNCED: 'Анонсирован', ONGOING: 'Выходит', RELEASED: 'Вышел', ENDED: 'Завершён', CANCELLED: 'Отменён' }
-const formatDate = (value: string) => new Intl.DateTimeFormat('ru-RU', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+const formatDate = (value: string) => new Intl.DateTimeFormat('ru-RU', { dateStyle: 'medium' }).format(new Date(value))
+const countLabel = (count: number, one: string, few: string, many: string) => {
+  const lastTwo = count % 100
+  const last = count % 10
+  return lastTwo >= 11 && lastTwo <= 14 ? many : last === 1 ? one : last >= 2 && last <= 4 ? few : many
+}
 
 export function SeriesDetailsPage() {
   const id = Number(useParams().id)
@@ -78,7 +83,7 @@ export function SeriesDetailsPage() {
     </section>
     <section className="series-summary-grid">
       <article className="detail-card series-progress-card"><div><h2>Прогресс просмотра</h2><strong>{watched.length} из {episodes.length} эпизодов</strong></div><b>{Math.round(progress)}%</b><div className="series-progress"><span style={{ width: `${progress}%` }} /></div></article>
-      <article className="detail-card series-count-card"><h2>Сезоны и эпизоды</h2><strong>{seasons.length} <small>сезонов</small></strong><strong>{episodes.length} <small>эпизодов</small></strong></article>
+      <article className="detail-card series-count-card"><h2>Сезоны и эпизоды</h2><strong>{seasons.length} <small>{countLabel(seasons.length, 'сезон', 'сезона', 'сезонов')}</small></strong><strong>{episodes.length} <small>{countLabel(episodes.length, 'эпизод', 'эпизода', 'эпизодов')}</small></strong></article>
       <article className="detail-card series-last-watch"><h2>Последний просмотр</h2>{lastWatch ? <><strong>{lastWatch.label}</strong><span>{lastWatch.detail}</span><small>{formatDate(lastWatch.occurredAt)}</small></> : <span>{watched.length ? 'Дата исторического просмотра не указана' : 'Просмотров пока нет'}</span>}</article>
     </section>
     {series.description && <section className="detail-card movie-description"><h2>Описание</h2><p>{series.description}</p></section>}

@@ -19,7 +19,7 @@ const statusLabels: Record<LibraryStatus, string> = {
   NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю',
   COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено',
 }
-const formatDate = (value: string) => new Intl.DateTimeFormat('ru-RU', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(value))
+const formatDate = (value: string) => new Intl.DateTimeFormat('ru-RU', { dateStyle: 'long' }).format(new Date(value))
 const localDateTime = (value: string) => { const date = new Date(value); return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16) }
 const duration = (minutes: number | null) => minutes == null ? '—' : `${Math.floor(minutes / 60)} ч ${minutes % 60} мин`
 
