@@ -14,20 +14,21 @@ function delta(current: number, previous: number) { if (previous === 0) return c
 
 export function AnalyticsPage() {
   const initial = periodDates(30)
-  const [period, setPeriod] = useState<Period | 'custom'>(30)
+  const [period, setPeriod] = useState<Period | 'custom' | 'all'>(30)
   const [from, setFrom] = useState(initial.from)
   const [to, setTo] = useState(initial.to)
   const [analytics, setAnalytics] = useState<Analytics | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async () => { setLoading(true); setError(null); try { setAnalytics(await getAnalytics(from, to)) } catch (reason) { setError(getApiErrorMessage(reason, 'Не удалось загрузить статистику')) } finally { setLoading(false) } }, [from, to])
+  const load = useCallback(async () => { setLoading(true); setError(null); try { setAnalytics(await getAnalytics(from, to, period === 'all')) } catch (reason) { setError(getApiErrorMessage(reason, 'Не удалось загрузить статистику')) } finally { setLoading(false) } }, [from, to, period])
   useEffect(() => { void load() }, [load])
   const choosePeriod = (value: Period) => { const dates = periodDates(value); setPeriod(value); setFrom(dates.from); setTo(dates.to) }
+  const chooseAllTime = () => { setPeriod('all'); setTo(localDate(new Date())) }
   const chart = useMemo(() => analytics ? chartPoints(analytics.daily) : [], [analytics])
 
   return <div className="analytics-page">
-    <section className="analytics-toolbar"><div className="filter-tabs" aria-label="Период статистики">{([7, 30, 365] as Period[]).map(value => <button key={value} className={period === value ? 'active' : ''} onClick={() => choosePeriod(value)}>{value === 7 ? '7 дней' : value === 30 ? '30 дней' : 'Год'}</button>)}</div><div className="analytics-dates"><label>С<input type="date" value={from} max={to} onChange={event => { setPeriod('custom'); setFrom(event.target.value) }} /></label><label>По<input type="date" value={to} min={from} onChange={event => { setPeriod('custom'); setTo(event.target.value) }} /></label></div></section>
+    <section className="analytics-toolbar"><div className="filter-tabs" aria-label="Период статистики">{([7, 30, 365] as Period[]).map(value => <button key={value} className={period === value ? 'active' : ''} onClick={() => choosePeriod(value)}>{value === 7 ? '7 дней' : value === 30 ? '30 дней' : 'Год'}</button>)}<button className={period === 'all' ? 'active' : ''} onClick={chooseAllTime}>Всё время</button></div><div className="analytics-dates"><label>С<input type="date" value={period === 'all' && analytics ? analytics.from : from} max={to} onChange={event => { setPeriod('custom'); setFrom(event.target.value) }} /></label><label>По<input type="date" value={period === 'all' && analytics ? analytics.to : to} min={period === 'all' && analytics ? analytics.from : from} onChange={event => { if (period === 'all' && analytics) setFrom(analytics.from); setPeriod('custom'); setTo(event.target.value) }} /></label></div></section>
     {error && <div className="notice error"><strong>Ошибка</strong><span>{error}</span></div>}
     {loading ? <div className="loading"><span />Собираем статистику…</div> : analytics && <>
       <section className="analytics-summary">
@@ -54,6 +55,6 @@ function ReadingStats({ data }: { data: AnalyticsOverview }) { return <article c
 function chartPoints(daily: AnalyticsDailyPoint[]): ChartPoint[] {
   if (daily.length <= 60) return daily.map(point => ({ label: dateLabel(point.date), steps: point.steps, sleepMinutes: point.sleepMinutes, gameMinutes: point.gameMinutes }))
   const months = new Map<string, ChartPoint & { days: number; sleepDays: number }>()
-  daily.forEach(point => { const key = point.date.slice(0, 7); const current = months.get(key) ?? { label: new Intl.DateTimeFormat('ru-RU', { month: 'short' }).format(new Date(`${key}-15T12:00:00`)), steps: 0, sleepMinutes: 0, gameMinutes: 0, days: 0, sleepDays: 0 }; current.steps += point.steps; current.days++; current.gameMinutes += point.gameMinutes; if (point.sleepSessions) { current.sleepMinutes += point.sleepMinutes; current.sleepDays++ } months.set(key, current) })
+  daily.forEach(point => { const key = point.date.slice(0, 7); const current = months.get(key) ?? { label: new Intl.DateTimeFormat('ru-RU', { month: 'short', year: 'numeric' }).format(new Date(`${key}-15T12:00:00`)), steps: 0, sleepMinutes: 0, gameMinutes: 0, days: 0, sleepDays: 0 }; current.steps += point.steps; current.days++; current.gameMinutes += point.gameMinutes; if (point.sleepSessions) { current.sleepMinutes += point.sleepMinutes; current.sleepDays++ } months.set(key, current) })
   return [...months.values()].map(point => ({ label: point.label, steps: Math.round(point.steps / point.days), sleepMinutes: point.sleepDays ? Math.round(point.sleepMinutes / point.sleepDays) : 0, gameMinutes: point.gameMinutes }))
 }

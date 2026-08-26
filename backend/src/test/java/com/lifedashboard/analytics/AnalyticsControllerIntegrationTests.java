@@ -59,6 +59,25 @@ class AnalyticsControllerIntegrationTests {
     }
 
     @Test
+    void returnsAllTimeAnalyticsFromEarliestRecordedActivity() throws Exception {
+        LocalDate earliest = FROM.minusYears(2);
+        jdbc.update("INSERT INTO daily_activity(user_id, activity_date, steps, distance_meters) VALUES (1, ?, 1234, 800)",
+                earliest);
+        Long historicalMovieId = addContent("Historical movie before tracking began", "MOVIE", "LIVE_ACTION");
+        jdbc.update("""
+                INSERT INTO movie_watch_history(user_id, content_id, watched_at, watch_number)
+                VALUES (1, ?, ?::date + time '12:00', 1)
+                """, historicalMovieId, earliest.minusYears(1));
+
+        mockMvc.perform(get("/api/analytics").param("allTime", "true").param("to", TO.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.from").value(earliest.toString()))
+                .andExpect(jsonPath("$.to").value(TO.toString()))
+                .andExpect(jsonPath("$.current.totalSteps").value(8734))
+                .andExpect(jsonPath("$.current.moviesWatched").value(0));
+    }
+
+    @Test
     void doesNotCountBulkEpisodeWatchesWhenCompletionDateIsUnknown() throws Exception {
         Long contentId = jdbc.queryForObject("""
                 INSERT INTO content_items(title, item_type, format, release_status)

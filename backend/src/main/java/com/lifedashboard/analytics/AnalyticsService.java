@@ -23,6 +23,7 @@ import java.util.List;
 public class AnalyticsService {
 
     private static final int MAX_DAYS = 366;
+    private static final int MAX_ALL_TIME_DAYS = 36_525;
     private static final long ACTIVE_DAY_STEPS = 1_000;
     private final NamedParameterJdbcTemplate jdbc;
     private final long userId;
@@ -33,15 +34,16 @@ public class AnalyticsService {
         this.userId = userId;
     }
 
-    public AnalyticsResponse get(LocalDate from, LocalDate to) {
+    public AnalyticsResponse get(LocalDate from, LocalDate to, boolean allTime) {
         String timezone = jdbc.query("SELECT timezone FROM users WHERE id = :userId",
                 new MapSqlParameterSource("userId", userId),
                 result -> result.next() ? result.getString(1) : null);
         if (timezone == null) throw new ResourceNotFoundException("Default user was not found");
         ZoneId zone = ZoneId.of(timezone);
         LocalDate effectiveTo = to == null ? LocalDate.now(zone) : to;
-        LocalDate effectiveFrom = from == null ? effectiveTo.minusDays(29) : from;
-        validate(effectiveFrom, effectiveTo);
+        LocalDate effectiveFrom = allTime ? earliestDate(effectiveTo, zone)
+                : from == null ? effectiveTo.minusDays(29) : from;
+        validate(effectiveFrom, effectiveTo, allTime);
 
         long days = ChronoUnit.DAYS.between(effectiveFrom, effectiveTo) + 1;
         LocalDate previousTo = effectiveFrom.minusDays(1);
@@ -52,11 +54,22 @@ public class AnalyticsService {
                 overview(current), overview(previous), current);
     }
 
-    private void validate(LocalDate from, LocalDate to) {
+    private void validate(LocalDate from, LocalDate to, boolean allTime) {
         if (to.isBefore(from)) throw new InvalidRequestException("to must not be before from");
-        if (ChronoUnit.DAYS.between(from, to) >= MAX_DAYS) {
+        long days = ChronoUnit.DAYS.between(from, to);
+        if (!allTime && days >= MAX_DAYS) {
             throw new InvalidRequestException("Analytics period must not exceed 366 days");
         }
+        if (allTime && days >= MAX_ALL_TIME_DAYS) {
+            throw new InvalidRequestException("All-time analytics period must not exceed 100 years");
+        }
+    }
+
+    private LocalDate earliestDate(LocalDate to, ZoneId zone) {
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
+                .addValue("userId", userId).addValue("toDate", to).addValue("timezone", zone.getId());
+        LocalDate earliest = jdbc.queryForObject(EARLIEST_DATE_SQL, parameters, LocalDate.class);
+        return earliest == null ? to : earliest;
     }
 
     private List<AnalyticsResponse.DailyPoint> daily(LocalDate from, LocalDate to, ZoneId zone) {
@@ -190,5 +203,19 @@ public class AnalyticsService {
             FROM dates LEFT JOIN activity USING (day) LEFT JOIN sleep USING (day)
             LEFT JOIN habit_data USING (day) LEFT JOIN gaming USING (day) LEFT JOIN movies USING (day)
             LEFT JOIN episodes USING (day) LEFT JOIN reading USING (day) ORDER BY dates.day
+            """;
+
+    private static final String EARLIEST_DATE_SQL = """
+            SELECT COALESCE(
+                (SELECT MIN(day) FROM (
+                    SELECT activity_date AS day FROM daily_activity WHERE user_id = :userId
+                    UNION ALL
+                    SELECT (ended_at AT TIME ZONE :timezone)::date FROM sleep_sessions WHERE user_id = :userId
+                    UNION ALL
+                    SELECT entry.entry_date FROM habit_entries entry
+                        JOIN habits habit ON habit.id = entry.habit_id WHERE habit.user_id = :userId
+                ) tracking_dates WHERE day <= :toDate),
+                (SELECT (created_at AT TIME ZONE :timezone)::date FROM users WHERE id = :userId)
+            )
             """;
 }

@@ -21,5 +21,5 @@ export type Analytics = {
   current: AnalyticsOverview; previous: AnalyticsOverview; daily: AnalyticsDailyPoint[]
 }
 
-export const getAnalytics = (from: string, to: string) =>
-  apiRequest<Analytics>(`/api/analytics?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
+export const getAnalytics = (from: string, to: string, allTime = false) =>
+  apiRequest<Analytics>(`/api/analytics?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}${allTime ? '&allTime=true' : ''}`)

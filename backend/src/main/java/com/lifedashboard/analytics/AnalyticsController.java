@@ -21,7 +21,8 @@ public class AnalyticsController {
     @GetMapping
     public AnalyticsResponse get(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        return service.get(from, to);
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue = "false") boolean allTime) {
+        return service.get(from, to, allTime);
     }
 }
