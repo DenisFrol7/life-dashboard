@@ -2,6 +2,7 @@
 .idea/
 .vscode/
 backend/target/
+backend/.m2/
 backend/*.log
 backups/
 *.iml

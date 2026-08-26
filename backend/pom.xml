@@ -11,7 +11,7 @@
 
     <groupId>com.lifedashboard</groupId>
     <artifactId>life-dashboard-backend</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>life-dashboard-backend</name>
     <description>Backend for Life Dashboard</description>
 
