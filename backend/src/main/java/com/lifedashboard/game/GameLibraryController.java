@@ -1,6 +1,8 @@
 package com.lifedashboard.game;
 
 import com.lifedashboard.content.UserContentStatus;
+import com.lifedashboard.content.dto.LibraryEntryRequest;
+import com.lifedashboard.content.dto.LibraryEntryResponse;
 import com.lifedashboard.game.dto.*;
 import jakarta.validation.Valid;
 import org.springframework.http.*;
@@ -31,4 +33,6 @@ public class GameLibraryController {
     @DeleteMapping("/library/{id}") public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id); return ResponseEntity.noContent().build();
     }
+    @PutMapping("/profile/{contentId}") public LibraryEntryResponse updateProfile(@PathVariable Long contentId,
+            @Valid @RequestBody LibraryEntryRequest request) { return service.updateProfile(contentId, request); }
 }

@@ -4,6 +4,7 @@ import org.jspecify.annotations.NonNull;
 import com.lifedashboard.common.error.*;
 import com.lifedashboard.content.*;
 import com.lifedashboard.content.dto.LibraryEntryRequest;
+import com.lifedashboard.content.dto.LibraryEntryResponse;
 import com.lifedashboard.game.dto.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -43,13 +44,13 @@ public class GameLibraryService {
     @Transactional
     public GameLibraryResponse create(Long contentId, GameLibraryRequest request) {
         ContentItem item = findContent(contentId);
-        validateGame(item); validateRequest(request);
-        contentService.putInLibrary(contentId, libraryRequest(request));
+        validateGame(item);
+        if (userContent.findByUserIdAndContentId(userId, contentId).isEmpty())
+            contentService.putInLibrary(contentId, new LibraryEntryRequest(UserContentStatus.NOT_STARTED,
+                    null, false, null, null, null));
         UserGame game = new UserGame(userContent.findByUserIdAndContentId(userId, contentId).orElseThrow());
         apply(game, request);
-        UserGame saved = games.save(game);
-        syncFirstPlaythrough(saved, request);
-        return response(saved);
+        return response(games.save(game));
     }
     public List<GameLibraryResponse> getAll(UserContentStatus status, Long platformId) {
         return games.findLibrary(userId, status, platformId).stream()
@@ -58,14 +59,21 @@ public class GameLibraryService {
     public GameLibraryResponse get(Long id) { return response(findGame(id)); }
     @Transactional
     public GameLibraryResponse update(Long id, GameLibraryRequest request) {
-        validateRequest(request);
         UserGame game = findGame(id);
-        contentService.putInLibrary(game.getUserContent().getContent().getId(), libraryRequest(request));
         apply(game, request);
-        syncFirstPlaythrough(game, request);
         return response(game);
     }
     @Transactional public void delete(Long id) { games.delete(findGame(id)); }
+
+    @Transactional
+    public LibraryEntryResponse updateProfile(Long contentId, LibraryEntryRequest request) {
+        ContentItem item = findContent(contentId);
+        validateGame(item);
+        LibraryEntryResponse result = contentService.putInLibrary(contentId, request);
+        games.findFirstByUserContentUserIdAndUserContentContentIdOrderByIdAsc(userId, contentId)
+                .ifPresent(game -> syncFirstPlaythrough(game, request));
+        return result;
+    }
 
     private void apply(UserGame game, GameLibraryRequest r) {
         GamingPlatform platform = platforms.findById(r.platformId())
@@ -77,10 +85,6 @@ public class GameLibraryService {
         game.update(platform, source, r.accessType(), normalize(r.edition()), r.acquiredAt(), normalize(r.note()),
                 r.legacyPlaytimeMinutes());
     }
-    private void validateRequest(GameLibraryRequest r) {
-        if (r.completedAt() != null && r.startedAt() != null && r.completedAt().isBefore(r.startedAt()))
-            throw new InvalidRequestException("completedAt must not be before startedAt");
-    }
     private void validateGame(ContentItem item) {
         if (item.getItemType() != ContentType.GAME)
             throw new InvalidRequestException("Only content with itemType GAME can be added to the game library");
@@ -89,10 +93,8 @@ public class GameLibraryService {
             .orElseThrow(() -> new ResourceNotFoundException("Content with id " + id + " was not found")); }
     private UserGame findGame(Long id) { return games.findByIdAndUserContentUserId(id, userId)
             .orElseThrow(() -> new ResourceNotFoundException("Game library entry with id " + id + " was not found")); }
-    private LibraryEntryRequest libraryRequest(GameLibraryRequest r) { return new LibraryEntryRequest(r.status(),
-            r.rating(), r.favorite(), r.startedAt(), r.completedAt(), r.personalNote()); }
     private String normalize(String value) { return value == null || value.isBlank() ? null : value.trim(); }
-    private void syncFirstPlaythrough(UserGame game, GameLibraryRequest request) {
+    private void syncFirstPlaythrough(UserGame game, LibraryEntryRequest request) {
         if (request.status() != UserContentStatus.COMPLETED || request.completedAt() == null) return;
         playthroughs.findByLibraryEntryIdAndPlaythroughNumber(game.getId(), 1).ifPresentOrElse(
                 item -> {

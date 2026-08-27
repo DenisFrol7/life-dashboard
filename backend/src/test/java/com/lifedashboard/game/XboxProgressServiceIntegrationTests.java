@@ -107,8 +107,7 @@ class XboxProgressServiceIntegrationTests {
         long platform = platforms.findByCode(platformCode).orElseThrow().getId();
         long source = sources.findByCode("XBOX_STORE").orElseThrow().getId();
         return gameLibraryService.create(contentId, new GameLibraryRequest(platform, source,
-                GameAccessType.OWNED, null, null, null, UserContentStatus.IN_PROGRESS,
-                null, false, null, null, null, 0L)).id();
+                GameAccessType.OWNED, null, null, null, 0L)).id();
     }
     private void cleanup() {
         contentRepository.findByTitle(TITLE).ifPresent(contentRepository::delete);

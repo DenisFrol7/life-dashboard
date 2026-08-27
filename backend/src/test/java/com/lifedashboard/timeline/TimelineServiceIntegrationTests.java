@@ -60,8 +60,7 @@ class TimelineServiceIntegrationTests {
         long platformId = platforms.findByCode("PC").orElseThrow().getId();
         long sourceId = sources.findByCode("STEAM").orElseThrow().getId();
         long libraryId = gameLibraryService.create(contentId, new GameLibraryRequest(platformId, sourceId,
-                GameAccessType.OWNED, null, null, null, UserContentStatus.IN_PROGRESS,
-                null, false, null, null, null, 600L)).id();
+                GameAccessType.OWNED, null, null, null, 600L)).id();
         Instant startedAt = Instant.parse("2098-09-12T09:00:00Z");
         gameSessionService.create(libraryId, new GameSessionRequest(startedAt, 90, "Story mission"));
 

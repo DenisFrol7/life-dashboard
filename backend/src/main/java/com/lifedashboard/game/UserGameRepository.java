@@ -10,4 +10,5 @@ public interface UserGameRepository extends JpaRepository<UserGame, Long> {
     List<UserGame> findLibrary(@Param("userId") Long userId, @Param("status") UserContentStatus status,
                                @Param("platformId") Long platformId);
     Optional<UserGame> findByIdAndUserContentUserId(Long id, Long userId);
+    Optional<UserGame> findFirstByUserContentUserIdAndUserContentContentIdOrderByIdAsc(Long userId, Long contentId);
 }

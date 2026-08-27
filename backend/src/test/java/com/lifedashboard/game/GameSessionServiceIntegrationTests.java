@@ -2,6 +2,7 @@ package com.lifedashboard.game;
 
 import com.lifedashboard.content.*;
 import com.lifedashboard.content.dto.ContentItemRequest;
+import com.lifedashboard.content.dto.LibraryEntryRequest;
 import com.lifedashboard.game.dto.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,8 +33,9 @@ class GameSessionServiceIntegrationTests {
             long platformId = platforms.findByCode("XBOX_SERIES").orElseThrow().getId();
             long sourceId = sources.findByCode("XBOX_STORE").orElseThrow().getId();
             long libraryId = gameLibrary.create(contentId, new GameLibraryRequest(platformId, sourceId,
-                    GameAccessType.OWNED, null, null, null, UserContentStatus.IN_PROGRESS,
-                    null, false, null, null, null, 600L)).id();
+                    GameAccessType.OWNED, null, null, null, 600L)).id();
+            gameLibrary.updateProfile(contentId, new LibraryEntryRequest(UserContentStatus.IN_PROGRESS,
+                    null, false, null, null, null));
             xboxProgress.put(libraryId, new XboxProgressRequest(20, 10, 1000, 200));
             Instant startedAt = Instant.parse("2026-08-06T17:00:00Z");
 
@@ -49,13 +51,13 @@ class GameSessionServiceIntegrationTests {
             assertEquals(13, xboxProgress.get(libraryId).unlockedAchievements());
             assertEquals(270, xboxProgress.get(libraryId).earnedGamerscore());
             Instant completedAt = startedAt.plusSeconds(10_000);
-            gameLibrary.update(libraryId, new GameLibraryRequest(platformId, sourceId, GameAccessType.OWNED,
-                    null, null, null, UserContentStatus.COMPLETED, null, false, null, completedAt, null, 600L));
+            gameLibrary.updateProfile(contentId, new LibraryEntryRequest(UserContentStatus.COMPLETED,
+                    null, false, null, completedAt, null));
             assertEquals(1, playthroughs.getAll(libraryId).size());
             assertEquals(completedAt, playthroughs.getAll(libraryId).getFirst().completedAt());
             Instant correctedAt = completedAt.plusSeconds(86_400);
-            gameLibrary.update(libraryId, new GameLibraryRequest(platformId, sourceId, GameAccessType.OWNED,
-                    null, null, null, UserContentStatus.COMPLETED, null, false, null, correctedAt, null, 600L));
+            gameLibrary.updateProfile(contentId, new LibraryEntryRequest(UserContentStatus.COMPLETED,
+                    null, false, null, correctedAt, null));
             assertEquals(1, playthroughs.getAll(libraryId).size());
             assertEquals(correctedAt, playthroughs.getAll(libraryId).getFirst().completedAt());
             var playthrough = playthroughs.create(libraryId, new GamePlaythroughRequest(startedAt, "Completed"));
