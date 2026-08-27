@@ -1043,7 +1043,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .detail-progress strong { color: #293944; font-size: 20px; }
 .detail-progress > div { height: 6px; overflow: hidden; border-radius: 5px; background: #e2e8eb; }
 .detail-progress > div span { display: block; height: 100%; border-radius: inherit; background: #607f95; }
-.detail-progress em { position: absolute; top: 47px; right: 14px; color: #53646f; font-size: 11px; font-style: normal; }
+.detail-progress em { position: absolute; top: 43px; right: 14px; color: #53646f; font-size: 16px; font-style: normal; font-weight: 800; line-height: 1; }
 .achievement-summary { display: grid; align-content: start; gap: 7px; }
 .achievement-summary h2 { margin-bottom: 8px; }
 .achievement-summary strong { color: #3b7c3b; font-size: 16px; }
@@ -1051,6 +1051,8 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .achievement-compact-list { display: grid; gap: 5px; margin-bottom: 3px; }
 .achievement-compact-list > div { display: grid; grid-template-columns: 1fr auto auto; gap: 9px; padding: 6px 8px; border-radius: 7px; background: #f6f8f9; }
 .achievement-compact-list span, .achievement-compact-list b, .achievement-compact-list em { font-size: 9px; font-style: normal; }
+.achievement-compact-list > div > span { font-size: 13px; font-weight: 700; }
+.achievement-compact-list b, .achievement-compact-list em { font-size: 12px; font-weight: 700; }
 .achievement-compact-list b { color: #344750; }
 .achievement-details-button { margin-top: 4px; padding: 7px 10px; border: 0; border-radius: 7px; color: #536b7c; background: #edf2f5; cursor: pointer; }
 .achievement-groups-modal { width: min(760px, 100%); max-height: calc(100vh - 40px); padding: 24px; overflow-y: auto; border-radius: 17px; background: #fff; }
@@ -1102,8 +1104,8 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .playthrough-button { width: 100%; margin-top: 10px; }
 .sessions-table-card { overflow: hidden; }
 .sessions-table { min-width: 780px; overflow-x: auto; }
-.sessions-table > div { display: grid; grid-template-columns: 1fr .7fr 1fr .8fr .8fr 1.8fr; gap: 10px; padding: 9px 11px; border-bottom: 1px solid #edf0f2; color: #465761; font-size: 10px; }
-.sessions-table .sessions-head { color: #7a878f; background: #f5f8f9; }
+.sessions-table > div { display: grid; grid-template-columns: 1fr .7fr 1fr .8fr .8fr 1.8fr; gap: 10px; padding: 11px; border-bottom: 1px solid #edf0f2; color: #465761; font-size: 13px; }
+.sessions-table .sessions-head { color: #7a878f; background: #f5f8f9; font-size: 11px; font-weight: 700; }
 .sessions-table .positive { color: #38843d; font-weight: 700; }
 .all-sessions-link { display: block; margin-top: 12px; padding: 9px; border-radius: 8px; color: #536b7c; text-align: center; text-decoration: none; background: #f2f5f7; }
 .xbox-fields { margin-top: 13px; padding: 13px; border: 1px solid #cfded0; border-radius: 10px; background: #f3f8f2; }
