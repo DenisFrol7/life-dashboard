@@ -734,7 +734,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .series-statistics h2 { margin: 0 0 18px; color: #344751; font-family: Georgia, serif; font-size: 21px; }
 .series-statistics dl { display: grid; gap: 0; margin: 0; }
 .series-statistics dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 9px 0; border-bottom: 1px solid #eceeec; }
-.series-statistics dt { color: #6e797d; font-size: 10px; }
+.series-statistics dt { color: #6e797d; font-size: 13px; font-weight: 600; line-height: 1.35; }
 .series-statistics dd { margin: 0; color: #3e5f76; font-family: Georgia, serif; font-size: 16px; font-weight: 700; text-align: right; }
 .series-statistics .series-stat-total { margin-top: 8px; border-top: 0; }
 .series-list-card { position: relative; display: grid; grid-template-columns: 132px minmax(0, 1fr) 150px; gap: 15px; min-height: 94px; padding: 8px; border-bottom: 1px solid #dfe3e5; background: var(--paper); }

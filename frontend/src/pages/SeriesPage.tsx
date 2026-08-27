@@ -74,7 +74,7 @@ export function SeriesPage() {
       <div><dt>На паузе</dt><dd>{libraryEntries.filter((item) => item.status === 'PAUSED').length}</dd></div>
       <div><dt>Брошено</dt><dd>{libraryEntries.filter((item) => item.status === 'DROPPED').length}</dd></div>
       <div className="series-stat-total"><dt>Просмотрено эпизодов</dt><dd>{watchedEpisodeCount}</dd></div>
-      <div><dt>Затрачено времени</dt><dd>{watchTime}</dd></div>
+      <div><dt>Общее время</dt><dd>{watchTime}</dd></div>
     </dl></aside></section>
     {editing && <SeriesForm series={editing === 'new' ? undefined : editing} library={editing === 'new' ? undefined : library[editing.id]} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void load() }} />}
   </div>
