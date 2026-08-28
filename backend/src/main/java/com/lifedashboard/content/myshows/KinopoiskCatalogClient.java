@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
@@ -136,8 +137,8 @@ public class KinopoiskCatalogClient {
         return type != null && (type.contains("TV_SERIES") || type.contains("MINI_SERIES") || type.contains("TV_SHOW"));
     }
 
-    private String text(JsonNode node, String field) {
+    private @Nullable String text(JsonNode node, String field) {
         JsonNode value = node.get(field);
-        return value == null || value.isNull() ? null : value.asText();
+        return value == null || value.isNull() ? null : value.stringValue();
     }
 }

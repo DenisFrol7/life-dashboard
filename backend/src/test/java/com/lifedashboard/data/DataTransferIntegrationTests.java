@@ -21,6 +21,7 @@ import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -78,7 +79,9 @@ class DataTransferIntegrationTests {
         assertThat(rowsAfterSecondImport).isEqualTo(rowsBefore);
         assertThat(firstImport.tableCount()).isEqualTo(rowsBefore.size());
         assertThat(secondImport.tableCount()).isEqualTo(rowsBefore.size());
-        assertThat(firstImport.rowCount()).isEqualTo(rowsBefore.values().stream().mapToLong(Long::longValue).sum());
+        assertThat(firstImport.rowCount()).isEqualTo(rowsBefore.values().stream()
+                .mapToLong(value -> Objects.requireNonNull(value, "Row count must not be null"))
+                .sum());
         assertThat(secondImport.rowCount()).isEqualTo(firstImport.rowCount());
         assertThat(Files.exists(Path.of(secondImport.backupFile()))).isTrue();
         assertThat(Files.readString(Path.of(secondImport.backupFile()))).contains("\"formatVersion\":1");

@@ -302,7 +302,10 @@ public class MyShowsImportService {
     }
 
     private String userZone() {
-        return userRepository.findById(defaultUserId).map(User::getTimezone).orElse("Europe/Moscow");
+        return userRepository.findById(defaultUserId).map(user -> {
+            String timezone = user.getTimezone();
+            return timezone == null || timezone.isBlank() ? "Europe/Moscow" : timezone;
+        }).orElse("Europe/Moscow");
     }
 
     private Integer parseYear(String value) {
@@ -366,7 +369,7 @@ public class MyShowsImportService {
                 String title = value(row, 0, formatter);
                 if (title.isBlank()) continue;
                 String status = value(row, 1, formatter);
-                statuses.merge(status, 1, Integer::sum);
+                statuses.compute(status, (key, count) -> count == null ? 1 : count + 1);
                 List<ContentItem> candidates = byTitle.getOrDefault(normalize(title), List.of());
                 String match;
                 Long contentId = null;
