@@ -54,7 +54,7 @@ export function DashboardPage() {
       <section className="metrics-grid" aria-label="Показатели за сегодня">
         <div className="metrics-column">
           <Metric to="/activity" icon={<Footprints />} tone="mint" label="Шаги" value={data.activity.steps?.toLocaleString('ru-RU') ?? '—'} note={formatDistance(data.activity.distanceMeters)} />
-          <Metric to="/sleep" icon={<Moon />} tone="violet" label="Сон" value={formatDuration(data.sleep.durationMinutes)} note={data.sleep.qualityRating ? `Качество ${data.sleep.qualityRating}/10` : 'Нет оценки'} />
+          <Metric to="/sleep" icon={<Moon />} tone="violet" label="Сон" value={formatDuration(data.sleep.durationMinutes)} note={data.sleep.qualityRating ? `Качество ${data.sleep.qualityRating}/5` : 'Нет оценки'} />
         </div>
         <div className="metrics-column">
           <Metric to="/habits" icon={<ListChecks />} tone="amber" label="Привычки" value={`${data.habits.completed} из ${data.habits.scheduled}`} note={data.habits.skipped ? `Пропущено: ${data.habits.skipped}` : 'Без пропусков'} />

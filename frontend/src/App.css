@@ -438,7 +438,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .chart-goal span { width: 21px; height: 4px; border-radius: 2px; background: #496985; }
 .activity-form { display: flex; flex-direction: column; }
 .activity-form .panel-heading h3 { font-size: 22px; }
-.activity-form .panel-heading input { width: 150px; padding: 8px 9px; border: 1px solid #dbdcd7; border-radius: 8px; color: #5a656e; background: #fff; font-size: 13px; }
+.activity-form .panel-heading input { width: 150px; padding: 8px 9px; border: 1px solid #dbdcd7; border-radius: 8px; color: #5a656e; background: #fff; font-size: 13px; cursor: pointer; }
 .activity-form > label { display: grid; gap: 7px; margin-bottom: 14px; color: #68716b; font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .input-with-unit { position: relative; }
 .activity-form input, .activity-form textarea { width: 100%; padding: 12px; border: 1px solid #d9d9d1; border-radius: 9px; outline: none; color: var(--ink); background: #fff; font-size: 14px; }

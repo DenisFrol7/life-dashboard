@@ -10,6 +10,16 @@ const today = new Date().toLocaleDateString('en-CA')
 const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const statusLabels: Record<HabitStatus, string> = { ACTIVE: 'Активные', PAUSED: 'На паузе', ARCHIVED: 'Архив' }
 const sourceLabels = { MANUAL: 'Вручную', DAILY_ACTIVITY_STEPS: 'Из активности: шаги', DAILY_ACTIVITY_DISTANCE: 'Из активности: дистанция', SLEEP_DURATION: 'Из сна' }
+const formatAutomatedValue = (habit: Habit, entry?: HabitEntry) => {
+  if (entry?.value == null) return 'нет данных'
+  if (habit.dataSource === 'SLEEP_DURATION') {
+    const minutes = Math.round(entry.value)
+    const hours = Math.floor(minutes / 60)
+    const remainder = minutes % 60
+    return hours ? `${hours} ч${remainder ? ` ${remainder} мин` : ''}` : `${remainder} мин`
+  }
+  return `${entry.value} ${habit.unit ?? ''}`.trim()
+}
 
 const emptyHabit: HabitInput = {
   name: '', description: null, trackingType: 'BOOLEAN', dataSource: 'MANUAL', targetValue: 1,
@@ -105,7 +115,7 @@ function HabitCard({ habit, entry, onToggle, onValue, onEdit, onDelete }: {
         <span>{habit.unit ?? (habit.trackingType === 'DURATION' ? 'мин' : '')}</span><button>Сохранить</button>
         {habit.targetValue != null && <small>Цель: {habit.targetValue} {habit.unit}</small>}
       </form>}
-      {automated && <div className="automated-value">Сегодня: <strong>{entry?.value ?? 'нет данных'} {habit.unit}</strong></div>}
+      {automated && <div className="automated-value">Сегодня: <strong>{formatAutomatedValue(habit, entry)}</strong></div>}
     </article>
   )
 }
