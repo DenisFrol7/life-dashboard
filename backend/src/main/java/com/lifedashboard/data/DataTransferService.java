@@ -55,6 +55,12 @@ public class DataTransferService {
         return createExport().getBytes(StandardCharsets.UTF_8);
     }
 
+    /** Creates a portable snapshot before a feature-level bulk operation. */
+    @Transactional(readOnly = true)
+    public Path createAutomaticBackup() {
+        return writeAutomaticBackup(createExport());
+    }
+
     @Transactional
     public DataTransferResponse importData(byte[] content) {
         if (content == null || content.length == 0) {

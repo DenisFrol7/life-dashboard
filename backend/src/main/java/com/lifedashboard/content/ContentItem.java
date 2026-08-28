@@ -32,6 +32,8 @@ public class ContentItem {
     private LocalDate releaseDate;
     @Column(name = "xbox_play_anywhere", nullable = false)
     private boolean xboxPlayAnywhere;
+    @Column(name = "kinopoisk_film_id")
+    private Long kinopoiskFilmId;
     @Enumerated(EnumType.STRING) @Column(name = "release_status", nullable = false, length = 20)
     private ReleaseStatus releaseStatus;
 
@@ -60,4 +62,6 @@ public class ContentItem {
     public LocalDate getReleaseDate() { return releaseDate; }
     public boolean isXboxPlayAnywhere() { return xboxPlayAnywhere; }
     public ReleaseStatus getReleaseStatus() { return releaseStatus; }
+    public Long getKinopoiskFilmId() { return kinopoiskFilmId; }
+    public void setKinopoiskFilmId(Long kinopoiskFilmId) { this.kinopoiskFilmId = kinopoiskFilmId; }
 }
