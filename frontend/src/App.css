@@ -409,11 +409,12 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .activity-error { max-width: none; margin: 0; }
 .activity-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, .65fr); gap: 14px; }
 .activity-panel { padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: 0 8px 28px #25322708; }
+.activity-grid .chart-panel { display: flex; flex-direction: column; }
 .period-switch { display: flex; padding: 3px; border-radius: 9px; background: #ebece9; }
 .period-switch button { padding: 6px 9px; border: 0; border-radius: 7px; color: #747c78; background: transparent; cursor: pointer; font-size: 9px; font-weight: 700; }
 .period-switch button.active { color: #3d5870; background: #fff; box-shadow: 0 2px 7px #24384712; }
-.step-chart { position: relative; display: flex; align-items: stretch; gap: 8px; height: 220px; padding: 24px 5px 0 68px; border-bottom: 1px solid #dfe2df; }
-.step-chart-scale { position: absolute; inset: 0; color: #7f8c96; font-size: 9px; pointer-events: none; }
+.step-chart { position: relative; display: flex; flex: 1; align-items: stretch; gap: 8px; min-height: 220px; padding: 24px 5px 0 68px; border-bottom: 1px solid #dfe2df; }
+.step-chart-scale { position: absolute; inset: 0 0 24px; color: #7f8c96; font-size: 9px; pointer-events: none; }
 .step-chart-scale span { position: absolute; left: 0; z-index: 0; width: 100%; border-top: 1px solid #dfe2df; transform: translateY(-50%); }
 .step-chart-scale span:first-child { transform: none; }
 .step-chart-scale b { position: absolute; top: 0; left: 0; min-width: 62px; padding: 1px 4px; background: var(--paper); font-weight: 600; transform: translateY(-50%); }
@@ -421,21 +422,21 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .step-chart-scale span.goal { border-color: #6f9b78; }
 .step-chart-scale span.goal b { color: #5f936d; font-weight: 800; }
 .step-chart button { z-index: 1; }
-.step-chart button { position: relative; display: flex; flex: 1; align-items: center; justify-content: flex-end; flex-direction: column; min-width: 0; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.step-chart button { position: relative; display: flex; flex: 1; align-self: flex-start; align-items: center; justify-content: flex-end; flex-direction: column; min-width: 0; height: calc(100% - 24px); padding: 0; border: 0; background: transparent; cursor: pointer; }
 .step-chart i { width: min(30px, 66%); min-height: 3px; border-radius: 6px 6px 2px 2px; background: #9db7cf; transition: height .25s, background .2s; }
 .step-chart i.goal-reached { background: #6f9b78; }
 .step-chart button:hover i, .step-chart button.selected i { background: #496985; }
 .step-chart button:hover i.goal-reached,
 .step-chart button.selected i.goal-reached { background: #568864; }
-.step-chart button.selected::after { position: absolute; bottom: -5px; width: 5px; height: 5px; border-radius: 50%; background: #496985; content: ''; }
-.step-chart small { margin: 7px 0 8px; color: #838a86; font-size: 8px; text-transform: capitalize; }
+.step-chart button.selected::after { position: absolute; bottom: -29px; width: 5px; height: 5px; border-radius: 50%; background: #496985; content: ''; }
+.step-chart small { position: absolute; top: calc(100% + 7px); margin: 0; color: #838a86; font-size: 8px; text-transform: capitalize; }
 .bar-value { position: absolute; top: -17px; color: #52616c; font-size: 8px; opacity: 0; transition: opacity .2s; }
 .step-chart button:hover .bar-value, .step-chart button.selected .bar-value { opacity: 1; }
 .period-30 { gap: 2px; }
 .period-30 i { width: 70%; }
 .period-30 small { font-size: 7px; }
 .chart-goal { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--muted); font-size: 13px; }
-.chart-goal span { width: 21px; height: 4px; border-radius: 2px; background: #496985; }
+.chart-goal span { width: 21px; height: 4px; border-radius: 2px; background: #6f9b78; }
 .activity-form { display: flex; flex-direction: column; }
 .activity-form .panel-heading h3 { font-size: 22px; }
 .activity-form .panel-heading input { width: 150px; padding: 8px 9px; border: 1px solid #dbdcd7; border-radius: 8px; color: #5a656e; background: #fff; font-size: 13px; cursor: pointer; }
@@ -471,15 +472,24 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .sleep-error { max-width: none; margin: 0; }
 .sleep-grid { display: grid; grid-template-columns: 1.45fr .75fr; gap: 14px; }
 .sleep-panel { padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: 0 8px 28px #25322708; }
-.sleep-legend { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
-.sleep-legend i { width: 16px; height: 3px; border-radius: 2px; background: #747da5; }
-.sleep-chart { display: flex; align-items: flex-end; gap: 12px; height: 220px; padding: 28px 10px 0; border-bottom: 1px solid #e2e2e5; background: repeating-linear-gradient(to bottom, transparent 0, transparent 54px, #eeeef1 55px); }
-.sleep-chart > div { position: relative; display: flex; flex: 1; align-items: center; flex-direction: column; height: 100%; justify-content: flex-end; }
-.sleep-chart > div > span { position: absolute; top: -18px; color: #777b89; font-size: 10px; opacity: 0; }
-.sleep-chart > div:hover > span { opacity: 1; }
-.sleep-chart > div > i { width: min(38px, 72%); min-height: 3px; border-radius: 7px 7px 2px 2px; background: #aeb4cf; }
-.sleep-chart > div > i.goal-reached { background: #747da5; }
+.sleep-chart { position: relative; display: flex; align-items: flex-end; gap: 12px; height: 220px; padding: 28px 5px 0 48px; border-bottom: 1px solid #dfe2df; }
+.sleep-chart-scale { position: absolute; inset: 0; color: #7f8c96; font-size: 9px; pointer-events: none; }
+.sleep-chart-scale span { position: absolute; left: 0; width: 100%; border-top: 1px solid #dfe2df; transform: translateY(-50%); }
+.sleep-chart-scale span:first-child { transform: none; }
+.sleep-chart-scale b { position: absolute; top: 0; left: 0; min-width: 43px; padding: 1px 4px; background: var(--paper); font-weight: 600; transform: translateY(-50%); }
+.sleep-chart-scale span:first-child b { transform: none; }
+.sleep-chart-scale span.goal { border-color: #6f9b78; }
+.sleep-chart-scale span.goal b { color: #5f936d; font-weight: 800; }
+.sleep-chart-day { position: relative; z-index: 1; display: flex; flex: 1; align-items: center; flex-direction: column; height: 100%; justify-content: flex-end; }
+.sleep-chart-day > span { position: absolute; top: -18px; color: #777b89; font-size: 10px; opacity: 0; }
+.sleep-chart-day:hover > span { opacity: 1; }
+.sleep-chart-day > i { width: min(38px, 72%); min-height: 3px; border-radius: 7px 7px 2px 2px; background: #aeb4cf; }
+.sleep-chart-day > i.goal-reached { background: #6f9b78; }
 .sleep-chart small { margin: 8px 0; color: #82868c; font-size: 10px; text-transform: capitalize; }
+.sleep-chart.period-30 { gap: 3px; padding-inline: 4px; }
+.sleep-chart.period-30 { padding-left: 48px; }
+.sleep-chart.period-30 .sleep-chart-day > i { width: 72%; }
+.sleep-chart.period-30 small { font-size: 8px; }
 .sleep-empty { display: grid; place-items: center; min-height: 190px; padding: 25px; color: var(--muted); text-align: center; font-size: 13px; line-height: 1.5; }
 .phase-bar { display: flex; width: 100%; height: 11px; margin: 20px 0 22px; overflow: hidden; border-radius: 999px; background: #eeeef1; }
 .phase-bar i { height: 100%; }
@@ -487,6 +497,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .phase-list { display: grid; gap: 12px; }
 .phase-list > div { display: grid; grid-template-columns: 8px 1fr auto; align-items: center; gap: 8px; color: #737780; font-size: 12px; }
 .phase-list > div i { width: 7px; height: 7px; border-radius: 50%; }
+.phase-list > div > span { font-size: 15px; font-weight: 600; }
 .phase-list strong { color: #515765; font-size: 13px; }
 .sleep-table-head, .sleep-table > div { display: grid; grid-template-columns: 1.2fr .9fr .7fr .8fr 1.4fr 55px; align-items: center; gap: 12px; }
 .sleep-table-head { padding: 9px 12px; color: #898d91; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
@@ -1561,7 +1572,10 @@ html[data-theme="dark"] .sleep-hero dd { color: #c5c0ff; }
 html[data-theme="dark"] .sleep-hero dl div { border-color: #292f43; }
 html[data-theme="dark"] .sleep-goal-ring { background: radial-gradient(circle closest-side, #111b28 72%, transparent 74%), conic-gradient(#8b7df5 var(--sleep-progress), #273041 0); }
 html[data-theme="dark"] .sleep-goal-ring span { color: #c5c0ff; }
-html[data-theme="dark"] .sleep-chart { border-color: #253442; background: repeating-linear-gradient(to bottom, transparent 0, transparent 54px, #1c2a36 55px); }
+html[data-theme="dark"] .sleep-chart { border-color: #253442; }
+html[data-theme="dark"] .sleep-chart-scale span { border-color: #253442; }
+html[data-theme="dark"] .sleep-chart-scale b { background: var(--paper); }
+html[data-theme="dark"] .sleep-chart-scale span.goal { border-color: #6f9b78; }
 html[data-theme="dark"] .sleep-table > div { border-color: #1d2b38; }
 html[data-theme="dark"] .sleep-table > div > strong { color: #c3d3df; }
 

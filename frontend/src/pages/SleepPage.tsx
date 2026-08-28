@@ -13,6 +13,7 @@ const formatDate = (value: string) => new Intl.DateTimeFormat('ru-RU', { day: 'n
 
 export function SleepPage() {
   const { showToast } = useToast()
+  const [period, setPeriod] = useState<7 | 30>(7)
   const [sessions, setSessions] = useState<SleepSession[]>([])
   const [editing, setEditing] = useState<SleepSession | 'new' | null>(null)
   const [loading, setLoading] = useState(true)
@@ -20,12 +21,12 @@ export function SleepPage() {
 
   const load = useCallback(async () => {
     setLoading(true); setError(null)
-    const from = new Date(); from.setDate(from.getDate() - 30); from.setHours(0, 0, 0, 0)
+    const from = new Date(); from.setDate(from.getDate() - (period - 1)); from.setHours(0, 0, 0, 0)
     const to = new Date(); to.setDate(to.getDate() + 1); to.setHours(0, 0, 0, 0)
     try { setSessions(await getSleepSessions(from.toISOString(), to.toISOString())) }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить данные сна') }
     finally { setLoading(false) }
-  }, [])
+  }, [period])
   useEffect(() => { void load() }, [load])
 
   const todaySessions = sessions.filter((session) => localDate(session.endedAt) === today)
@@ -34,12 +35,13 @@ export function SleepPage() {
   const averageQuality = rated.length ? rated.reduce((sum, session) => sum + (session.qualityRating ?? 0), 0) / rated.length : 0
   const averageDuration = sessions.length ? Math.round(sessions.reduce((sum, session) => sum + sleepMinutes(session), 0) / sessions.length) : 0
 
-  const week = useMemo(() => Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(); date.setDate(date.getDate() + index - 6)
+  const chartData = useMemo(() => Array.from({ length: period }, (_, index) => {
+    const date = new Date(); date.setDate(date.getDate() + index - period + 1)
     const key = localDate(date)
     const daily = sessions.filter((session) => localDate(session.endedAt) === key)
-    return { key, label: new Intl.DateTimeFormat('ru-RU', { weekday: 'short' }).format(date), minutes: daily.reduce((sum, session) => sum + sleepMinutes(session), 0) }
-  }), [sessions])
+    const label = period === 7 ? new Intl.DateTimeFormat('ru-RU', { weekday: 'short' }).format(date) : date.getDate().toString()
+    return { key, label, minutes: daily.reduce((sum, session) => sum + sleepMinutes(session), 0) }
+  }), [sessions, period])
 
   const remove = async (session: SleepSession) => {
     if (!window.confirm(`Удалить сессию сна за ${formatDate(session.endedAt)}?`)) return
@@ -51,15 +53,22 @@ export function SleepPage() {
     <section className="sleep-hero">
       <div><p className="eyebrow">Последняя ночь</p><strong>{formatDuration(todayMinutes)}</strong><span>цель — {formatDuration(sleepGoalMinutes)}</span></div>
       <div className="sleep-goal-ring" style={{ '--sleep-progress': `${Math.min(360, todayMinutes / sleepGoalMinutes * 360)}deg` } as React.CSSProperties}><span>{Math.round(todayMinutes / sleepGoalMinutes * 100)}%</span></div>
-      <dl><div><dt>Средняя длительность</dt><dd>{formatDuration(averageDuration)}</dd></div><div><dt>Средняя оценка</dt><dd>{averageQuality ? `${averageQuality.toFixed(1)} из 5` : '—'}</dd></div><div><dt>Сессий за 30 дней</dt><dd>{sessions.length}</dd></div></dl>
+      <dl><div><dt>Средняя длительность</dt><dd>{formatDuration(averageDuration)}</dd></div><div><dt>Средняя оценка</dt><dd>{averageQuality ? `${averageQuality.toFixed(1)} из 5` : '—'}</dd></div><div><dt>Сессий за {period} дней</dt><dd>{sessions.length}</dd></div></dl>
       <button className="primary-button icon-button" onClick={() => setEditing('new')}><Plus />Добавить сон</button>
     </section>
     {error && <div className="notice error sleep-error"><strong>Ошибка</strong><span>{error}</span></div>}
     <section className="sleep-grid">
       <article className="sleep-panel sleep-chart-panel">
-        <div className="panel-heading"><div><p className="eyebrow">Неделя</p><h3>Продолжительность сна</h3></div><span className="sleep-legend"><i />цель 8 часов</span></div>
-        {loading ? <div className="loading"><span />Загружаем историю…</div> : <div className="sleep-chart">
-          {week.map((day) => <div key={day.key}><span>{day.minutes ? formatDuration(day.minutes) : '—'}</span><i style={{ height: `${Math.max(2, Math.min(100, day.minutes / 600 * 100))}%` }} className={day.minutes >= sleepGoalMinutes ? 'goal-reached' : ''} /><small>{day.label}</small></div>)}
+        <div className="panel-heading"><div><p className="eyebrow">Период</p><h3>Продолжительность сна</h3></div><div className="period-switch"><button className={period === 7 ? 'active' : ''} onClick={() => setPeriod(7)}>7 дней</button><button className={period === 30 ? 'active' : ''} onClick={() => setPeriod(30)}>30 дней</button></div></div>
+        {loading ? <div className="loading"><span />Загружаем историю…</div> : <div className={`sleep-chart period-${period}`}>
+          <div className="sleep-chart-scale" aria-hidden="true">
+            <span style={{ top: '0%' }}><b>10 ч</b></span>
+            <span className="goal" style={{ top: '20%' }}><b>8 ч</b></span>
+            <span style={{ top: '40%' }}><b>6 ч</b></span>
+            <span style={{ top: '60%' }}><b>4 ч</b></span>
+            <span style={{ top: '80%' }}><b>2 ч</b></span>
+          </div>
+          {chartData.map((day) => <div className="sleep-chart-day" key={day.key}><span>{day.minutes ? formatDuration(day.minutes) : '—'}</span><i style={{ height: `${Math.max(2, Math.min(100, day.minutes / 600 * 100))}%` }} className={day.minutes >= sleepGoalMinutes ? 'goal-reached' : ''} /><small>{day.label}</small></div>)}
         </div>}
       </article>
       <article className="sleep-panel sleep-breakdown">
