@@ -50,7 +50,9 @@ public class GameLibraryService {
                     null, false, null, null, null));
         UserGame game = new UserGame(userContent.findByUserIdAndContentId(userId, contentId).orElseThrow());
         apply(game, request);
-        return response(games.save(game));
+        games.save(game);
+        syncCopyCompletion(game, request, null);
+        return response(game);
     }
     public List<GameLibraryResponse> getAll(UserContentStatus status, Long platformId) {
         return games.findLibrary(userId, status, platformId).stream()
@@ -60,7 +62,9 @@ public class GameLibraryService {
     @Transactional
     public GameLibraryResponse update(Long id, GameLibraryRequest request) {
         UserGame game = findGame(id);
+        UserContentStatus previousStatus = game.getStatus();
         apply(game, request);
+        syncCopyCompletion(game, request, previousStatus);
         return response(game);
     }
     @Transactional public void delete(Long id) { games.delete(findGame(id)); }
@@ -69,13 +73,12 @@ public class GameLibraryService {
     public LibraryEntryResponse updateProfile(Long contentId, LibraryEntryRequest request) {
         ContentItem item = findContent(contentId);
         validateGame(item);
-        LibraryEntryResponse result = contentService.putInLibrary(contentId, request);
-        games.findFirstByUserContentUserIdAndUserContentContentIdOrderByIdAsc(userId, contentId)
-                .ifPresent(game -> syncFirstPlaythrough(game, request));
-        return result;
+        return contentService.putInLibrary(contentId, request);
     }
 
     private void apply(UserGame game, GameLibraryRequest r) {
+        if (r.completedAt() != null && r.startedAt() != null && r.completedAt().isBefore(r.startedAt()))
+            throw new InvalidRequestException("completedAt must not be before startedAt");
         GamingPlatform platform = platforms.findById(r.platformId())
                 .orElseThrow(() -> new ResourceNotFoundException("Gaming platform was not found"));
         GameSource source = sources.findById(r.sourceId())
@@ -83,7 +86,7 @@ public class GameLibraryService {
         if ((r.accessType() == GameAccessType.SUBSCRIPTION) != (source.getSourceType() == GameSourceType.SUBSCRIPTION))
             throw new InvalidRequestException("accessType must match the selected source type");
         game.update(platform, source, r.accessType(), normalize(r.edition()), r.acquiredAt(), normalize(r.note()),
-                r.legacyPlaytimeMinutes());
+                r.legacyPlaytimeMinutes(), r.status(), r.startedAt(), r.completedAt());
     }
     private void validateGame(ContentItem item) {
         if (item.getItemType() != ContentType.GAME)
@@ -94,24 +97,28 @@ public class GameLibraryService {
     private UserGame findGame(Long id) { return games.findByIdAndUserContentUserId(id, userId)
             .orElseThrow(() -> new ResourceNotFoundException("Game library entry with id " + id + " was not found")); }
     private String normalize(String value) { return value == null || value.isBlank() ? null : value.trim(); }
-    private void syncFirstPlaythrough(UserGame game, LibraryEntryRequest request) {
+    private void syncCopyCompletion(UserGame game, GameLibraryRequest request, UserContentStatus previousStatus) {
         if (request.status() != UserContentStatus.COMPLETED || request.completedAt() == null) return;
-        playthroughs.findByLibraryEntryIdAndPlaythroughNumber(game.getId(), 1).ifPresentOrElse(
-                item -> {
-                    item.updateCompletedAt(request.completedAt());
-                    if (item.getPlaytimeMinutes() == 0 && game.getLegacyPlaytimeMinutes() > 0)
-                        item.updatePlaytimeMinutes(game.getLegacyPlaytimeMinutes());
-                },
-                () -> playthroughs.save(new GamePlaythrough(game, 1, request.completedAt(),
-                        game.getLegacyPlaytimeMinutes() + sessions.totalMinutes(game.getId(), userId), null)));
+        int currentNumber = playthroughs.maxNumber(game.getId());
+        if (previousStatus == UserContentStatus.COMPLETED && currentNumber > 0) {
+            playthroughs.findByLibraryEntryIdAndPlaythroughNumber(game.getId(), currentNumber).ifPresent(item -> {
+                item.updateCompletedAt(request.completedAt());
+                if (item.getPlaytimeMinutes() == 0 && game.getLegacyPlaytimeMinutes() > 0)
+                    item.updatePlaytimeMinutes(game.getLegacyPlaytimeMinutes());
+            });
+            return;
+        }
+        int number = currentNumber + 1;
+        playthroughs.save(new GamePlaythrough(game, number, request.completedAt(),
+                game.getLegacyPlaytimeMinutes() + sessions.totalMinutes(game.getId(), userId), null));
     }
     private GameLibraryResponse response(UserGame g) {
         UserContent u = g.getUserContent();
         return new GameLibraryResponse(g.getId(), u.getContent().getId(), u.getContent().getTitle(),
                 new ReferenceResponse(g.getPlatform().getId(), g.getPlatform().getCode(), g.getPlatform().getName(), null),
                 new ReferenceResponse(g.getSource().getId(), g.getSource().getCode(), g.getSource().getName(), g.getSource().getSourceType().name()),
-                g.getAccessType(), g.getEdition(), g.getAcquiredAt(), g.getNote(), u.getStatus(), u.getRating(),
-                u.isFavorite(), u.getStartedAt(), u.getCompletedAt(), u.getPersonalNote(),
+                g.getAccessType(), g.getEdition(), g.getAcquiredAt(), g.getNote(), g.getStatus(), u.getRating(),
+                u.isFavorite(), g.getStartedAt(), g.getCompletedAt(), u.getPersonalNote(),
                 g.getLegacyPlaytimeMinutes());
     }
 }

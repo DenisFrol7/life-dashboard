@@ -39,6 +39,7 @@ public class GameSessionService {
         GameSession session = new GameSession(game);
         XboxAchievementGroup group = resolveGroup(game, request);
         apply(session, request, group);
+        game.markStarted(request.startedAt());
         adjustGroup(game, group, request.unlockedAchievements(), request.earnedGamerscore());
         return response(sessions.save(session));
     }

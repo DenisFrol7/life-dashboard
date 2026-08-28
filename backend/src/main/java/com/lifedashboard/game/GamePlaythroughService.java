@@ -33,6 +33,7 @@ public class GamePlaythroughService {
         String note = request.note() == null || request.note().isBlank() ? null : request.note().trim();
         GamePlaythrough result = new GamePlaythrough(game, playthroughs.maxNumber(libraryId) + 1,
                 completedAt, game.getLegacyPlaytimeMinutes() + sessions.totalMinutes(libraryId, userId), note);
+        game.markCompleted(completedAt);
         return response(playthroughs.save(result));
     }
     @Transactional
@@ -41,6 +42,7 @@ public class GamePlaythroughService {
         Instant completedAt = request.completedAt() == null ? item.getCompletedAt() : request.completedAt();
         String note = request.note() == null || request.note().isBlank() ? null : request.note().trim();
         item.update(completedAt, note);
+        item.getLibraryEntry().markCompleted(completedAt);
         return response(item);
     }
     @Transactional public void delete(Long id) {

@@ -77,7 +77,8 @@ class GameLibraryServiceIntegrationTests {
             gameService.updateProfile(contentId, new LibraryEntryRequest(UserContentStatus.COMPLETED,
                     (short) 9, true, null, Instant.parse("2025-08-12T09:00:00Z"), "Пройдено полностью"));
             gameService.update(steam.id(), new GameLibraryRequest(pcId, steamId, GameAccessType.OWNED,
-                    "Deluxe Edition", null, "Физическая копия", 120L));
+                    "Deluxe Edition", null, "Физическая копия", 120L,
+                    UserContentStatus.COMPLETED, null, Instant.parse("2025-08-12T09:00:00Z")));
 
             var copies = gameService.getAll(null, null).stream()
                     .filter(entry -> entry.contentId().equals(contentId)).toList();
@@ -85,7 +86,10 @@ class GameLibraryServiceIntegrationTests {
             assertNotEquals(steam.id(), xbox.id());
             assertTrue(copies.stream().anyMatch(entry -> entry.source().code().equals("STEAM")));
             assertTrue(copies.stream().anyMatch(entry -> entry.source().code().equals("XBOX_STORE")));
-            assertTrue(copies.stream().allMatch(entry -> entry.status() == UserContentStatus.COMPLETED));
+            assertEquals(UserContentStatus.COMPLETED, gameService.get(steam.id()).status());
+            assertEquals(UserContentStatus.IN_PROGRESS, gameService.get(xbox.id()).status());
+            assertEquals(1, playthroughService.getAll(steam.id()).size());
+            assertTrue(playthroughService.getAll(xbox.id()).isEmpty());
             assertTrue(copies.stream().allMatch(entry -> Short.valueOf((short) 9).equals(entry.rating())));
             assertTrue(copies.stream().allMatch(entry -> entry.favorite()));
             assertEquals("Deluxe Edition", gameService.get(steam.id()).edition());
@@ -101,17 +105,13 @@ class GameLibraryServiceIntegrationTests {
             long sourceId = sources.findByCode("STEAM").orElseThrow().getId();
             Instant completedAt = Instant.parse("2025-08-12T09:00:00Z");
             var initial = new GameLibraryRequest(platformId, sourceId, GameAccessType.OWNED,
-                    null, null, null, 0L);
+                    null, null, null, 0L, UserContentStatus.COMPLETED, null, completedAt);
             long libraryId = gameService.create(contentId, initial).id();
-            gameService.updateProfile(contentId, new LibraryEntryRequest(UserContentStatus.COMPLETED,
-                    null, false, null, completedAt, null));
             assertEquals(0, playthroughService.getAll(libraryId).getFirst().playtimeMinutes());
 
             var withLegacyTime = new GameLibraryRequest(platformId, sourceId, GameAccessType.OWNED,
-                    null, null, null, 600L);
+                    null, null, null, 600L, UserContentStatus.COMPLETED, null, completedAt);
             gameService.update(libraryId, withLegacyTime);
-            gameService.updateProfile(contentId, new LibraryEntryRequest(UserContentStatus.COMPLETED,
-                    null, false, null, completedAt, null));
 
             assertEquals(600, playthroughService.getAll(libraryId).getFirst().playtimeMinutes());
         } finally { cleanup(); }
@@ -122,7 +122,8 @@ class GameLibraryServiceIntegrationTests {
                 null, null, null, ReleaseStatus.RELEASED)).id();
     }
     private GameLibraryRequest request(long platform, long source, GameAccessType access, UserContentStatus status) {
-        return new GameLibraryRequest(platform, source, access, null, null, null, 0L);
+        return new GameLibraryRequest(platform, source, access, null, null, null, 0L,
+                status, null, null);
     }
     private void cleanup() {
         contentRepository.findByTitle(GAME).ifPresent(contentRepository::delete);

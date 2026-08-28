@@ -1095,12 +1095,13 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .total-playtime small { margin-top: 17px; color: #849098; }
 .total-playtime span { color: #455963; font-size: 12px; }
 .playthrough-list { display: grid; gap: 6px; }
-.playthrough-list > button { display: grid; width: 100%; grid-template-columns: 25px 1fr auto; align-items: center; gap: 9px; padding: 7px 8px; border: 0; border-radius: 8px; color: inherit; text-align: left; background: #f6f8f9; cursor: pointer; }
+.playthrough-list > button { display: grid; width: 100%; grid-template-columns: 30px 1fr auto; align-items: center; gap: 11px; padding: 10px; border: 0; border-radius: 8px; color: inherit; text-align: left; background: #f6f8f9; cursor: pointer; }
 .playthrough-list > button:hover { background: #edf2f5; }
-.playthrough-list > button > b { display: grid; width: 23px; height: 23px; border-radius: 50%; color: #fff; font-size: 11px; place-items: center; background: #607f95; }
+.playthrough-list > button > b { display: grid; width: 28px; height: 28px; border-radius: 50%; color: #fff; font-size: 13px; place-items: center; background: #607f95; }
 .playthrough-list span { display: grid; gap: 2px; }
-.playthrough-list span strong { font-size: 11px; }
-.playthrough-list small, .playthrough-list em { color: #7a878e; font-size: 9px; font-style: normal; }
+.playthrough-list span strong { font-size: 15px; }
+.playthrough-list small { color: #7a878e; font-size: 13px; font-style: normal; }
+.playthrough-list em { color: #7a878e; font-size: 14px; font-style: normal; }
 .playthrough-button { width: 100%; margin-top: 10px; }
 .sessions-table-card { overflow: hidden; }
 .sessions-table { min-width: 780px; overflow-x: auto; }

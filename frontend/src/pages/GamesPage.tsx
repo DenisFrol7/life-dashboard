@@ -1,76 +1,1353 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useNavigate, useSearchParams } from 'react-router'
-import { Plus, Search } from 'lucide-react'
-import { createGame, createGameLibrary, createGameSession, deleteGame, deleteGameSession, getGameCatalog, getGameLibrary, getGameSessions, getPlatforms, getSources, getXboxAchievementGroups, getXboxLibrarySummary, putGameProfile, putXboxProgress, updateGame, updateGameLibrary, updateGameSession, type Game, type GameInput, type GameLibrary, type GameLibraryInput, type GameSession, type GameSessionInput, type Reference, type XboxAchievementGroup, type XboxProgress, type XboxProgressInput } from '../api/games'
-import type { LibraryInput, LibraryStatus } from '../api/movies'
-import { ErrorState, LoadingState } from '../components/AsyncState'
-import { useToast } from '../components/ToastContext'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
+import { useNavigate, useSearchParams } from "react-router";
+import { Plus, Search } from "lucide-react";
+import {
+  createGame,
+  createGameLibrary,
+  createGameSession,
+  deleteGame,
+  deleteGameSession,
+  getGameCatalog,
+  getGameLibrary,
+  getGameSessions,
+  getPlatforms,
+  getSources,
+  getXboxAchievementGroups,
+  getXboxLibrarySummary,
+  putGameProfile,
+  putXboxProgress,
+  updateGame,
+  updateGameLibrary,
+  updateGameSession,
+  type Game,
+  type GameInput,
+  type GameLibrary,
+  type GameLibraryInput,
+  type GameSession,
+  type GameSessionInput,
+  type Reference,
+  type XboxAchievementGroup,
+  type XboxProgress,
+  type XboxProgressInput,
+} from "../api/games";
+import type { LibraryInput, LibraryStatus } from "../api/movies";
+import { ErrorState, LoadingState } from "../components/AsyncState";
+import { useToast } from "../components/ToastContext";
 
-const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Играю', COMPLETED: 'Пройдено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
-const emptyGame: GameInput = { title: '', originalTitle: null, itemType: 'GAME', format: null, releaseYear: null, description: null, coverUrl: null, durationMinutes: null, releaseStatus: 'RELEASED', genre: null, developer: null, releaseDate: null, xboxPlayAnywhere: false }
-const emptyProgress: XboxProgressInput = { totalAchievements: 0, unlockedAchievements: 0, totalGamerscore: 0, earnedGamerscore: 0 }
-const isXbox = (code: string) => code.startsWith('XBOX_') || code === 'ORIGINAL_XBOX'
+const statusLabels: Record<LibraryStatus, string> = {
+  NOT_STARTED: "Не начато",
+  PLANNED: "В планах",
+  IN_PROGRESS: "Играю",
+  COMPLETED: "Пройдено",
+  PAUSED: "На паузе",
+  DROPPED: "Брошено",
+};
+const emptyGame: GameInput = {
+  title: "",
+  originalTitle: null,
+  itemType: "GAME",
+  format: null,
+  releaseYear: null,
+  description: null,
+  coverUrl: null,
+  durationMinutes: null,
+  releaseStatus: "RELEASED",
+  genre: null,
+  developer: null,
+  releaseDate: null,
+  xboxPlayAnywhere: false,
+};
+const emptyProgress: XboxProgressInput = {
+  totalAchievements: 0,
+  unlockedAchievements: 0,
+  totalGamerscore: 0,
+  earnedGamerscore: 0,
+};
+const isXbox = (code: string) =>
+  code.startsWith("XBOX_") || code === "ORIGINAL_XBOX";
 
 export function GamesPage() {
-  const navigate = useNavigate(); const [searchParams, setSearchParams] = useSearchParams()
-  const [games, setGames] = useState<Game[]>([]); const [library, setLibrary] = useState<Record<number, GameLibrary>>({}); const [libraryEntries, setLibraryEntries] = useState<GameLibrary[]>([]); const [platforms, setPlatforms] = useState<Reference[]>([]); const [sources, setSources] = useState<Reference[]>([]); const [xbox, setXbox] = useState<Record<number, XboxProgress | null>>({}); const [xboxBase, setXboxBase] = useState<Record<number, XboxProgressInput | null>>({}); const [sessions, setSessions] = useState<GameSession[]>([])
-  const [editing, setEditing] = useState<Game | 'new' | null>(null); const [editingSession, setEditingSession] = useState<GameSession | 'new' | null>(null); const [query, setQuery] = useState(''); const [status, setStatus] = useState<LibraryStatus | 'GAME_PASS' | ''>(''); const [platform, setPlatform] = useState(''); const [source, setSource] = useState(''); const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null)
-  const load = useCallback(async () => { setLoading(true); setError(null); try { const [catalog, entries, platformList, sourceList, sessionList, xboxSummary] = await Promise.all([getGameCatalog(), getGameLibrary(), getPlatforms(), getSources(), getGameSessions(), getXboxLibrarySummary()]); setGames(catalog); setLibraryEntries(entries); setLibrary(Object.fromEntries(entries.map((entry) => [entry.contentId, entry]))); setPlatforms(platformList); setSources(sourceList); setSessions(sessionList); setXbox(Object.fromEntries(xboxSummary.map((summary) => [summary.libraryEntryId, summary.progress]))); setXboxBase(Object.fromEntries(xboxSummary.map((summary) => { const base = summary.baseGame; return [summary.libraryEntryId, base ? { totalAchievements: base.totalAchievements, unlockedAchievements: base.unlockedAchievements, totalGamerscore: base.totalGamerscore, earnedGamerscore: base.earnedGamerscore } : null] }))) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить игры') } finally { setLoading(false) } }, [])
-  useEffect(() => { void load() }, [load])
-  useEffect(() => { const editId = Number(searchParams.get('edit')); const game = games.find((item) => item.id === editId); if (game) { setEditing(game); setSearchParams({}, { replace: true }) } }, [games, searchParams, setSearchParams])
-  const visible = useMemo(() => { const normalized = query.trim().toLocaleLowerCase('ru-RU'); return games.filter((game) => { const entry = library[game.id]; const copies = libraryEntries.filter((item) => item.contentId === game.id); const matchesStatus = !status || status === 'GAME_PASS' ? !status || copies.some((item) => item.source.code === 'GAME_PASS') : entry?.status === status; const matchesLocation = !platform && !source || copies.some((item) => (!platform || String(item.platform.id) === platform) && (!source || String(item.source.id) === source)); return (!normalized || game.title.toLocaleLowerCase('ru-RU').includes(normalized)) && matchesStatus && matchesLocation }) }, [games, library, libraryEntries, platform, query, source, status])
-  const sessionPlaytime = sessions.reduce((sum, item) => sum + item.durationMinutes, 0)
-  const countGamesBy = (predicate: (entry: GameLibrary) => boolean) => new Set(libraryEntries.filter(predicate).map((item) => item.contentId)).size
-  const xboxGames = countGamesBy((item) => isXbox(item.platform.code))
-  const pcGames = countGamesBy((item) => item.platform.code === 'PC')
-  const gamePassGames = countGamesBy((item) => item.source.code === 'GAME_PASS')
-  const steamGames = countGamesBy((item) => item.source.code === 'STEAM')
-  const eaGames = countGamesBy((item) => item.source.code === 'EA_APP')
-  const epicGames = countGamesBy((item) => item.source.code === 'EPIC_GAMES_STORE')
-  const ubisoftGames = countGamesBy((item) => item.source.code === 'UBISOFT_CONNECT')
-  const totalAchievements = Object.values(xbox).reduce((sum, item) => sum + (item?.unlockedAchievements ?? 0), 0)
-  const totalGamerscore = Object.values(xbox).reduce((sum, item) => sum + (item?.earnedGamerscore ?? 0), 0)
-  if (loading) return <LoadingState message="Загружаем игры…" />
-  if (error) return <ErrorState title="Не удалось загрузить игры" message={error} onRetry={() => void load()} />
-  return <div className="movies-page series-page games-page"><section className="media-toolbar series-media-toolbar"><div className="series-status-tabs game-status-tabs" aria-label="Фильтр игр по статусу">{([['', 'Все'], ['IN_PROGRESS', 'Играю'], ['COMPLETED', 'Пройдено'], ['NOT_STARTED', 'Не начато'], ['PAUSED', 'На паузе'], ['DROPPED', 'Брошено'], ['GAME_PASS', 'Game Pass']] as const).map(([value, label]) => <button key={value || 'all'} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><div className="journal-search game-catalog-search"><span><Search /></span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти игру" /></div><select className="game-platform-filter" value={platform} onChange={(event) => setPlatform(event.target.value)}><option value="">Все платформы</option>{platforms.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><select className="game-platform-filter game-source-filter" value={source} onChange={(event) => setSource(event.target.value)}><option value="">Все источники</option>{sources.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button className="primary-button series-add-button media-add-button icon-button" onClick={() => setEditing('new')}><Plus />Добавить игру</button></section>
-    <section className="series-catalog-layout"><div className="series-catalog-main">
-    {error && <div className="notice error movies-error"><strong>Ошибка</strong><span>{error}</span></div>}
-    {loading ? <div className="loading"><span />Загружаем игры…</div> : visible.length === 0 ? <div className="media-empty"><span>＋</span><h2>Игр пока нет</h2><p>Добавьте первую игру в каталог.</p></div> : <section className="movie-grid series-catalog-grid">{visible.map((game) => { const entry = library[game.id]; const copies = libraryEntries.filter((item) => item.contentId === game.id); const platformNames = [...new Set(copies.map((item) => item.platform.name))]; const sourceNames = [...new Set(copies.map((item) => item.source.name))]; const progress = entry ? xbox[entry.id] : null; return <article className="series-list-card game-catalog-card" key={game.id}><button className="series-list-cover game-poster" onClick={() => navigate(`/games/${game.id}`)} style={game.coverUrl ? { backgroundImage: `url(${game.coverUrl})` } : undefined}><span>{game.title.slice(0, 1)}</span>{entry?.favorite && <i>♥</i>}</button><div className="series-list-content"><div className="series-list-heading"><button onClick={() => navigate(`/games/${game.id}`)}>{game.title}</button>{platformNames.map((name) => <span className="release-badge game-platform-badge" key={name}>{name}</span>)}</div><div className="movie-list-meta"><span>{game.releaseYear ?? '—'}</span><span>{game.genre ?? 'Жанр не указан'}</span>{sourceNames.length > 0 && <span>{sourceNames.join(' · ')}</span>}</div><div className="series-list-inline-status">{entry ? <span className={`media-status ${entry.status.toLowerCase()}`}>{statusLabels[entry.status]}</span> : <span className="media-status not_started">Не в библиотеке</span>}</div>{progress && <div className="game-catalog-progress"><strong>{progress.unlockedAchievements} <small>из {progress.totalAchievements} достижений</small></strong><div className="series-list-progress"><span style={{ width: `${progress.achievementPercent}%` }} /></div><small>{progress.earnedGamerscore} из {progress.totalGamerscore} G</small></div>}</div><div className="series-list-side">{entry ? <strong className="series-list-score">{entry.rating ? `${entry.rating}/10` : 'Без оценки'}</strong> : <button className="add-library-button" onClick={() => setEditing(game)}>+ В библиотеку</button>}</div></article>})}</section>}
-    </div><aside className="series-statistics"><p className="eyebrow">Общая статистика</p><h2>Игры</h2><dl><div><dt>Количество игр</dt><dd>{games.length}</dd></div><div><dt>Не начато</dt><dd>{Object.values(library).filter((item) => item.status === 'NOT_STARTED').length}</dd></div><div><dt>Пройдено</dt><dd>{Object.values(library).filter((item) => item.status === 'COMPLETED').length}</dd></div><div><dt>Играю</dt><dd>{Object.values(library).filter((item) => item.status === 'IN_PROGRESS').length}</dd></div><div><dt>На паузе</dt><dd>{Object.values(library).filter((item) => item.status === 'PAUSED').length}</dd></div><div><dt>Брошено</dt><dd>{Object.values(library).filter((item) => item.status === 'DROPPED').length}</dd></div><div className="series-stat-total"><dt>Xbox</dt><dd>{xboxGames}</dd></div><div><dt>PC</dt><dd>{pcGames}</dd></div><div><dt>Game Pass</dt><dd>{gamePassGames}</dd></div><div className="series-stat-total"><dt>Steam</dt><dd>{steamGames}</dd></div><div><dt>EA</dt><dd>{eaGames}</dd></div><div><dt>Epic Games</dt><dd>{epicGames}</dd></div><div><dt>Ubisoft Connect</dt><dd>{ubisoftGames}</dd></div><div className="series-stat-total"><dt>Игровое время</dt><dd>{Math.floor(sessionPlaytime / 60)} ч {sessionPlaytime % 60} мин</dd></div><div><dt>Достижения</dt><dd>{totalAchievements}</dd></div><div><dt>Gamerscore</dt><dd>{totalGamerscore} G</dd></div></dl></aside></section>
-    <section className="game-sessions-panel game-sessions-bottom"><div className="panel-heading"><div><p className="eyebrow">Игровая активность</p><h2>Последние игровые сессии</h2></div><button className="primary-button" disabled={!Object.keys(library).length} onClick={() => setEditingSession('new')}>+ Добавить сессию</button></div>{sessions.length === 0 ? <p className="muted">Игровых сессий пока нет.</p> : <div className="game-session-list">{sessions.slice(0, 5).map((session) => <button key={session.id} onClick={() => setEditingSession(session)}><span><strong>{session.title}</strong><small>{new Date(session.startedAt).toLocaleString('ru-RU')}</small></span><span className="game-session-achievements">{session.unlockedAchievements ? `+${session.unlockedAchievements} достиж.` : ''}{session.earnedGamerscore ? `+${session.earnedGamerscore} G` : ''}</span><b>{Math.floor(session.durationMinutes / 60)} ч {session.durationMinutes % 60} мин</b></button>)}</div>}</section>
-    {editing && <GameForm game={editing === 'new' ? undefined : editing} library={editing === 'new' ? undefined : library[editing.id]} platforms={platforms} sources={sources} progress={editing !== 'new' && library[editing.id] ? xboxBase[library[editing.id].id] : null} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void load() }} />}
-    {editingSession && <GameSessionForm session={editingSession === 'new' ? undefined : editingSession} library={libraryEntries} onClose={() => setEditingSession(null)} onSaved={() => { setEditingSession(null); void load() }} />}
-  </div>
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [games, setGames] = useState<Game[]>([]);
+  const [library, setLibrary] = useState<Record<number, GameLibrary>>({});
+  const [libraryEntries, setLibraryEntries] = useState<GameLibrary[]>([]);
+  const [platforms, setPlatforms] = useState<Reference[]>([]);
+  const [sources, setSources] = useState<Reference[]>([]);
+  const [xbox, setXbox] = useState<Record<number, XboxProgress | null>>({});
+  const [xboxBase, setXboxBase] = useState<
+    Record<number, XboxProgressInput | null>
+  >({});
+  const [sessions, setSessions] = useState<GameSession[]>([]);
+  const [editing, setEditing] = useState<Game | "new" | null>(null);
+  const [editingSession, setEditingSession] = useState<
+    GameSession | "new" | null
+  >(null);
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<LibraryStatus | "GAME_PASS" | "">("");
+  const [platform, setPlatform] = useState("");
+  const [source, setSource] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [
+        catalog,
+        entries,
+        platformList,
+        sourceList,
+        sessionList,
+        xboxSummary,
+      ] = await Promise.all([
+        getGameCatalog(),
+        getGameLibrary(),
+        getPlatforms(),
+        getSources(),
+        getGameSessions(),
+        getXboxLibrarySummary(),
+      ]);
+      setGames(catalog);
+      setLibraryEntries(entries);
+      setLibrary(
+        Object.fromEntries(entries.map((entry) => [entry.contentId, entry])),
+      );
+      setPlatforms(platformList);
+      setSources(sourceList);
+      setSessions(sessionList);
+      setXbox(
+        Object.fromEntries(
+          xboxSummary.map((summary) => [
+            summary.libraryEntryId,
+            summary.progress,
+          ]),
+        ),
+      );
+      setXboxBase(
+        Object.fromEntries(
+          xboxSummary.map((summary) => {
+            const base = summary.baseGame;
+            return [
+              summary.libraryEntryId,
+              base
+                ? {
+                    totalAchievements: base.totalAchievements,
+                    unlockedAchievements: base.unlockedAchievements,
+                    totalGamerscore: base.totalGamerscore,
+                    earnedGamerscore: base.earnedGamerscore,
+                  }
+                : null,
+            ];
+          }),
+        ),
+      );
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Не удалось загрузить игры",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  useEffect(() => {
+    const editId = Number(searchParams.get("edit"));
+    const game = games.find((item) => item.id === editId);
+    if (game) {
+      setEditing(game);
+      setSearchParams({}, { replace: true });
+    }
+  }, [games, searchParams, setSearchParams]);
+  const visible = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("ru-RU");
+    return games.filter((game) => {
+      const entry = library[game.id];
+      const copies = libraryEntries.filter(
+        (item) => item.contentId === game.id,
+      );
+      const matchesStatus =
+        !status || status === "GAME_PASS"
+          ? !status || copies.some((item) => item.source.code === "GAME_PASS")
+          : entry?.status === status;
+      const matchesLocation =
+        (!platform && !source) ||
+        copies.some(
+          (item) =>
+            (!platform || String(item.platform.id) === platform) &&
+            (!source || String(item.source.id) === source),
+        );
+      return (
+        (!normalized ||
+          game.title.toLocaleLowerCase("ru-RU").includes(normalized)) &&
+        matchesStatus &&
+        matchesLocation
+      );
+    });
+  }, [games, library, libraryEntries, platform, query, source, status]);
+  const sessionPlaytime = sessions.reduce(
+    (sum, item) => sum + item.durationMinutes,
+    0,
+  );
+  const countGamesBy = (predicate: (entry: GameLibrary) => boolean) =>
+    new Set(libraryEntries.filter(predicate).map((item) => item.contentId))
+      .size;
+  const xboxGames = countGamesBy((item) => isXbox(item.platform.code));
+  const pcGames = countGamesBy((item) => item.platform.code === "PC");
+  const gamePassGames = countGamesBy(
+    (item) => item.source.code === "GAME_PASS",
+  );
+  const steamGames = countGamesBy((item) => item.source.code === "STEAM");
+  const eaGames = countGamesBy((item) => item.source.code === "EA_APP");
+  const epicGames = countGamesBy(
+    (item) => item.source.code === "EPIC_GAMES_STORE",
+  );
+  const ubisoftGames = countGamesBy(
+    (item) => item.source.code === "UBISOFT_CONNECT",
+  );
+  const totalAchievements = Object.values(xbox).reduce(
+    (sum, item) => sum + (item?.unlockedAchievements ?? 0),
+    0,
+  );
+  const totalGamerscore = Object.values(xbox).reduce(
+    (sum, item) => sum + (item?.earnedGamerscore ?? 0),
+    0,
+  );
+  if (loading) return <LoadingState message="Загружаем игры…" />;
+  if (error)
+    return (
+      <ErrorState
+        title="Не удалось загрузить игры"
+        message={error}
+        onRetry={() => void load()}
+      />
+    );
+  return (
+    <div className="movies-page series-page games-page">
+      <section className="media-toolbar series-media-toolbar">
+        <div
+          className="series-status-tabs game-status-tabs"
+          aria-label="Фильтр игр по статусу"
+        >
+          {(
+            [
+              ["", "Все"],
+              ["IN_PROGRESS", "Играю"],
+              ["COMPLETED", "Пройдено"],
+              ["NOT_STARTED", "Не начато"],
+              ["PAUSED", "На паузе"],
+              ["DROPPED", "Брошено"],
+              ["GAME_PASS", "Game Pass"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value || "all"}
+              className={status === value ? "active" : ""}
+              onClick={() => setStatus(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="journal-search game-catalog-search">
+          <span>
+            <Search />
+          </span>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Найти игру"
+          />
+        </div>
+        <select
+          className="game-platform-filter"
+          value={platform}
+          onChange={(event) => setPlatform(event.target.value)}
+        >
+          <option value="">Все платформы</option>
+          {platforms.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+        <select
+          className="game-platform-filter game-source-filter"
+          value={source}
+          onChange={(event) => setSource(event.target.value)}
+        >
+          <option value="">Все источники</option>
+          {sources.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+        <button
+          className="primary-button series-add-button media-add-button icon-button"
+          onClick={() => setEditing("new")}
+        >
+          <Plus />
+          Добавить игру
+        </button>
+      </section>
+      <section className="series-catalog-layout">
+        <div className="series-catalog-main">
+          {error && (
+            <div className="notice error movies-error">
+              <strong>Ошибка</strong>
+              <span>{error}</span>
+            </div>
+          )}
+          {loading ? (
+            <div className="loading">
+              <span />
+              Загружаем игры…
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="media-empty">
+              <span>＋</span>
+              <h2>Игр пока нет</h2>
+              <p>Добавьте первую игру в каталог.</p>
+            </div>
+          ) : (
+            <section className="movie-grid series-catalog-grid">
+              {visible.map((game) => {
+                const entry = library[game.id];
+                const copies = libraryEntries.filter(
+                  (item) => item.contentId === game.id,
+                );
+                const platformNames = [
+                  ...new Set(copies.map((item) => item.platform.name)),
+                ];
+                const sourceNames = [
+                  ...new Set(copies.map((item) => item.source.name)),
+                ];
+                const progress = entry ? xbox[entry.id] : null;
+                return (
+                  <article
+                    className="series-list-card game-catalog-card"
+                    key={game.id}
+                  >
+                    <button
+                      className="series-list-cover game-poster"
+                      onClick={() => navigate(`/games/${game.id}`)}
+                      style={
+                        game.coverUrl
+                          ? { backgroundImage: `url(${game.coverUrl})` }
+                          : undefined
+                      }
+                    >
+                      <span>{game.title.slice(0, 1)}</span>
+                      {entry?.favorite && <i>♥</i>}
+                    </button>
+                    <div className="series-list-content">
+                      <div className="series-list-heading">
+                        <button onClick={() => navigate(`/games/${game.id}`)}>
+                          {game.title}
+                        </button>
+                        {platformNames.map((name) => (
+                          <span
+                            className="release-badge game-platform-badge"
+                            key={name}
+                          >
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="movie-list-meta">
+                        <span>{game.releaseYear ?? "—"}</span>
+                        <span>{game.genre ?? "Жанр не указан"}</span>
+                        {sourceNames.length > 0 && (
+                          <span>{sourceNames.join(" · ")}</span>
+                        )}
+                      </div>
+                      <div className="series-list-inline-status">
+                        {entry ? (
+                          <span
+                            className={`media-status ${entry.status.toLowerCase()}`}
+                          >
+                            {statusLabels[entry.status]}
+                          </span>
+                        ) : (
+                          <span className="media-status not_started">
+                            Не в библиотеке
+                          </span>
+                        )}
+                      </div>
+                      {progress && (
+                        <div className="game-catalog-progress">
+                          <strong>
+                            {progress.unlockedAchievements}{" "}
+                            <small>
+                              из {progress.totalAchievements} достижений
+                            </small>
+                          </strong>
+                          <div className="series-list-progress">
+                            <span
+                              style={{
+                                width: `${progress.achievementPercent}%`,
+                              }}
+                            />
+                          </div>
+                          <small>
+                            {progress.earnedGamerscore} из{" "}
+                            {progress.totalGamerscore} G
+                          </small>
+                        </div>
+                      )}
+                    </div>
+                    <div className="series-list-side">
+                      {entry ? (
+                        <strong className="series-list-score">
+                          {entry.rating ? `${entry.rating}/10` : "Без оценки"}
+                        </strong>
+                      ) : (
+                        <button
+                          className="add-library-button"
+                          onClick={() => setEditing(game)}
+                        >
+                          + В библиотеку
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </section>
+          )}
+        </div>
+        <aside className="series-statistics">
+          <p className="eyebrow">Общая статистика</p>
+          <h2>Игры</h2>
+          <dl>
+            <div>
+              <dt>Количество игр</dt>
+              <dd>{games.length}</dd>
+            </div>
+            <div>
+              <dt>Не начато</dt>
+              <dd>
+                {
+                  Object.values(library).filter(
+                    (item) => item.status === "NOT_STARTED",
+                  ).length
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>Пройдено</dt>
+              <dd>
+                {
+                  Object.values(library).filter(
+                    (item) => item.status === "COMPLETED",
+                  ).length
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>Играю</dt>
+              <dd>
+                {
+                  Object.values(library).filter(
+                    (item) => item.status === "IN_PROGRESS",
+                  ).length
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>На паузе</dt>
+              <dd>
+                {
+                  Object.values(library).filter(
+                    (item) => item.status === "PAUSED",
+                  ).length
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>Брошено</dt>
+              <dd>
+                {
+                  Object.values(library).filter(
+                    (item) => item.status === "DROPPED",
+                  ).length
+                }
+              </dd>
+            </div>
+            <div className="series-stat-total">
+              <dt>Xbox</dt>
+              <dd>{xboxGames}</dd>
+            </div>
+            <div>
+              <dt>PC</dt>
+              <dd>{pcGames}</dd>
+            </div>
+            <div>
+              <dt>Game Pass</dt>
+              <dd>{gamePassGames}</dd>
+            </div>
+            <div className="series-stat-total">
+              <dt>Steam</dt>
+              <dd>{steamGames}</dd>
+            </div>
+            <div>
+              <dt>EA</dt>
+              <dd>{eaGames}</dd>
+            </div>
+            <div>
+              <dt>Epic Games</dt>
+              <dd>{epicGames}</dd>
+            </div>
+            <div>
+              <dt>Ubisoft Connect</dt>
+              <dd>{ubisoftGames}</dd>
+            </div>
+            <div className="series-stat-total">
+              <dt>Игровое время</dt>
+              <dd>
+                {Math.floor(sessionPlaytime / 60)} ч {sessionPlaytime % 60} мин
+              </dd>
+            </div>
+            <div>
+              <dt>Достижения</dt>
+              <dd>{totalAchievements}</dd>
+            </div>
+            <div>
+              <dt>Gamerscore</dt>
+              <dd>{totalGamerscore} G</dd>
+            </div>
+          </dl>
+        </aside>
+      </section>
+      <section className="game-sessions-panel game-sessions-bottom">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Игровая активность</p>
+            <h2>Последние игровые сессии</h2>
+          </div>
+          <button
+            className="primary-button"
+            disabled={!Object.keys(library).length}
+            onClick={() => setEditingSession("new")}
+          >
+            + Добавить сессию
+          </button>
+        </div>
+        {sessions.length === 0 ? (
+          <p className="muted">Игровых сессий пока нет.</p>
+        ) : (
+          <div className="game-session-list">
+            {sessions.slice(0, 5).map((session) => (
+              <button
+                key={session.id}
+                onClick={() => setEditingSession(session)}
+              >
+                <span>
+                  <strong>{session.title}</strong>
+                  <small>
+                    {new Date(session.startedAt).toLocaleString("ru-RU")}
+                  </small>
+                </span>
+                <span className="game-session-achievements">
+                  {session.unlockedAchievements
+                    ? `+${session.unlockedAchievements} достиж.`
+                    : ""}
+                  {session.earnedGamerscore
+                    ? `+${session.earnedGamerscore} G`
+                    : ""}
+                </span>
+                <b>
+                  {Math.floor(session.durationMinutes / 60)} ч{" "}
+                  {session.durationMinutes % 60} мин
+                </b>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+      {editing && (
+        <GameForm
+          game={editing === "new" ? undefined : editing}
+          library={editing === "new" ? undefined : library[editing.id]}
+          platforms={platforms}
+          sources={sources}
+          progress={
+            editing !== "new" && library[editing.id]
+              ? xboxBase[library[editing.id].id]
+              : null
+          }
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void load();
+          }}
+        />
+      )}
+      {editingSession && (
+        <GameSessionForm
+          session={editingSession === "new" ? undefined : editingSession}
+          library={libraryEntries}
+          onClose={() => setEditingSession(null)}
+          onSaved={() => {
+            setEditingSession(null);
+            void load();
+          }}
+        />
+      )}
+    </div>
+  );
 }
 
-function GameForm({ game, library, platforms, sources, progress, onClose, onSaved }: { game?: Game; library?: GameLibrary; platforms: Reference[]; sources: Reference[]; progress?: XboxProgressInput | null; onClose: () => void; onSaved: () => void }) {
-  const { showToast } = useToast()
-  const [item, setItem] = useState<GameInput>(game ? { ...game } : emptyGame); const defaultPlatform = library?.platform.id ?? platforms[0]?.id ?? 0; const defaultSource = library?.source.id ?? sources[0]?.id ?? 0
-  const [entry, setEntry] = useState<GameLibraryInput>({ platformId: defaultPlatform, sourceId: defaultSource, accessType: library?.accessType ?? (sources.find((source) => source.id === defaultSource)?.type === 'SUBSCRIPTION' ? 'SUBSCRIPTION' : 'OWNED'), edition: library?.edition ?? null, acquiredAt: library?.acquiredAt ?? null, note: library?.note ?? null, legacyPlaytimeMinutes: library?.legacyPlaytimeMinutes ?? 0 })
-  const [profile, setProfile] = useState<LibraryInput>({ status: library?.status ?? 'NOT_STARTED', rating: library?.rating ?? null, favorite: library?.favorite ?? false, startedAt: library?.startedAt ?? null, completedAt: library?.completedAt ?? null, personalNote: library?.personalNote ?? null })
-  const [xboxProgress, setXboxProgress] = useState<XboxProgressInput>(progress ?? emptyProgress); const [inLibrary, setInLibrary] = useState(Boolean(library) || !game); const [saving, setSaving] = useState(false); const [error, setError] = useState<string | null>(null)
-  useEffect(() => { setXboxProgress(progress ?? emptyProgress) }, [progress])
-  const setItemValue = <K extends keyof GameInput>(key: K, value: GameInput[K]) => setItem((current) => ({ ...current, [key]: value }))
-  const setEntryValue = <K extends keyof GameLibraryInput>(key: K, value: GameLibraryInput[K]) => setEntry((current) => ({ ...current, [key]: value }))
-  const setProfileValue = <K extends keyof LibraryInput>(key: K, value: LibraryInput[K]) => setProfile((current) => ({ ...current, [key]: value }))
-  const selectedPlatform = platforms.find((value) => value.id === entry.platformId); const xboxEnabled = selectedPlatform ? isXbox(selectedPlatform.code) : false
-  const compatibleSources = sources.filter((value) => entry.accessType === 'SUBSCRIPTION' ? value.type === 'SUBSCRIPTION' : value.type !== 'SUBSCRIPTION')
-  const changeAccessType = (accessType: GameLibraryInput['accessType']) => { const source = sources.find((value) => accessType === 'SUBSCRIPTION' ? value.type === 'SUBSCRIPTION' : value.type !== 'SUBSCRIPTION'); setEntry((current) => ({ ...current, accessType, sourceId: source?.id ?? current.sourceId })) }
-  const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); setError(null); try { const savedGame = game ? await updateGame(game.id, item) : await createGame(item); if (inLibrary) { const savedEntry = library ? await updateGameLibrary(library.id, entry) : await createGameLibrary(savedGame.id, entry); await putGameProfile(savedGame.id, profile); if (xboxEnabled) await putXboxProgress(savedEntry.id, xboxProgress) } showToast(game ? 'Игра обновлена' : 'Игра добавлена'); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить игру') } finally { setSaving(false) } }
-  const remove = async () => { if (!game || !window.confirm(`Удалить «${game.title}» из общего каталога?`)) return; try { await deleteGame(game.id); showToast('Игра удалена'); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить игру') } }
-  return <div className="modal-backdrop"><form className="habit-form game-form" onSubmit={(event) => void submit(event)}><div className="form-heading"><div><p className="eyebrow">Игры</p><h2>{game ? 'Редактирование' : 'Новая игра'}</h2></div><button type="button" onClick={onClose}>×</button></div>{error && <div className="form-error">{error}</div>}<label>Название<input required value={item.title} onChange={(event) => setItemValue('title', event.target.value)} /></label><label>Оригинальное название<input value={item.originalTitle ?? ''} onChange={(event) => setItemValue('originalTitle', event.target.value || null)} /></label><label>Разработчик<input maxLength={200} value={item.developer ?? ''} onChange={(event) => setItemValue('developer', event.target.value || null)} /></label><div className="form-grid"><label>Дата выхода<input type="date" value={item.releaseDate ?? ''} onChange={(event) => setItem((current) => ({ ...current, releaseDate: event.target.value || null, releaseYear: event.target.value ? Number(event.target.value.slice(0, 4)) : null }))} /></label><label>Жанр<input maxLength={100} value={item.genre ?? ''} onChange={(event) => setItemValue('genre', event.target.value || null)} /></label></div><label>URL обложки<input type="url" value={item.coverUrl ?? ''} onChange={(event) => setItemValue('coverUrl', event.target.value || null)} /></label><label>Описание<textarea rows={3} value={item.description ?? ''} onChange={(event) => setItemValue('description', event.target.value || null)} /></label><fieldset className="library-fields"><legend>Общий прогресс игры</legend><label className="all-day-check"><input type="checkbox" checked={inLibrary} onChange={(event) => setInLibrary(event.target.checked)} />Добавить в библиотеку</label>{inLibrary && <><div className="form-grid"><label>Статус<select value={profile.status} onChange={(event) => { const nextStatus = event.target.value as LibraryStatus; setProfile((current) => ({ ...current, status: nextStatus, completedAt: nextStatus === 'COMPLETED' && !current.completedAt ? new Date().toISOString() : current.completedAt })) }}>{Object.entries(statusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label>Оценка<select value={profile.rating ?? ''} onChange={(event) => setProfileValue('rating', event.target.value ? Number(event.target.value) : null)}><option value="">Без оценки</option>{Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <option key={value}>{value}</option>)}</select></label><label>Дата прохождения<input disabled={profile.status !== 'COMPLETED'} type="date" value={profile.completedAt ? new Date(new Date(profile.completedAt).getTime() - new Date(profile.completedAt).getTimezoneOffset() * 60_000).toISOString().slice(0, 10) : ''} onChange={(event) => setProfileValue('completedAt', event.target.value ? new Date(`${event.target.value}T12:00:00`).toISOString() : null)} /></label><label>Издание<input value={entry.edition ?? ''} onChange={(event) => setEntryValue('edition', event.target.value || null)} /></label></div><div className="game-library-flags"><label className="favorite-check"><input type="checkbox" checked={profile.favorite} onChange={(event) => setProfileValue('favorite', event.target.checked)} />В избранном</label>{xboxEnabled && <label className="play-anywhere-check"><input type="checkbox" checked={item.xboxPlayAnywhere} onChange={(event) => setItemValue('xboxPlayAnywhere', event.target.checked)} />Xbox Play Anywhere</label>}</div><label>Личная заметка<textarea rows={2} value={profile.personalNote ?? ''} onChange={(event) => setProfileValue('personalNote', event.target.value || null)} /></label><fieldset className="library-fields"><legend>Копия игры</legend><div className="form-grid"><label>Платформа<select required value={entry.platformId} onChange={(event) => setEntryValue('platformId', Number(event.target.value))}>{platforms.map((value) => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label><label>Источник<select required value={entry.sourceId} onChange={(event) => setEntryValue('sourceId', Number(event.target.value))}>{compatibleSources.map((value) => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label><label>Тип доступа<select value={entry.accessType} onChange={(event) => changeAccessType(event.target.value as GameLibraryInput['accessType'])}><option value="OWNED">Куплена</option><option value="SUBSCRIPTION">Подписка</option></select></label></div></fieldset></>}</fieldset>{inLibrary && xboxEnabled && <fieldset className="xbox-fields"><legend>Xbox-прогресс</legend><div className="form-grid"><label>Получено достижений<input min="0" max={xboxProgress.totalAchievements} type="number" value={xboxProgress.unlockedAchievements} onChange={(event) => setXboxProgress((current) => ({ ...current, unlockedAchievements: Number(event.target.value) }))} /></label><label>Всего достижений<input min="0" type="number" value={xboxProgress.totalAchievements} onChange={(event) => setXboxProgress((current) => ({ ...current, totalAchievements: Number(event.target.value) }))} /></label><label>Получено Gamerscore<input min="0" max={xboxProgress.totalGamerscore} type="number" value={xboxProgress.earnedGamerscore} onChange={(event) => setXboxProgress((current) => ({ ...current, earnedGamerscore: Number(event.target.value) }))} /></label><label>Всего Gamerscore<input min="0" type="number" value={xboxProgress.totalGamerscore} onChange={(event) => setXboxProgress((current) => ({ ...current, totalGamerscore: Number(event.target.value) }))} /></label></div></fieldset>}<div className="form-buttons">{game && <button className="danger-button" type="button" onClick={() => void remove()}>Удалить</button>}<button className="secondary-button" type="button" onClick={onClose}>Отмена</button><button className="primary-button" disabled={saving}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div></form></div>
+function GameForm({
+  game,
+  library,
+  platforms,
+  sources,
+  progress,
+  onClose,
+  onSaved,
+}: {
+  game?: Game;
+  library?: GameLibrary;
+  platforms: Reference[];
+  sources: Reference[];
+  progress?: XboxProgressInput | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { showToast } = useToast();
+  const [item, setItem] = useState<GameInput>(game ? { ...game } : emptyGame);
+  const defaultPlatform = library?.platform.id ?? platforms[0]?.id ?? 0;
+  const defaultSource = library?.source.id ?? sources[0]?.id ?? 0;
+  const [entry, setEntry] = useState<GameLibraryInput>({
+    platformId: defaultPlatform,
+    sourceId: defaultSource,
+    accessType:
+      library?.accessType ??
+      (sources.find((source) => source.id === defaultSource)?.type ===
+      "SUBSCRIPTION"
+        ? "SUBSCRIPTION"
+        : "OWNED"),
+    edition: library?.edition ?? null,
+    acquiredAt: library?.acquiredAt ?? null,
+    note: library?.note ?? null,
+    legacyPlaytimeMinutes: library?.legacyPlaytimeMinutes ?? 0,
+    status: library?.status ?? "NOT_STARTED",
+    startedAt: library?.startedAt ?? null,
+    completedAt: library?.completedAt ?? null,
+  });
+  const [profile, setProfile] = useState<LibraryInput>({
+    status: library?.status ?? "NOT_STARTED",
+    rating: library?.rating ?? null,
+    favorite: library?.favorite ?? false,
+    startedAt: library?.startedAt ?? null,
+    completedAt: library?.completedAt ?? null,
+    personalNote: library?.personalNote ?? null,
+  });
+  const [xboxProgress, setXboxProgress] = useState<XboxProgressInput>(
+    progress ?? emptyProgress,
+  );
+  const [inLibrary, setInLibrary] = useState(Boolean(library) || !game);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    setXboxProgress(progress ?? emptyProgress);
+  }, [progress]);
+  const setItemValue = <K extends keyof GameInput>(
+    key: K,
+    value: GameInput[K],
+  ) => setItem((current) => ({ ...current, [key]: value }));
+  const setEntryValue = <K extends keyof GameLibraryInput>(
+    key: K,
+    value: GameLibraryInput[K],
+  ) => setEntry((current) => ({ ...current, [key]: value }));
+  const setProfileValue = <K extends keyof LibraryInput>(
+    key: K,
+    value: LibraryInput[K],
+  ) => setProfile((current) => ({ ...current, [key]: value }));
+  const selectedPlatform = platforms.find(
+    (value) => value.id === entry.platformId,
+  );
+  const xboxEnabled = selectedPlatform ? isXbox(selectedPlatform.code) : false;
+  const compatibleSources = sources.filter((value) =>
+    entry.accessType === "SUBSCRIPTION"
+      ? value.type === "SUBSCRIPTION"
+      : value.type !== "SUBSCRIPTION",
+  );
+  const changeAccessType = (accessType: GameLibraryInput["accessType"]) => {
+    const source = sources.find((value) =>
+      accessType === "SUBSCRIPTION"
+        ? value.type === "SUBSCRIPTION"
+        : value.type !== "SUBSCRIPTION",
+    );
+    setEntry((current) => ({
+      ...current,
+      accessType,
+      sourceId: source?.id ?? current.sourceId,
+    }));
+  };
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const savedGame = game
+        ? await updateGame(game.id, item)
+        : await createGame(item);
+      if (inLibrary) {
+        const copyProgress = {
+          ...entry,
+          status: profile.status,
+          startedAt: profile.startedAt,
+          completedAt: profile.completedAt,
+        };
+        const savedEntry = library
+          ? await updateGameLibrary(library.id, copyProgress)
+          : await createGameLibrary(savedGame.id, copyProgress);
+        await putGameProfile(savedGame.id, profile);
+        if (xboxEnabled) await putXboxProgress(savedEntry.id, xboxProgress);
+      }
+      showToast(game ? "Игра обновлена" : "Игра добавлена");
+      onSaved();
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Не удалось сохранить игру",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+  const remove = async () => {
+    if (!game || !window.confirm(`Удалить «${game.title}» из общего каталога?`))
+      return;
+    try {
+      await deleteGame(game.id);
+      showToast("Игра удалена");
+      onSaved();
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Не удалось удалить игру",
+      );
+    }
+  };
+  return (
+    <div className="modal-backdrop">
+      <form
+        className="habit-form game-form"
+        onSubmit={(event) => void submit(event)}
+      >
+        <div className="form-heading">
+          <div>
+            <p className="eyebrow">Игры</p>
+            <h2>{game ? "Редактирование" : "Новая игра"}</h2>
+          </div>
+          <button type="button" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        {error && <div className="form-error">{error}</div>}
+        <label>
+          Название
+          <input
+            required
+            value={item.title}
+            onChange={(event) => setItemValue("title", event.target.value)}
+          />
+        </label>
+        <label>
+          Оригинальное название
+          <input
+            value={item.originalTitle ?? ""}
+            onChange={(event) =>
+              setItemValue("originalTitle", event.target.value || null)
+            }
+          />
+        </label>
+        <label>
+          Разработчик
+          <input
+            maxLength={200}
+            value={item.developer ?? ""}
+            onChange={(event) =>
+              setItemValue("developer", event.target.value || null)
+            }
+          />
+        </label>
+        <div className="form-grid">
+          <label>
+            Дата выхода
+            <input
+              type="date"
+              value={item.releaseDate ?? ""}
+              onChange={(event) =>
+                setItem((current) => ({
+                  ...current,
+                  releaseDate: event.target.value || null,
+                  releaseYear: event.target.value
+                    ? Number(event.target.value.slice(0, 4))
+                    : null,
+                }))
+              }
+            />
+          </label>
+          <label>
+            Жанр
+            <input
+              maxLength={100}
+              value={item.genre ?? ""}
+              onChange={(event) =>
+                setItemValue("genre", event.target.value || null)
+              }
+            />
+          </label>
+        </div>
+        <label>
+          URL обложки
+          <input
+            type="url"
+            value={item.coverUrl ?? ""}
+            onChange={(event) =>
+              setItemValue("coverUrl", event.target.value || null)
+            }
+          />
+        </label>
+        <label>
+          Описание
+          <textarea
+            rows={3}
+            value={item.description ?? ""}
+            onChange={(event) =>
+              setItemValue("description", event.target.value || null)
+            }
+          />
+        </label>
+        <fieldset className="library-fields">
+          <legend>Игра и выбранная копия</legend>
+          <label className="all-day-check">
+            <input
+              type="checkbox"
+              checked={inLibrary}
+              onChange={(event) => setInLibrary(event.target.checked)}
+            />
+            Добавить в библиотеку
+          </label>
+          {inLibrary && (
+            <>
+              <div className="form-grid">
+                <label>
+                  Статус выбранной копии
+                  <select
+                    value={profile.status}
+                    onChange={(event) => {
+                      const nextStatus = event.target.value as LibraryStatus;
+                      setProfile((current) => ({
+                        ...current,
+                        status: nextStatus,
+                        completedAt:
+                          nextStatus === "COMPLETED" && !current.completedAt
+                            ? new Date().toISOString()
+                            : current.completedAt,
+                      }));
+                    }}
+                  >
+                    {Object.entries(statusLabels).map(([key, label]) => (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Оценка
+                  <select
+                    value={profile.rating ?? ""}
+                    onChange={(event) =>
+                      setProfileValue(
+                        "rating",
+                        event.target.value ? Number(event.target.value) : null,
+                      )
+                    }
+                  >
+                    <option value="">Без оценки</option>
+                    {Array.from({ length: 10 }, (_, index) => index + 1).map(
+                      (value) => (
+                        <option key={value}>{value}</option>
+                      ),
+                    )}
+                  </select>
+                </label>
+                <label>
+                  Дата прохождения выбранной копии
+                  <input
+                    disabled={profile.status !== "COMPLETED"}
+                    type="date"
+                    value={
+                      profile.completedAt
+                        ? new Date(
+                            new Date(profile.completedAt).getTime() -
+                              new Date(
+                                profile.completedAt,
+                              ).getTimezoneOffset() *
+                                60_000,
+                          )
+                            .toISOString()
+                            .slice(0, 10)
+                        : ""
+                    }
+                    onChange={(event) =>
+                      setProfileValue(
+                        "completedAt",
+                        event.target.value
+                          ? new Date(
+                              `${event.target.value}T12:00:00`,
+                            ).toISOString()
+                          : null,
+                      )
+                    }
+                  />
+                </label>
+                <label>
+                  Издание
+                  <input
+                    value={entry.edition ?? ""}
+                    onChange={(event) =>
+                      setEntryValue("edition", event.target.value || null)
+                    }
+                  />
+                </label>
+              </div>
+              <div className="game-library-flags">
+                <label className="favorite-check">
+                  <input
+                    type="checkbox"
+                    checked={profile.favorite}
+                    onChange={(event) =>
+                      setProfileValue("favorite", event.target.checked)
+                    }
+                  />
+                  В избранном
+                </label>
+                {xboxEnabled && (
+                  <label className="play-anywhere-check">
+                    <input
+                      type="checkbox"
+                      checked={item.xboxPlayAnywhere}
+                      onChange={(event) =>
+                        setItemValue("xboxPlayAnywhere", event.target.checked)
+                      }
+                    />
+                    Xbox Play Anywhere
+                  </label>
+                )}
+              </div>
+              <label>
+                Личная заметка
+                <textarea
+                  rows={2}
+                  value={profile.personalNote ?? ""}
+                  onChange={(event) =>
+                    setProfileValue("personalNote", event.target.value || null)
+                  }
+                />
+              </label>
+              <fieldset className="library-fields">
+                <legend>Копия игры</legend>
+                <div className="form-grid">
+                  <label>
+                    Платформа
+                    <select
+                      required
+                      value={entry.platformId}
+                      onChange={(event) =>
+                        setEntryValue("platformId", Number(event.target.value))
+                      }
+                    >
+                      {platforms.map((value) => (
+                        <option key={value.id} value={value.id}>
+                          {value.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Источник
+                    <select
+                      required
+                      value={entry.sourceId}
+                      onChange={(event) =>
+                        setEntryValue("sourceId", Number(event.target.value))
+                      }
+                    >
+                      {compatibleSources.map((value) => (
+                        <option key={value.id} value={value.id}>
+                          {value.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Тип доступа
+                    <select
+                      value={entry.accessType}
+                      onChange={(event) =>
+                        changeAccessType(
+                          event.target.value as GameLibraryInput["accessType"],
+                        )
+                      }
+                    >
+                      <option value="OWNED">Куплена</option>
+                      <option value="SUBSCRIPTION">Подписка</option>
+                    </select>
+                  </label>
+                </div>
+              </fieldset>
+            </>
+          )}
+        </fieldset>
+        {inLibrary && xboxEnabled && (
+          <fieldset className="xbox-fields">
+            <legend>Xbox-прогресс</legend>
+            <div className="form-grid">
+              <label>
+                Получено достижений
+                <input
+                  min="0"
+                  max={xboxProgress.totalAchievements}
+                  type="number"
+                  value={xboxProgress.unlockedAchievements}
+                  onChange={(event) =>
+                    setXboxProgress((current) => ({
+                      ...current,
+                      unlockedAchievements: Number(event.target.value),
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Всего достижений
+                <input
+                  min="0"
+                  type="number"
+                  value={xboxProgress.totalAchievements}
+                  onChange={(event) =>
+                    setXboxProgress((current) => ({
+                      ...current,
+                      totalAchievements: Number(event.target.value),
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Получено Gamerscore
+                <input
+                  min="0"
+                  max={xboxProgress.totalGamerscore}
+                  type="number"
+                  value={xboxProgress.earnedGamerscore}
+                  onChange={(event) =>
+                    setXboxProgress((current) => ({
+                      ...current,
+                      earnedGamerscore: Number(event.target.value),
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Всего Gamerscore
+                <input
+                  min="0"
+                  type="number"
+                  value={xboxProgress.totalGamerscore}
+                  onChange={(event) =>
+                    setXboxProgress((current) => ({
+                      ...current,
+                      totalGamerscore: Number(event.target.value),
+                    }))
+                  }
+                />
+              </label>
+            </div>
+          </fieldset>
+        )}
+        <div className="form-buttons">
+          {game && (
+            <button
+              className="danger-button"
+              type="button"
+              onClick={() => void remove()}
+            >
+              Удалить
+            </button>
+          )}
+          <button className="secondary-button" type="button" onClick={onClose}>
+            Отмена
+          </button>
+          <button className="primary-button" disabled={saving}>
+            {saving ? "Сохраняем…" : "Сохранить"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
 }
 
-function GameSessionForm({ session, library, onClose, onSaved }: { session?: GameSession; library: GameLibrary[]; onClose: () => void; onSaved: () => void }) {
-  const { showToast } = useToast()
-  const localDateTime = (value: string) => { const date = new Date(value); return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16) }
-  const [libraryId, setLibraryId] = useState(session?.libraryEntryId ?? library[0]?.id ?? 0)
-  const [input, setInput] = useState<GameSessionInput>({ startedAt: session?.startedAt ?? new Date().toISOString(), durationMinutes: session?.durationMinutes ?? 60, note: session?.note ?? null, unlockedAchievements: session?.unlockedAchievements ?? 0, earnedGamerscore: session?.earnedGamerscore ?? 0, achievementGroupId: session?.achievementGroupId ?? null })
-  const [groups, setGroups] = useState<XboxAchievementGroup[]>([])
-  const [saving, setSaving] = useState(false); const [error, setError] = useState<string | null>(null)
-  const selectedEntry = library.find((entry) => entry.id === libraryId); const achievementsEnabled = selectedEntry ? isXbox(selectedEntry.platform.code) : false
-  useEffect(() => { if (!achievementsEnabled) { setGroups([]); setInput((current) => ({ ...current, achievementGroupId: null })); return }; getXboxAchievementGroups(libraryId).then((values) => { setGroups(values); setInput((current) => ({ ...current, achievementGroupId: values.some((value) => value.id === current.achievementGroupId) ? current.achievementGroupId : values.find((value) => value.groupType === 'BASE_GAME')?.id ?? null })) }).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Не удалось загрузить группы достижений')) }, [achievementsEnabled, libraryId])
-  const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); setError(null); try { const normalizedInput = input.unlockedAchievements === 0 && input.earnedGamerscore === 0 ? { ...input, achievementGroupId: null } : input; if (session) await updateGameSession(session.id, normalizedInput); else await createGameSession(libraryId, normalizedInput); showToast(session ? 'Игровая сессия обновлена' : 'Игровая сессия добавлена'); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить игровую сессию') } finally { setSaving(false) } }
-  const remove = async () => { if (!session || !window.confirm('Удалить игровую сессию?')) return; try { await deleteGameSession(session.id); showToast('Игровая сессия удалена'); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить игровую сессию') } }
-  return <div className="modal-backdrop"><form className="habit-form session-form" onSubmit={(event) => void submit(event)}><div className="form-heading"><div><p className="eyebrow">Игровое время</p><h2>{session ? 'Редактирование сессии' : 'Новая сессия'}</h2></div><button type="button" onClick={onClose}>×</button></div>{error && <div className="form-error">{error}</div>}<label>Игра и платформа<select disabled={Boolean(session)} value={libraryId} onChange={(event) => setLibraryId(Number(event.target.value))}>{library.map((entry) => <option key={entry.id} value={entry.id}>{entry.title} · {entry.platform.name} · {entry.source.name}</option>)}</select></label><div className="form-grid"><label>Начало<input required type="datetime-local" value={localDateTime(input.startedAt)} onChange={(event) => setInput((current) => ({ ...current, startedAt: new Date(event.target.value).toISOString() }))} /></label><label>Продолжительность, минут<input required min="1" type="number" value={input.durationMinutes} onChange={(event) => setInput((current) => ({ ...current, durationMinutes: Number(event.target.value) }))} /></label></div>{achievementsEnabled && <fieldset className="xbox-fields"><legend>Получено за эту сессию</legend><label>Раздел достижений<select required value={input.achievementGroupId ?? ''} onChange={(event) => setInput((current) => ({ ...current, achievementGroupId: Number(event.target.value) }))}>{groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label><div className="form-grid"><label>Достижений<input min="0" type="number" value={input.unlockedAchievements} onChange={(event) => setInput((current) => ({ ...current, unlockedAchievements: Number(event.target.value) }))} /></label><label>Gamerscore<input min="0" type="number" value={input.earnedGamerscore} onChange={(event) => setInput((current) => ({ ...current, earnedGamerscore: Number(event.target.value) }))} /></label></div></fieldset>}<label>Заметка<textarea rows={3} value={input.note ?? ''} onChange={(event) => setInput((current) => ({ ...current, note: event.target.value || null }))} /></label><div className="form-buttons">{session && <button className="danger-button" type="button" onClick={() => void remove()}>Удалить</button>}<button className="secondary-button" type="button" onClick={onClose}>Отмена</button><button className="primary-button" disabled={saving}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div></form></div>
+function GameSessionForm({
+  session,
+  library,
+  onClose,
+  onSaved,
+}: {
+  session?: GameSession;
+  library: GameLibrary[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { showToast } = useToast();
+  const localDateTime = (value: string) => {
+    const date = new Date(value);
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+      .toISOString()
+      .slice(0, 16);
+  };
+  const [libraryId, setLibraryId] = useState(
+    session?.libraryEntryId ?? library[0]?.id ?? 0,
+  );
+  const [input, setInput] = useState<GameSessionInput>({
+    startedAt: session?.startedAt ?? new Date().toISOString(),
+    durationMinutes: session?.durationMinutes ?? 60,
+    note: session?.note ?? null,
+    unlockedAchievements: session?.unlockedAchievements ?? 0,
+    earnedGamerscore: session?.earnedGamerscore ?? 0,
+    achievementGroupId: session?.achievementGroupId ?? null,
+  });
+  const [groups, setGroups] = useState<XboxAchievementGroup[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const selectedEntry = library.find((entry) => entry.id === libraryId);
+  const achievementsEnabled = selectedEntry
+    ? isXbox(selectedEntry.platform.code)
+    : false;
+  useEffect(() => {
+    if (!achievementsEnabled) {
+      setGroups([]);
+      setInput((current) => ({ ...current, achievementGroupId: null }));
+      return;
+    }
+    getXboxAchievementGroups(libraryId)
+      .then((values) => {
+        setGroups(values);
+        setInput((current) => ({
+          ...current,
+          achievementGroupId: values.some(
+            (value) => value.id === current.achievementGroupId,
+          )
+            ? current.achievementGroupId
+            : (values.find((value) => value.groupType === "BASE_GAME")?.id ??
+              null),
+        }));
+      })
+      .catch((reason: unknown) =>
+        setError(
+          reason instanceof Error
+            ? reason.message
+            : "Не удалось загрузить группы достижений",
+        ),
+      );
+  }, [achievementsEnabled, libraryId]);
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const normalizedInput =
+        input.unlockedAchievements === 0 && input.earnedGamerscore === 0
+          ? { ...input, achievementGroupId: null }
+          : input;
+      if (session) await updateGameSession(session.id, normalizedInput);
+      else await createGameSession(libraryId, normalizedInput);
+      showToast(
+        session ? "Игровая сессия обновлена" : "Игровая сессия добавлена",
+      );
+      onSaved();
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось сохранить игровую сессию",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+  const remove = async () => {
+    if (!session || !window.confirm("Удалить игровую сессию?")) return;
+    try {
+      await deleteGameSession(session.id);
+      showToast("Игровая сессия удалена");
+      onSaved();
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось удалить игровую сессию",
+      );
+    }
+  };
+  return (
+    <div className="modal-backdrop">
+      <form
+        className="habit-form session-form"
+        onSubmit={(event) => void submit(event)}
+      >
+        <div className="form-heading">
+          <div>
+            <p className="eyebrow">Игровое время</p>
+            <h2>{session ? "Редактирование сессии" : "Новая сессия"}</h2>
+          </div>
+          <button type="button" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        {error && <div className="form-error">{error}</div>}
+        <label>
+          Игра и платформа
+          <select
+            disabled={Boolean(session)}
+            value={libraryId}
+            onChange={(event) => setLibraryId(Number(event.target.value))}
+          >
+            {library.map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.title} · {entry.platform.name} · {entry.source.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="form-grid">
+          <label>
+            Начало
+            <input
+              required
+              type="datetime-local"
+              value={localDateTime(input.startedAt)}
+              onChange={(event) =>
+                setInput((current) => ({
+                  ...current,
+                  startedAt: new Date(event.target.value).toISOString(),
+                }))
+              }
+            />
+          </label>
+          <label>
+            Продолжительность, минут
+            <input
+              required
+              min="1"
+              type="number"
+              value={input.durationMinutes}
+              onChange={(event) =>
+                setInput((current) => ({
+                  ...current,
+                  durationMinutes: Number(event.target.value),
+                }))
+              }
+            />
+          </label>
+        </div>
+        {achievementsEnabled && (
+          <fieldset className="xbox-fields">
+            <legend>Получено за эту сессию</legend>
+            <label>
+              Раздел достижений
+              <select
+                required
+                value={input.achievementGroupId ?? ""}
+                onChange={(event) =>
+                  setInput((current) => ({
+                    ...current,
+                    achievementGroupId: Number(event.target.value),
+                  }))
+                }
+              >
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="form-grid">
+              <label>
+                Достижений
+                <input
+                  min="0"
+                  type="number"
+                  value={input.unlockedAchievements}
+                  onChange={(event) =>
+                    setInput((current) => ({
+                      ...current,
+                      unlockedAchievements: Number(event.target.value),
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Gamerscore
+                <input
+                  min="0"
+                  type="number"
+                  value={input.earnedGamerscore}
+                  onChange={(event) =>
+                    setInput((current) => ({
+                      ...current,
+                      earnedGamerscore: Number(event.target.value),
+                    }))
+                  }
+                />
+              </label>
+            </div>
+          </fieldset>
+        )}
+        <label>
+          Заметка
+          <textarea
+            rows={3}
+            value={input.note ?? ""}
+            onChange={(event) =>
+              setInput((current) => ({
+                ...current,
+                note: event.target.value || null,
+              }))
+            }
+          />
+        </label>
+        <div className="form-buttons">
+          {session && (
+            <button
+              className="danger-button"
+              type="button"
+              onClick={() => void remove()}
+            >
+              Удалить
+            </button>
+          )}
+          <button className="secondary-button" type="button" onClick={onClose}>
+            Отмена
+          </button>
+          <button className="primary-button" disabled={saving}>
+            {saving ? "Сохраняем…" : "Сохранить"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
 }

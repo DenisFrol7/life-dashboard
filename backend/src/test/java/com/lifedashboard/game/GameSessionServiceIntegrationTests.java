@@ -51,13 +51,15 @@ class GameSessionServiceIntegrationTests {
             assertEquals(13, xboxProgress.get(libraryId).unlockedAchievements());
             assertEquals(270, xboxProgress.get(libraryId).earnedGamerscore());
             Instant completedAt = startedAt.plusSeconds(10_000);
-            gameLibrary.updateProfile(contentId, new LibraryEntryRequest(UserContentStatus.COMPLETED,
-                    null, false, null, completedAt, null));
+            gameLibrary.update(libraryId, new GameLibraryRequest(platformId, sourceId,
+                    GameAccessType.OWNED, null, null, null, 600L,
+                    UserContentStatus.COMPLETED, startedAt, completedAt));
             assertEquals(1, playthroughs.getAll(libraryId).size());
             assertEquals(completedAt, playthroughs.getAll(libraryId).getFirst().completedAt());
             Instant correctedAt = completedAt.plusSeconds(86_400);
-            gameLibrary.updateProfile(contentId, new LibraryEntryRequest(UserContentStatus.COMPLETED,
-                    null, false, null, correctedAt, null));
+            gameLibrary.update(libraryId, new GameLibraryRequest(platformId, sourceId,
+                    GameAccessType.OWNED, null, null, null, 600L,
+                    UserContentStatus.COMPLETED, startedAt, correctedAt));
             assertEquals(1, playthroughs.getAll(libraryId).size());
             assertEquals(correctedAt, playthroughs.getAll(libraryId).getFirst().completedAt());
             var playthrough = playthroughs.create(libraryId, new GamePlaythroughRequest(startedAt, "Completed"));
