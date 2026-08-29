@@ -19,6 +19,7 @@ public class ViewingController {private final ViewingService service;private fin
  @DeleteMapping("/episodes/{id}") public ResponseEntity<Void> deleteEpisode(@PathVariable Long id){service.deleteEpisode(id);return ResponseEntity.noContent().build();}
  @PostMapping("/episodes/{id}/watches") public ResponseEntity<WatchResponse> watchEpisode(@PathVariable Long id,@RequestBody(required=false) WatchRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.watchEpisode(id,r));}
  @GetMapping("/episodes/{id}/watches") public List<WatchResponse> episodeHistory(@PathVariable Long id){return service.episodeHistory(id);}
+ @PutMapping("/episode-watches/{watchId}") public WatchResponse updateEpisodeWatch(@PathVariable Long watchId,@RequestBody WatchRequest r){return service.updateEpisodeWatch(watchId,r);}
  @PostMapping("/{id}/watches") public ResponseEntity<WatchResponse> watchMovie(@PathVariable Long id,@RequestBody(required=false) WatchRequest r){return ResponseEntity.status(HttpStatus.CREATED).body(service.watchMovie(id,r));}
  @GetMapping("/{id}/watches") public List<WatchResponse> movieHistory(@PathVariable Long id){return service.movieHistory(id);}
  @PutMapping("/watches/{watchId}") public WatchResponse updateMovieWatch(@PathVariable Long watchId,@RequestBody WatchRequest r){return service.updateMovieWatch(watchId,r);}

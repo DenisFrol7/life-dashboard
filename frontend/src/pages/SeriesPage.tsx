@@ -61,7 +61,7 @@ export function SeriesPage() {
       ['COMPLETED', 'Просмотрено'],
       ['PAUSED', 'На паузе'],
       ['DROPPED', 'Брошено'],
-    ] as const).map(([value, label]) => <button key={value || 'all'} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><div className="journal-search series-search"><span><Search /></span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти сериал" /></div><button className="secondary-button icon-button series-import-button" disabled={catalogUpdating} onClick={() => void updateKinopoiskCatalog()}><RefreshCw />{catalogUpdating ? 'Обновляем…' : 'Обновить из Кинопоиска'}</button><button className="secondary-button icon-button series-import-button" onClick={() => setImporting(true)}><FileSpreadsheet />Импорт MyShows</button><button className="primary-button series-add-button media-add-button icon-button" onClick={() => setEditing('new')}><Plus />Добавить сериал</button></section>
+    ] as const).map(([value, label]) => <button key={value || 'all'} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><div className="journal-search series-search"><span><Search /></span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти сериал" /></div><button className="secondary-button icon-button series-import-button" onClick={() => setImporting(true)}><FileSpreadsheet />Импорт MyShows</button><button className="primary-button series-add-button media-add-button icon-button" onClick={() => setEditing('new')}><Plus />Добавить сериал</button></section>
     <section className="series-catalog-layout"><div className="series-catalog-main">
     {error && <div className="notice error movies-error"><strong>Ошибка</strong><span>{error}</span></div>}
     {catalogUpdate && <div className="notice"><strong>Обновление Кинопоиска</strong><span>{catalogUpdate.rateLimited ? 'Дневная квота закончилась. Продолжите после её сброса.' : catalogUpdate.remaining ? `Обновлено в этом пакете: ${catalogUpdate.updated}. Осталось сериалов: ${catalogUpdate.remaining}.` : 'Все связанные сериалы обновлены.'}</span></div>}
@@ -92,7 +92,7 @@ export function SeriesPage() {
       <div><dt>Брошено</dt><dd>{libraryEntries.filter((item) => item.status === 'DROPPED').length}</dd></div>
       <div className="series-stat-total"><dt>Просмотрено эпизодов</dt><dd>{watchedEpisodeCount}</dd></div>
       <div><dt>Общее время</dt><dd>{watchTime}</dd></div>
-    </dl></aside></section>
+    </dl><button className="secondary-button icon-button series-catalog-update" disabled={catalogUpdating} onClick={() => void updateKinopoiskCatalog()}><RefreshCw />{catalogUpdating ? 'Обновляем…' : 'Обновить каталог'}</button></aside></section>
     {editing && <SeriesForm series={editing === 'new' ? undefined : editing} library={editing === 'new' ? undefined : library[editing.id]} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void load() }} />}
     {importing && <MyShowsImportDialog onClose={() => setImporting(false)} onImported={() => { setImporting(false); void load() }} />}
   </div>

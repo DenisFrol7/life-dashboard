@@ -49,9 +49,9 @@ export function AnimeDetailsPage() {
   const watched = useMemo(() => episodes.filter((episode) => episode.watches.length), [episodes])
   const progress = episodes.length ? watched.length / episodes.length * 100 : 0
   const lastWatch = useMemo(() => {
-    const manual = watched.flatMap((episode) => episode.watches.filter((watch) => !watch.bulk).map((watch) => ({ occurredAt: watch.watchedAt, label: `S${seasons.find((season) => season.id === episode.seasonId)?.seasonNumber} · E${episode.episodeNumber}`, detail: episode.title })))
-    const completed = seasons.filter((season) => season.completion?.completedAt).map((season) => ({ occurredAt: season.completion!.completedAt!, label: `Сезон ${season.seasonNumber}`, detail: `Просмотрено ${season.completion!.episodeCount} эпизодов` }))
-    return [...manual, ...completed].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))[0]
+    const manual = watched.flatMap((episode) => { const seasonNumber = seasons.find((season) => season.id === episode.seasonId)?.seasonNumber ?? 0; return episode.watches.filter((watch) => !watch.bulk).map((watch) => ({ occurredAt: watch.watchedAt, seasonNumber, episodeNumber: episode.episodeNumber, label: `S${seasonNumber} · E${episode.episodeNumber}`, detail: episode.title })) })
+    const completed = seasons.filter((season) => season.completion?.completedAt).map((season) => ({ occurredAt: season.completion!.completedAt!, seasonNumber: season.seasonNumber, episodeNumber: season.completion!.episodeCount, label: `Сезон ${season.seasonNumber}`, detail: `Просмотрено ${season.completion!.episodeCount} эпизодов` }))
+    return [...manual, ...completed].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt) || b.seasonNumber - a.seasonNumber || b.episodeNumber - a.episodeNumber)[0]
   }, [seasons, watched])
   const markEpisode = async (episode: Episode) => { try { await watchEpisode(episode.id); await load() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось отметить эпизод') } }
   const clearSeason = async (season: Season) => { if (!window.confirm(`Снять все отметки просмотра с сезона ${season.seasonNumber}?`)) return; try { await clearSeasonWatches(season.id); await load() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось снять отметки') } }

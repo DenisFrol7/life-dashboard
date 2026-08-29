@@ -78,7 +78,8 @@ public class KinopoiskCatalogClient {
         return new KinopoiskCatalogData(text(details, "nameRu"), text(details, "nameOriginal"),
                 details.path("year").isMissingNode() ? null : details.path("year").asInt(),
                 text(details, "description"), text(details, "posterUrl"), String.join(", ", genres),
-                text(details, "serialStatus"), List.copyOf(seasons));
+                text(details, "productionStatus"), details.path("completed").asBoolean(false),
+                List.copyOf(seasons));
     }
 
     private JsonNode requestWithRetry(String title) {

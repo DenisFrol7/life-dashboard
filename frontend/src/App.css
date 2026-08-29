@@ -748,6 +748,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .series-statistics dt { color: #6e797d; font-size: 13px; font-weight: 600; line-height: 1.35; }
 .series-statistics dd { margin: 0; color: #3e5f76; font-family: Georgia, serif; font-size: 16px; font-weight: 700; text-align: right; }
 .series-statistics .series-stat-total { margin-top: 8px; border-top: 0; }
+.series-catalog-update { width: 100%; justify-content: center; margin-top: 18px; }
 .series-list-card { position: relative; display: grid; grid-template-columns: 132px minmax(0, 1fr) 150px; gap: 15px; min-height: 94px; padding: 8px; border-bottom: 1px solid #dfe3e5; background: var(--paper); }
 .series-list-cover { position: relative; display: grid; place-items: center; width: 132px; height: 82px; overflow: hidden; border: 0; border-radius: 5px; color: #ffffff35; background: linear-gradient(145deg, #3d455f, #202536) center/cover; cursor: pointer; font-family: Georgia, serif; font-size: 32px; font-weight: 800; }
 .series-list-cover[style] { background-color: transparent; background-position: center; background-repeat: no-repeat; background-size: contain; }

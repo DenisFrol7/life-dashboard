@@ -186,6 +186,14 @@ public class ViewingService {
     }
 
     @Transactional
+    public WatchResponse updateEpisodeWatch(Long id, WatchRequest request) {
+        EpisodeWatch watch = episodeWatch(id);
+        watch.changeWatchedAt(time(request));
+        refresh(watch.getEpisode().getSeason().getContent());
+        return response(watch);
+    }
+
+    @Transactional
     public WatchResponse watchMovie(Long id, WatchRequest request) {
         ContentItem content = item(id);
         if (content.getItemType() != ContentType.MOVIE) throw new InvalidRequestException("Movie watch history is only available for MOVIE");
@@ -245,6 +253,7 @@ public class ViewingService {
     private ContentItem item(Long id) { return items.findById(id).orElseThrow(() -> new ResourceNotFoundException("Content with id " + id + " was not found")); }
     private ContentSeason season(Long id) { return seasons.findById(id).orElseThrow(() -> new ResourceNotFoundException("Season with id " + id + " was not found")); }
     private ContentEpisode episode(Long id) { return episodes.findById(id).orElseThrow(() -> new ResourceNotFoundException("Episode with id " + id + " was not found")); }
+    private EpisodeWatch episodeWatch(Long id) { return episodeWatches.findByIdAndUserId(id, userId).orElseThrow(() -> new ResourceNotFoundException("Episode watch with id " + id + " was not found")); }
     private MovieWatch movieWatch(Long id) { return movieWatches.findByIdAndUserId(id, userId).orElseThrow(() -> new ResourceNotFoundException("Movie watch with id " + id + " was not found")); }
     private User user() { return users.findById(userId).orElseThrow(() -> new ResourceNotFoundException("Default user was not found")); }
     private Instant time(WatchRequest request) { return request == null || request.watchedAt() == null ? Instant.now() : request.watchedAt(); }

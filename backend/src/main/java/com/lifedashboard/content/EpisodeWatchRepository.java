@@ -1,6 +1,7 @@
 package com.lifedashboard.content;
 import org.springframework.data.jpa.repository.*; import org.springframework.data.repository.query.Param; import java.util.*;
 public interface EpisodeWatchRepository extends JpaRepository<EpisodeWatch,Long>{
+ Optional<EpisodeWatch> findByIdAndUserId(Long id,Long userId);
  List<EpisodeWatch> findAllByEpisodeIdAndUserIdOrderByWatchNumber(Long e,Long u);
  @Query("select w from EpisodeWatch w join fetch w.episode e where w.user.id=:u and e.season.content.id=:c order by e.id,w.watchNumber")
  List<EpisodeWatch> findAllByUserIdAndContentId(@Param("u") Long userId,@Param("c") Long contentId);

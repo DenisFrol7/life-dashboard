@@ -155,7 +155,7 @@ public class MyShowsImportService {
         List<ContentItem> all = contentRepository
                 .findAllByItemTypeAndKinopoiskFilmIdIsNotNullOrderByTitleAsc(ContentType.SERIES);
         List<ContentItem> pending = all.stream()
-                .filter(item -> item.getCoverUrl() == null || item.getCoverUrl().isBlank())
+                .filter(this::needsCatalogRefresh)
                 .limit(limit).toList();
         if (pending.isEmpty()) return new KinopoiskEnrichmentResult(all.size(), 0, 0, false, null);
         Path backup = dataTransfer.createAutomaticBackup();
@@ -174,8 +174,13 @@ public class MyShowsImportService {
                 throw exception;
             }
         }
-        int remaining = (int) all.stream().filter(item -> item.getCoverUrl() == null || item.getCoverUrl().isBlank()).count() - updated;
+        int remaining = (int) all.stream().filter(this::needsCatalogRefresh).count() - updated;
         return new KinopoiskEnrichmentResult(all.size(), updated, Math.max(0, remaining), rateLimited, backup.toString());
+    }
+
+    private boolean needsCatalogRefresh(ContentItem item) {
+        return item.getCoverUrl() == null || item.getCoverUrl().isBlank()
+                || item.getReleaseStatus() == ReleaseStatus.RELEASED;
     }
 
     private void applyCatalog(ContentItem item, KinopoiskCatalogData catalog) {
@@ -184,7 +189,7 @@ public class MyShowsImportService {
                 item.getFormat() == null ? ContentFormat.LIVE_ACTION : item.getFormat(),
                 catalog.year() == null || catalog.year() == 0 ? item.getReleaseYear() : catalog.year(),
                 blankToNull(catalog.description()), blankToNull(catalog.coverUrl()), item.getDurationMinutes(),
-                mapReleaseStatus(catalog.status()), blankToNull(catalog.genre()), item.getDeveloper(),
+                mapReleaseStatus(catalog.status(), catalog.completed()), blankToNull(catalog.genre()), item.getDeveloper(),
                 item.getReleaseDate(), false);
         contentRepository.save(item);
         Map<Integer, ContentSeason> currentSeasons = new HashMap<>();
@@ -215,8 +220,8 @@ public class MyShowsImportService {
         }
     }
 
-    private ReleaseStatus mapReleaseStatus(String value) {
-        if (value == null) return ReleaseStatus.RELEASED;
+    private ReleaseStatus mapReleaseStatus(String value, boolean completed) {
+        if (value == null) return completed ? ReleaseStatus.ENDED : ReleaseStatus.ONGOING;
         return switch (value) {
             case "ONGOING", "FILMING", "PRE_PRODUCTION", "POST_PRODUCTION" -> ReleaseStatus.ONGOING;
             case "ANNOUNCED" -> ReleaseStatus.ANNOUNCED;
