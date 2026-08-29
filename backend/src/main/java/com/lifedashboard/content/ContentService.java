@@ -15,12 +15,17 @@ public class ContentService {
     private final ContentItemRepository contentRepository;
     private final UserContentRepository libraryRepository;
     private final UserRepository userRepository;
+    private final ContentEpisodeRepository episodeRepository;
+    private final EpisodeWatchRepository episodeWatchRepository;
     private final long defaultUserId;
 
     public ContentService(ContentItemRepository contentRepository, UserContentRepository libraryRepository,
-                          UserRepository userRepository, @Value("${app.default-user-id}") long defaultUserId) {
+                          UserRepository userRepository, ContentEpisodeRepository episodeRepository,
+                          EpisodeWatchRepository episodeWatchRepository,
+                          @Value("${app.default-user-id}") long defaultUserId) {
         this.contentRepository = contentRepository; this.libraryRepository = libraryRepository;
-        this.userRepository = userRepository; this.defaultUserId = defaultUserId;
+        this.userRepository = userRepository; this.episodeRepository = episodeRepository;
+        this.episodeWatchRepository = episodeWatchRepository; this.defaultUserId = defaultUserId;
     }
 
     @Transactional
@@ -38,7 +43,10 @@ public class ContentService {
     public ContentItemResponse get(Long id) { return toResponse(findContent(id)); }
     @Transactional
     public ContentItemResponse update(Long id, ContentItemRequest request) {
-        validateFormat(request); ContentItem item = findContent(id); apply(item, request); return toResponse(item);
+        validateFormat(request); ContentItem item = findContent(id); apply(item, request);
+        libraryRepository.findByUserIdAndContentId(defaultUserId, id)
+                .ifPresent(entry -> reconcileFullyWatchedStatus(item, entry));
+        return toResponse(item);
     }
     @Transactional
     public void delete(Long id) { contentRepository.delete(findContent(id)); }
@@ -50,6 +58,7 @@ public class ContentService {
                 .orElseGet(() -> new UserContent(findUser(), findContent(contentId)));
         entry.update(request.status(), request.rating(), request.favorite(), request.startedAt(),
                 request.completedAt(), normalize(request.personalNote()));
+        reconcileFullyWatchedStatus(entry.getContent(), entry);
         return toResponse(libraryRepository.save(entry));
     }
     public List<LibraryEntryResponse> getLibrary(UserContentStatus status) {
@@ -80,6 +89,14 @@ public class ContentService {
         item.update(r.title().trim(), normalize(r.originalTitle()), r.itemType(), r.format(), r.releaseYear(),
                 normalize(r.description()), normalize(r.coverUrl()), r.durationMinutes(), r.releaseStatus(),
                 normalize(r.genre()), normalize(r.developer()), r.releaseDate(), Boolean.TRUE.equals(r.xboxPlayAnywhere()));
+    }
+    private void reconcileFullyWatchedStatus(ContentItem item, UserContent entry) {
+        if (item.getItemType() != ContentType.SERIES && item.getItemType() != ContentType.ANIME) return;
+        long total = episodeRepository.countByContent(item.getId());
+        if (total == 0 || episodeWatchRepository.watchedCount(defaultUserId, item.getId()) != total) return;
+        if (item.getReleaseStatus() == ReleaseStatus.ONGOING || item.getReleaseStatus() == ReleaseStatus.ANNOUNCED)
+            entry.changeStatus(UserContentStatus.PAUSED, null);
+        else entry.changeStatus(UserContentStatus.COMPLETED, entry.getCompletedAt());
     }
     private ContentItem findContent(Long id) { return contentRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Content with id " + id + " was not found")); }

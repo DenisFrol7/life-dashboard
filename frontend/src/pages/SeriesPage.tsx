@@ -75,7 +75,7 @@ export function SeriesPage() {
         <button className="series-list-cover" onClick={() => navigate(`/series/${item.id}`)} style={item.coverUrl ? { backgroundImage: `url(${item.coverUrl})` } : undefined}><span>{item.title.slice(0, 1)}</span>{entry?.favorite && <i>♥</i>}</button>
         <div className="series-list-content">
           <div className="series-list-heading"><button onClick={() => navigate(`/series/${item.id}`)}>{item.title}</button><span className={`release-badge ${item.releaseStatus.toLowerCase()}`}>{releaseLabels[item.releaseStatus]}</span></div>
-          {item.originalTitle && <p>{item.originalTitle}</p>}
+          <p aria-hidden={!item.originalTitle}>{item.originalTitle || '\u00a0'}</p>
           <div className="movie-list-meta"><span>{item.releaseYear ?? '—'}</span>{item.genre && <span>{item.genre}</span>}<span>{formatSeasonCount(data?.seasonCount ?? 0)}</span></div>
           <div className="series-list-inline-status">{entry ? <span className={`media-status ${entry.status.toLowerCase()}`}>{statusLabels[entry.status]}</span> : <span className="media-status not_started">Не в библиотеке</span>}</div>
           <div className="series-list-progress-row"><strong>{watched} <small>из {total}</small></strong><div className="series-list-progress"><span style={{ width: `${percent}%` }} /></div></div>

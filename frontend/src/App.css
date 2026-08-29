@@ -909,7 +909,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .series-count-card { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .series-count-card h2 { grid-column: 1/-1; }
 .series-count-card strong { color: var(--accent-strong); font-size: 25px; }
-.series-count-card small { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; font-weight: 500; }
+.series-count-card small { display: block; margin-top: 3px; color: var(--muted); font-size: 13px; font-weight: 600; }
 .series-last-watch { display: grid; align-content: start; gap: 5px; }
 .series-last-watch strong { color: var(--accent-strong); font-size: 18px; }
 .series-last-watch span { color: var(--ink); font-size: 12px; }
@@ -944,6 +944,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .movie-main-info { padding: 8px 12px; }
 .movie-main-info h1 { margin: 7px 0; color: var(--ink); font-family: Georgia,serif; font-size: clamp(25px,3vw,38px); }
 .movie-main-info h2 { margin: 0 0 25px; color: var(--muted); font-size: 14px; font-weight: 500; }
+.movie-main-info .original-title-slot { min-height: 17px; line-height: 17px; }
 .movie-main-info dl { display: grid; gap: 15px; margin: 24px 0 0; }
 .movie-main-info dl div { display: grid; gap: 4px; }
 .movie-main-info dt,.movie-personal-info small { color: var(--muted); font-size: 10px; }
@@ -1067,6 +1068,14 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .movie-details-page .movie-main-info dd,
 .book-details-page .book-main-info dd,
 .game-details-page .game-main-info dd { font-size: 16px; }
+.series-details-page .movie-main-info dt,
+.movie-details-page .movie-main-info dt,
+.book-details-page .book-main-info dt,
+.game-details-page .game-main-info dt { font-size: 16px; font-weight: 700; }
+.series-details-page .movie-personal-info small,
+.movie-details-page .movie-personal-info small,
+.book-details-page .book-personal-info small,
+.game-details-page .game-personal-info small { font-size: 16px; font-weight: 700; }
 .movie-details-page .movie-personal-info strong,
 .book-details-page .book-personal-info strong,
 .game-details-page .detail-status { font-size: 20px; }

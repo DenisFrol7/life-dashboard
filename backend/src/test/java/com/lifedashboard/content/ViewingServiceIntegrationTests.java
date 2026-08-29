@@ -46,6 +46,10 @@ class ViewingServiceIntegrationTests {
 
             contentService.update(contentId, new ContentItemRequest(SERIES, null, ContentType.SERIES,
                     ContentFormat.LIVE_ACTION, 2024, null, null, null, ReleaseStatus.ENDED));
+            assertEquals(UserContentStatus.COMPLETED, library(contentId).getStatus());
+            contentService.putInLibrary(contentId, new LibraryEntryRequest(UserContentStatus.PAUSED,
+                    null, false, null, null, null));
+            assertEquals(UserContentStatus.COMPLETED, library(contentId).getStatus());
             viewingService.watchEpisode(second, new WatchRequest(null));
             assertEquals(UserContentStatus.COMPLETED, library(contentId).getStatus());
             assertEquals(2, viewingService.episodeHistory(second).size());
