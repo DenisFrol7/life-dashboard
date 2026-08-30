@@ -9,9 +9,14 @@ export type LibraryEntry = { id: number; content: Movie; status: LibraryStatus; 
 export type LibraryInput = Omit<LibraryEntry, 'id' | 'content'>
 export type Watch = { id: number; targetId: number; watchedAt: string; watchNumber: number; bulk: boolean }
 export type MovieCatalogItem = Omit<Movie, 'itemType' | 'xboxPlayAnywhere'> & { libraryId: number | null; userStatus: LibraryStatus | null; rating: number | null; favorite: boolean; startedAt: string | null; completedAt: string | null; personalNote: string | null; watchCount: number; watchedMinutes: number }
+export type KinopoiskMovieCandidate = { filmId: number; nameRu: string | null; nameOriginal: string | null; year: string | null; posterUrlPreview: string | null; existingContentId: number | null }
+export type KinopoiskMovieDetails = { filmId: number; title: string; originalTitle: string | null; format: ContentFormat; releaseYear: number | null; description: string | null; coverUrl: string | null; durationMinutes: number | null; releaseStatus: ReleaseStatus; genre: string | null; existingContentId: number | null }
 
 export const getMovies = () => apiRequest<Movie[]>('/api/content?type=MOVIE')
 export const getMovieCatalog = () => apiRequest<MovieCatalogItem[]>('/api/movies')
+export const searchKinopoiskMovies = (query: string) => apiRequest<KinopoiskMovieCandidate[]>(`/api/movies/kinopoisk/search?query=${encodeURIComponent(query)}`)
+export const previewKinopoiskMovie = (filmId: number) => apiRequest<KinopoiskMovieDetails>(`/api/movies/kinopoisk/${filmId}`)
+export const createKinopoiskMovie = (filmId: number, input: MovieInput) => apiRequest<Movie>(`/api/movies/kinopoisk/${filmId}`, { method: 'POST', body: JSON.stringify(input) })
 export const getMovie = (id: number) => apiRequest<Movie>(`/api/content/${id}`)
 export const createMovie = (input: MovieInput) => apiRequest<Movie>('/api/content', { method: 'POST', body: JSON.stringify(input) })
 export const updateMovie = (id: number, input: MovieInput) => apiRequest<Movie>(`/api/content/${id}`, { method: 'PUT', body: JSON.stringify(input) })

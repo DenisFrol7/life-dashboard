@@ -54,6 +54,48 @@ public class KinopoiskCatalogClient {
         }
     }
 
+    public List<MovieCandidate> searchMovies(String title) {
+        if (apiKey.isBlank()) throw new InvalidRequestException("KINOPOISK_API_KEY is not configured");
+        try {
+            JsonNode response = requestWithRetry(title);
+            List<MovieCandidate> result = new ArrayList<>();
+            if (response == null) return result;
+            for (JsonNode film : response.path("films")) {
+                String type = text(film, "type");
+                if (isSeries(type)) continue;
+                result.add(new MovieCandidate(film.path("filmId").asLong(), text(film, "nameRu"),
+                        first(text(film, "nameEn"), text(film, "nameOriginal")), text(film, "year"),
+                        text(film, "posterUrlPreview")));
+                if (result.size() == 8) break;
+            }
+            return List.copyOf(result);
+        } catch (RuntimeException exception) {
+            if (exception instanceof InvalidRequestException invalid) throw invalid;
+            log.warn("Failed to process Kinopoisk movie search for title '{}': {}", title,
+                    exception.toString(), exception);
+            throw new InvalidRequestException("Could not connect to Kinopoisk API");
+        }
+    }
+
+    public MovieDetails getMovie(long filmId) {
+        JsonNode details = requestWithRetry("/api/v2.2/films/" + filmId, null);
+        if (details.path("serial").asBoolean(false) || isSeries(text(details, "type")))
+            throw new InvalidRequestException("Selected Kinopoisk item is a series, not a movie");
+        List<String> genres = new ArrayList<>();
+        for (JsonNode genre : details.path("genres")) {
+            String value = text(genre, "genre");
+            if (value != null) genres.add(value);
+        }
+        return new MovieDetails(filmId, text(details, "nameRu"),
+                first(text(details, "nameOriginal"), text(details, "nameEn")),
+                details.path("year").isMissingNode() ? null : details.path("year").asInt(),
+                text(details, "description"), text(details, "posterUrl"),
+                details.path("filmLength").isMissingNode() || details.path("filmLength").isNull()
+                        ? null : details.path("filmLength").asInt(),
+                String.join(", ", genres), text(details, "productionStatus"),
+                details.path("completed").asBoolean(false));
+    }
+
     public KinopoiskCatalogData getCatalog(long filmId) {
         JsonNode details = requestWithRetry("/api/v2.2/films/" + filmId, null);
         JsonNode seasonsResponse = requestWithRetry("/api/v2.2/films/" + filmId + "/seasons", null);
@@ -137,6 +179,14 @@ public class KinopoiskCatalogClient {
     private boolean isSeries(String type) {
         return type != null && (type.contains("TV_SERIES") || type.contains("MINI_SERIES") || type.contains("TV_SHOW"));
     }
+
+    private String first(String primary, String fallback) { return primary == null ? fallback : primary; }
+
+    public record MovieCandidate(long filmId, String nameRu, String nameOriginal, String year,
+            String posterUrlPreview) {}
+    public record MovieDetails(long filmId, String nameRu, String nameOriginal, Integer year,
+            String description, String posterUrl, Integer durationMinutes, String genre,
+            String productionStatus, boolean completed) {}
 
     private @Nullable String text(JsonNode node, String field) {
         JsonNode value = node.get(field);

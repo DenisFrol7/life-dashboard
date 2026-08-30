@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowLeft, Pencil } from 'lucide-react'
 import {
   deleteMovieWatch,
@@ -25,6 +25,7 @@ const duration = (minutes: number | null) => minutes == null ? '—' : `${Math.f
 
 export function MovieDetailsPage() {
   const id = Number(useParams().id)
+  const navigate = useNavigate()
   const [movie, setMovie] = useState<Movie | null>(null)
   const [library, setLibrary] = useState<LibraryEntry | undefined>()
   const [watches, setWatches] = useState<Watch[]>([])
@@ -58,7 +59,7 @@ export function MovieDetailsPage() {
     </section>
     {movie.description && <section className="detail-card movie-description"><h2>Описание</h2><p>{movie.description}</p></section>}
     <section className="detail-card movie-watch-history"><div className="panel-heading"><div><p className="eyebrow">История</p><h2>Все просмотры</h2></div></div>{watches.length ? <div className="movie-watch-list">{[...watches].reverse().map((item) => <button key={item.id} onClick={() => setWatch(item)}><b>{item.watchNumber}</b><span><strong>Просмотр №{item.watchNumber}</strong><small>{formatDate(item.watchedAt)}</small></span><em>Изменить</em></button>)}</div> : <p className="muted">Просмотров пока нет.</p>}</section>
-    {editing && <MovieForm movie={movie} library={library} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); void load() }} />}
+    {editing && <MovieForm movie={movie} library={library} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); void load() }} onDeleted={() => navigate('/movies', { replace: true })} />}
     {watch && <MovieWatchForm movie={movie} watch={watch === 'new' ? undefined : watch} onClose={() => setWatch(null)} onSaved={() => { setWatch(null); void load() }} />}
   </div>
 }
