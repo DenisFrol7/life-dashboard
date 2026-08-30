@@ -1,5 +1,5 @@
 import { useCallback,useEffect,useMemo,useState } from 'react'
-import { Link,useParams } from 'react-router'
+import { Link,useNavigate,useParams } from 'react-router'
 import { getBook,type Book,type ReadingSession } from '../api/books'
 import { BookForm,ProgressForm,SessionForm } from './BooksPage'
 import { bookFormatLabels,bookStatusLabels,progressText } from './bookUi'
@@ -8,7 +8,7 @@ const formatDate=(value:string)=>new Intl.DateTimeFormat('ru-RU',{dateStyle:'med
 const duration=(minutes:number)=>`${Math.floor(minutes/60)} ч ${minutes%60} мин`
 
 export function BookDetailsPage(){
- const id=Number(useParams().id);const [book,setBook]=useState<Book|null>(null);const [editing,setEditing]=useState(false);const [progress,setProgress]=useState(false);const [session,setSession]=useState<ReadingSession|'new'|null>(null);const [loading,setLoading]=useState(true);const [error,setError]=useState<string|null>(null)
+ const id=Number(useParams().id);const navigate=useNavigate();const [book,setBook]=useState<Book|null>(null);const [editing,setEditing]=useState(false);const [progress,setProgress]=useState(false);const [session,setSession]=useState<ReadingSession|'new'|null>(null);const [loading,setLoading]=useState(true);const [error,setError]=useState<string|null>(null)
  const load=useCallback(async()=>{setLoading(true);setError(null);try{setBook(await getBook(id))}catch(reason){setError(reason instanceof Error?reason.message:'Не удалось загрузить книгу')}finally{setLoading(false)}},[id])
  useEffect(()=>{void load()},[load]);const totalMinutes=useMemo(()=>book?.sessions.reduce((sum,item)=>sum+item.durationMinutes,0)??0,[book])
  if(loading)return <div className="loading"><span/>Загружаем книгу…</div>;if(error||!book)return <div className="notice error"><strong>Не удалось открыть книгу</strong><span>{error}</span></div>
@@ -17,6 +17,6 @@ export function BookDetailsPage(){
  <section className="book-detail-summary"><article className="detail-card book-progress-detail"><div><h2>{audio?'Прогресс прослушивания':'Прогресс чтения'}</h2><strong>{progressText(book)}</strong></div><b>{Math.round(book.progressPercent)}%</b><div className="book-progress"><span style={{width:`${book.progressPercent}%`}}/></div><button className="secondary-button" disabled={!book.libraryEntryId} onClick={()=>setProgress(true)}>Изменить прогресс</button></article><article className="detail-card total-playtime"><h2>Общее время</h2><strong>◷ {duration(totalMinutes)}</strong><small>Сеансов</small><span>{book.sessions.length}</span><button className="primary-button" disabled={!book.libraryEntryId} onClick={()=>setSession('new')}>+ Добавить сеанс</button></article></section>
  {book.description&&<section className="detail-card book-description"><h2>Описание</h2><p>{book.description}</p></section>}
  <section className="detail-card reading-history"><div className="panel-heading"><div><p className="eyebrow">История</p><h2>Сеансы чтения</h2></div></div>{book.sessions.length?<div className="reading-session-list">{book.sessions.map(item=><button key={item.id} onClick={()=>setSession(item)}><span><strong>{formatDate(item.startedAt)}</strong><small>{item.note??'Без заметки'}</small></span><b>{audio?`${item.listenedMinutes} мин прослушано`:`${item.pagesRead} стр.`}</b><em>{duration(item.durationMinutes)}</em></button>)}</div>:<p className="muted">Сеансов пока нет.</p>}</section>
- {editing&&<BookForm book={book} onClose={()=>setEditing(false)} onSaved={()=>{setEditing(false);void load()}}/>}{progress&&<ProgressForm book={book} onClose={()=>setProgress(false)} onSaved={()=>{setProgress(false);void load()}}/>}{session&&<SessionForm book={book} session={session==='new'?undefined:session} onClose={()=>setSession(null)} onSaved={()=>{setSession(null);void load()}}/>}
+ {editing&&<BookForm book={book} onClose={()=>setEditing(false)} onSaved={()=>{setEditing(false);void load()}} onDeleted={()=>navigate('/books',{replace:true})}/>}{progress&&<ProgressForm book={book} onClose={()=>setProgress(false)} onSaved={()=>{setProgress(false);void load()}}/>}{session&&<SessionForm book={book} session={session==='new'?undefined:session} onClose={()=>setSession(null)} onSaved={()=>{setSession(null);void load()}}/>}
  </div>
 }

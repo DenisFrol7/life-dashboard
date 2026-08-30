@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowLeft, Pencil } from 'lucide-react'
 import {
   createEpisode,
@@ -37,6 +37,7 @@ const countLabel = (count: number, one: string, few: string, many: string) => {
 
 export function SeriesDetailsPage() {
   const id = Number(useParams().id)
+  const navigate = useNavigate()
   const [series, setSeries] = useState<Series | null>(null)
   const [library, setLibrary] = useState<SeriesLibraryEntry | undefined>()
   const [seasons, setSeasons] = useState<SeasonDetails[]>([])
@@ -91,7 +92,7 @@ export function SeriesDetailsPage() {
     <section className="detail-card series-season-panel"><div className="panel-heading"><div><p className="eyebrow">Структура сериала</p><h2>Сезоны и эпизоды</h2></div><button className="primary-button" onClick={() => setAddingSeason(true)}>+ Добавить сезон</button></div>
       {seasons.length ? <div className="season-detail-list">{seasons.map((season) => <details key={season.id}><summary><span><b>Сезон {season.seasonNumber}</b>{season.title && <small>{season.title}</small>}{season.completion && <small>{season.completion.completedAt ? `Завершён ${new Intl.DateTimeFormat('ru-RU').format(new Date(season.completion.completedAt))}` : 'Просмотрен · дата неизвестна'}</small>}</span><span className="season-summary-actions"><em>{season.episodes.filter((episode) => episode.watches.length).length} из {season.episodes.length}</em><button type="button" onClick={(event) => { event.preventDefault(); setEditingSeason(season) }}>Изменить</button></span></summary><div className="season-bulk-actions"><button onClick={() => setBulkSeason(season)}>+ Добавить несколько эпизодов</button><button disabled={!season.episodes.length} onClick={() => setCompletingSeason(season)}>✓ Просмотрен весь сезон</button><button disabled={!season.episodes.some((episode) => episode.watches.length)} onClick={() => void clearSeason(season)}>Снять просмотры</button></div><div className="episode-detail-list">{season.episodes.map((episode) => <div className={episode.watches.length ? 'watched' : ''} key={episode.id}><b>{episode.episodeNumber}</b><button className="episode-title-button" onClick={() => setEditingEpisode({ season, episode })}><strong>{episode.title}</strong><small>{episode.releaseDate ? new Intl.DateTimeFormat('ru-RU').format(new Date(episode.releaseDate)) : 'Дата не указана'}{episode.durationMinutes ? ` · ${episode.durationMinutes} мин` : ''}</small></button><em>{episode.watches.length ? `Просмотрено${episode.watches.length > 1 ? ` ×${episode.watches.length}` : ''}` : 'Не просмотрено'}</em><button title="Отметить просмотренным" onClick={() => void markWatched(episode)}>✓</button></div>)}<button className="add-episode-row" onClick={() => setEpisodeSeason(season)}>+ Добавить один эпизод</button></div></details>)}</div> : <p className="muted">Сезонов пока нет.</p>}
     </section>
-    {editing && <SeriesForm series={series} library={library} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); void load() }} />}
+    {editing && <SeriesForm series={series} library={library} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); void load() }} onDeleted={() => navigate('/series', { replace: true })} />}
     {addingSeason && <SeasonForm series={series} onClose={() => setAddingSeason(false)} onSaved={() => { setAddingSeason(false); void load() }} />}
     {editingSeason && <SeasonForm series={series} season={editingSeason} onClose={() => setEditingSeason(null)} onSaved={() => { setEditingSeason(null); void load() }} />}
     {episodeSeason && <EpisodeForm season={episodeSeason} onClose={() => setEpisodeSeason(null)} onSaved={() => { setEpisodeSeason(null); void load() }} />}
