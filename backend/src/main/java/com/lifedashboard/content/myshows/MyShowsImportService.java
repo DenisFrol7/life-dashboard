@@ -174,8 +174,8 @@ public class MyShowsImportService {
                 throw exception;
             }
         }
-        int remaining = (int) all.stream().filter(this::needsCatalogRefresh).count() - updated;
-        return new KinopoiskEnrichmentResult(all.size(), updated, Math.max(0, remaining), rateLimited, backup.toString());
+        int remaining = (int) all.stream().filter(this::needsCatalogRefresh).count();
+        return new KinopoiskEnrichmentResult(all.size(), updated, remaining, rateLimited, backup.toString());
     }
 
     private boolean needsCatalogRefresh(ContentItem item) {

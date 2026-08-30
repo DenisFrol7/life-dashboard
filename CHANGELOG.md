@@ -11,6 +11,13 @@
 - адаптация интерфейса для телефонов;
 - авторизация и поддержка нескольких пользователей.
 
+## [1.2.2] — 2026-08-30
+
+### Исправлено
+
+- остаток пакетного обновления каталога сериалов больше не уменьшается повторно после обработки пакета;
+- сообщение «Все связанные сериалы обновлены» показывается только после фактической обработки всех оставшихся записей.
+
 ## [1.2.1] — 2026-08-30
 
 ### Добавлено
@@ -116,7 +123,8 @@
 - интерфейс ориентирован на настольный компьютер;
 - внешние каталоги и игровые аккаунты не подключены.
 
-[Unreleased]: https://github.com/DenisFrol7/life-dashboard/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/DenisFrol7/life-dashboard/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/DenisFrol7/life-dashboard/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/DenisFrol7/life-dashboard/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/DenisFrol7/life-dashboard/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/DenisFrol7/life-dashboard/compare/v1.1.0...v1.1.1
