@@ -96,6 +96,34 @@ public class KinopoiskCatalogClient {
                 details.path("completed").asBoolean(false));
     }
 
+    public UserRatings getUserRatings(String profileId) {
+        if (apiKey.isBlank()) throw new InvalidRequestException("KINOPOISK_API_KEY is not configured");
+        if (profileId == null || !profileId.matches("[A-Za-z0-9_-]+"))
+            throw new InvalidRequestException("Invalid Kinopoisk profile id");
+        List<UserRating> ratings = new ArrayList<>();
+        int total = 0;
+        int totalPages = 1;
+        for (int page = 1; page <= totalPages; page++) {
+            JsonNode response = requestWithRetry("/api/v1/kp_users/" + profileId + "/votes", "page", page);
+            if (page == 1) {
+                total = response.path("total").asInt();
+                totalPages = response.path("totalPages").asInt(1);
+            }
+            for (JsonNode item : response.path("items")) {
+                List<String> genres = new ArrayList<>();
+                for (JsonNode genre : item.path("genres")) {
+                    String value = text(genre, "genre");
+                    if (value != null) genres.add(value);
+                }
+                ratings.add(new UserRating(item.path("kinopoiskId").asLong(), text(item, "nameRu"),
+                        first(text(item, "nameOriginal"), text(item, "nameEn")),
+                        nullableInt(item, "year"), nullableInt(item, "userRating"), text(item, "type"),
+                        text(item, "posterUrlPreview"), String.join(", ", genres)));
+            }
+        }
+        return new UserRatings(total, totalPages, List.copyOf(ratings));
+    }
+
     public KinopoiskCatalogData getCatalog(long filmId) {
         JsonNode details = requestWithRetry("/api/v2.2/films/" + filmId, null);
         JsonNode seasonsResponse = requestWithRetry("/api/v2.2/films/" + filmId + "/seasons", null);
@@ -129,13 +157,18 @@ public class KinopoiskCatalogClient {
     }
 
     private JsonNode requestWithRetry(String path, String title) {
+        return requestWithRetry(path, title == null ? null : "keyword", title);
+    }
+
+    private JsonNode requestWithRetry(String path, String queryName, Object queryValue) {
         for (int attempt = 0; attempt < 4; attempt++) {
             awaitRequestSlot();
             try {
                 return client.get()
                         .uri(uri -> {
                             var builder = uri.path(path);
-                            if (title != null) builder.queryParam("keyword", title).queryParam("page", 1);
+                            if (queryName != null) builder.queryParam(queryName, queryValue);
+                            if ("keyword".equals(queryName)) builder.queryParam("page", 1);
                             return builder.build();
                         })
                         .header("X-API-KEY", apiKey)
@@ -187,6 +220,14 @@ public class KinopoiskCatalogClient {
     public record MovieDetails(long filmId, String nameRu, String nameOriginal, Integer year,
             String description, String posterUrl, Integer durationMinutes, String genre,
             String productionStatus, boolean completed) {}
+    public record UserRatings(int total, int totalPages, List<UserRating> items) {}
+    public record UserRating(long filmId, String nameRu, String nameOriginal, Integer year,
+            Integer userRating, String type, String posterUrlPreview, String genre) {}
+
+    private Integer nullableInt(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        return value == null || value.isNull() ? null : value.asInt();
+    }
 
     private @Nullable String text(JsonNode node, String field) {
         JsonNode value = node.get(field);

@@ -13,6 +13,7 @@ public interface ContentItemRepository extends JpaRepository<ContentItem, Long> 
     Optional<ContentItem> findByTitle(String title);
     Optional<ContentItem> findByKinopoiskFilmId(Long kinopoiskFilmId);
     List<ContentItem> findAllByItemTypeAndKinopoiskFilmIdIsNotNullOrderByTitleAsc(ContentType itemType);
+    List<ContentItem> findAllByItemTypeAndKinopoiskFilmIdIsNotNullAndKinopoiskEnrichedAtIsNullOrderByIdAsc(ContentType itemType);
 
     @Query(value = """
             select c.id, c.title, c.original_title as "originalTitle", c.format,

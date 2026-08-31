@@ -738,6 +738,19 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .kinopoisk-movie-results > button > span:first-child { display: grid; background: var(--line); place-items: center; }
 .kinopoisk-movie-results strong, .kinopoisk-movie-results small { display: block; }
 .kinopoisk-movie-results small { margin-top: 3px; color: var(--muted); }
+.kinopoisk-ratings-dialog { width: min(920px, calc(100vw - 32px)); }
+.kinopoisk-profile-input { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 12px; }
+.kinopoisk-ratings-list { display: grid; max-height: 440px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; }
+.kinopoisk-ratings-list article { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto 74px; align-items: center; gap: 10px; padding: 8px 10px; border-top: 1px solid var(--line); }
+.kinopoisk-ratings-list article:first-child { border-top: 0; }
+.kinopoisk-ratings-list article.existing { opacity: .62; }
+.kinopoisk-ratings-list img, .kinopoisk-ratings-list article > span { width: 42px; height: 58px; border-radius: 5px; object-fit: cover; }
+.kinopoisk-ratings-list article > span { display: grid; place-items: center; background: var(--line); }
+.kinopoisk-ratings-list strong, .kinopoisk-ratings-list small { display: block; }
+.kinopoisk-ratings-list small { margin-top: 3px; color: var(--muted); }
+.kinopoisk-ratings-list b { color: var(--accent-strong); font-size: 16px; white-space: nowrap; }
+.kinopoisk-ratings-list em { color: var(--muted); font-size: 11px; font-style: normal; text-align: right; }
+.movie-load-more { display: block; min-width: 220px; margin: 18px auto 0; }
 .movie-details-grid input, .movie-details-grid select { width: 100%; padding: 10px 11px; border: 1px solid #d9d9d1; border-radius: 9px; color: var(--ink); background: #fff; font-size: 12px; }
 .library-fields legend { padding: 0 5px; color: #66737c; font-size: 9px; font-weight: 800; }
 .library-fields > label { display: grid; gap: 6px; margin-top: 10px; color: #5f675f; font-size: 10px; font-weight: 800; }

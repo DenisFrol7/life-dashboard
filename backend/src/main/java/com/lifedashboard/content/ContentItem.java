@@ -2,6 +2,7 @@ package com.lifedashboard.content;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.Instant;
 
 @Entity
 @Table(name = "content_items")
@@ -34,6 +35,8 @@ public class ContentItem {
     private boolean xboxPlayAnywhere;
     @Column(name = "kinopoisk_film_id")
     private Long kinopoiskFilmId;
+    @Column(name = "kinopoisk_enriched_at")
+    private Instant kinopoiskEnrichedAt;
     @Enumerated(EnumType.STRING) @Column(name = "release_status", nullable = false, length = 20)
     private ReleaseStatus releaseStatus;
 
@@ -64,4 +67,6 @@ public class ContentItem {
     public ReleaseStatus getReleaseStatus() { return releaseStatus; }
     public Long getKinopoiskFilmId() { return kinopoiskFilmId; }
     public void setKinopoiskFilmId(Long kinopoiskFilmId) { this.kinopoiskFilmId = kinopoiskFilmId; }
+    public Instant getKinopoiskEnrichedAt() { return kinopoiskEnrichedAt; }
+    public void markKinopoiskEnriched() { this.kinopoiskEnrichedAt = Instant.now(); }
 }

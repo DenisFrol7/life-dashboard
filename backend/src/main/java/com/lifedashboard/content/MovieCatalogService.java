@@ -5,6 +5,12 @@ import com.lifedashboard.content.dto.ContentItemResponse;
 import com.lifedashboard.content.dto.ContentItemRequest;
 import com.lifedashboard.content.dto.KinopoiskMovieCandidate;
 import com.lifedashboard.content.dto.KinopoiskMovieDetails;
+import com.lifedashboard.content.dto.KinopoiskRatingsPreview;
+import com.lifedashboard.content.dto.KinopoiskRatingsImportResult;
+import com.lifedashboard.content.dto.KinopoiskMovieEnrichmentResult;
+import com.lifedashboard.content.dto.MovieCatalogPageResponse;
+import com.lifedashboard.content.dto.LibraryEntryRequest;
+import com.lifedashboard.data.DataTransferService;
 import com.lifedashboard.content.myshows.KinopoiskCatalogClient;
 import com.lifedashboard.common.error.DuplicateResourceException;
 import com.lifedashboard.common.error.InvalidRequestException;
@@ -14,14 +20,20 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 @Service
 @Transactional(readOnly = true)
 public class MovieCatalogService {
-    private final ContentItemRepository items; private final KinopoiskCatalogClient kinopoisk; private final long userId;
-    public MovieCatalogService(ContentItemRepository items, KinopoiskCatalogClient kinopoisk,
+    private final ContentItemRepository items; private final KinopoiskCatalogClient kinopoisk;
+    private final ContentService contentService; private final DataTransferService dataTransfer; private final long userId;
+    private final ConcurrentMap<String, KinopoiskRatingsPreview> ratingsCache = new ConcurrentHashMap<>();
+    public MovieCatalogService(ContentItemRepository items, KinopoiskCatalogClient kinopoisk, ContentService contentService,
+            DataTransferService dataTransfer,
             @Value("${app.default-user-id}") long userId) {
-        this.items = items; this.kinopoisk = kinopoisk; this.userId = userId;
+        this.items = items; this.kinopoisk = kinopoisk; this.contentService = contentService;
+        this.dataTransfer = dataTransfer; this.userId = userId;
     }
     public List<MovieCatalogResponse> getAll() {
         return items.findMovieCatalog(userId).stream().map(item -> new MovieCatalogResponse(item.getId(),
@@ -32,6 +44,28 @@ public class MovieCatalogService {
                 : UserContentStatus.valueOf(item.getUserStatus()), item.getRating(),
                 Boolean.TRUE.equals(item.getFavorite()), item.getStartedAt(), item.getCompletedAt(),
                 item.getPersonalNote(), item.getWatchCount(), item.getWatchedMinutes())).toList();
+    }
+
+    public MovieCatalogPageResponse getPage(int page, int size, String query, UserContentStatus status) {
+        if (page < 0 || size < 1 || size > 100)
+            throw new InvalidRequestException("Movie page must be non-negative and size must be between 1 and 100");
+        List<MovieCatalogResponse> all = getAll();
+        String normalized = Optional.ofNullable(normalize(query)).orElse("");
+        List<MovieCatalogResponse> filtered = all.stream()
+                .filter(item -> normalized.isEmpty() || normalize(item.title()).contains(normalized)
+                        || normalize(item.originalTitle()) != null && normalize(item.originalTitle()).contains(normalized))
+                .filter(item -> status == null || item.userStatus() == status)
+                .toList();
+        int from = Math.min(page * size, filtered.size());
+        int to = Math.min(from + size, filtered.size());
+        var statistics = new MovieCatalogPageResponse.Statistics(all.size(),
+                (int) all.stream().filter(item -> item.libraryId() != null).count(),
+                (int) all.stream().filter(item -> item.userStatus() == UserContentStatus.COMPLETED).count(),
+                (int) all.stream().filter(item -> item.userStatus() == UserContentStatus.PLANNED).count(),
+                (int) all.stream().filter(item -> item.format() == ContentFormat.LIVE_ACTION).count(),
+                (int) all.stream().filter(item -> item.format() == ContentFormat.ANIMATION).count());
+        return new MovieCatalogPageResponse(filtered.subList(from, to), page, size, filtered.size(),
+                to < filtered.size(), statistics);
     }
 
     public List<KinopoiskMovieCandidate> searchKinopoisk(String query) {
@@ -46,6 +80,95 @@ public class MovieCatalogService {
     public KinopoiskMovieDetails previewKinopoisk(long filmId) {
         var details = kinopoisk.getMovie(filmId);
         return response(details, items.findByKinopoiskFilmId(filmId).map(ContentItem::getId).orElse(null));
+    }
+
+    public KinopoiskRatingsPreview previewRatings(String profileId) {
+        var source = kinopoisk.getUserRatings(profileId);
+        List<ContentItem> catalog = items.findAllByItemTypeOrderByTitleAsc(ContentType.MOVIE);
+        List<KinopoiskRatingsPreview.Item> movies = source.items().stream()
+                .filter(item -> !isSeries(item.type()))
+                .map(item -> {
+                    Long existingId = catalog.stream()
+                            .filter(existing -> existing.getKinopoiskFilmId() != null
+                                    && existing.getKinopoiskFilmId() == item.filmId())
+                            .map(ContentItem::getId).findFirst()
+                            .orElseGet(() -> findLegacyMovie(catalog, item).map(ContentItem::getId).orElse(null));
+                    String title = item.nameRu() == null || item.nameRu().isBlank()
+                            ? item.nameOriginal() : item.nameRu();
+                    return new KinopoiskRatingsPreview.Item(item.filmId(), title, item.nameOriginal(), item.year(),
+                            item.userRating(), item.type(), item.posterUrlPreview(), item.genre(), existingId);
+                }).toList();
+        int seriesCount = source.items().size() - movies.size();
+        int existingCount = (int) movies.stream().filter(item -> item.existingContentId() != null).count();
+        var preview = new KinopoiskRatingsPreview(profileId, source.total(), source.totalPages(), movies.size(),
+                seriesCount, existingCount, movies.size() - existingCount, movies);
+        ratingsCache.put(profileId, preview);
+        return preview;
+    }
+
+    @Transactional
+    public KinopoiskRatingsImportResult importRatings(String profileId) {
+        KinopoiskRatingsPreview preview = ratingsCache.get(profileId);
+        if (preview == null)
+            throw new InvalidRequestException("Load the Kinopoisk ratings preview before confirming import");
+        String backupFile = dataTransfer.createAutomaticBackup().toString();
+        int created = 0;
+        int updated = 0;
+        int skipped = 0;
+        for (KinopoiskRatingsPreview.Item source : preview.movies()) {
+            ContentItem item = items.findByKinopoiskFilmId(source.filmId()).orElse(null);
+            if (item == null && source.existingContentId() != null)
+                item = items.findById(source.existingContentId()).orElse(null);
+            boolean isNew = item == null;
+            if (isNew) item = new ContentItem(source.title());
+            if (source.title() == null || source.title().isBlank()) { skipped++; continue; }
+            item.update(source.title().trim(), trim(source.originalTitle()), ContentType.MOVIE,
+                    format(source.genre()), source.year(), isNew ? null : item.getDescription(),
+                    trim(source.posterUrlPreview()) == null && !isNew ? item.getCoverUrl() : trim(source.posterUrlPreview()),
+                    isNew ? null : item.getDurationMinutes(), isNew ? ReleaseStatus.RELEASED : item.getReleaseStatus(),
+                    trim(source.genre()) == null && !isNew ? item.getGenre() : trim(source.genre()), null, null, false);
+            item.setKinopoiskFilmId(source.filmId());
+            item = items.save(item);
+            Short rating = source.userRating() == null ? null : source.userRating().shortValue();
+            contentService.putInLibrary(item.getId(), new LibraryEntryRequest(UserContentStatus.COMPLETED,
+                    rating, false, null, null, null));
+            if (isNew) created++; else updated++;
+        }
+        ratingsCache.remove(profileId);
+        return new KinopoiskRatingsImportResult(preview.movieCount(), created, updated, skipped, backupFile);
+    }
+
+    @Transactional
+    public KinopoiskMovieEnrichmentResult enrichMovies(int batchSize) {
+        if (batchSize < 1 || batchSize > 400)
+            throw new InvalidRequestException("Movie enrichment batch size must be between 1 and 400");
+        List<ContentItem> pending = items
+                .findAllByItemTypeAndKinopoiskFilmIdIsNotNullAndKinopoiskEnrichedAtIsNullOrderByIdAsc(ContentType.MOVIE);
+        int total = pending.size();
+        if (total == 0) return new KinopoiskMovieEnrichmentResult(0, 0, 0, false, null);
+        String backupFile = dataTransfer.createAutomaticBackup().toString();
+        int updated = 0;
+        boolean quotaExhausted = false;
+        for (ContentItem item : pending.stream().limit(batchSize).toList()) {
+            try {
+                var details = kinopoisk.getMovie(item.getKinopoiskFilmId());
+                String title = details.nameRu() == null || details.nameRu().isBlank()
+                        ? item.getTitle() : details.nameRu().trim();
+                item.update(title, trim(details.nameOriginal()), ContentType.MOVIE, format(details.genre()),
+                        details.year(), trim(details.description()), trim(details.posterUrl()), details.durationMinutes(),
+                        releaseStatus(details.productionStatus(), details.completed()), trim(details.genre()),
+                        null, null, false);
+                item.markKinopoiskEnriched();
+                items.save(item);
+                updated++;
+            } catch (InvalidRequestException exception) {
+                if (exception.getMessage() != null && exception.getMessage().contains("daily quota")) {
+                    quotaExhausted = true;
+                    break;
+                }
+            }
+        }
+        return new KinopoiskMovieEnrichmentResult(total, updated, total - updated, quotaExhausted, backupFile);
     }
 
     @Transactional
@@ -85,6 +208,24 @@ public class MovieCatalogService {
                             || matches(itemOriginal, russianTitle, originalTitle, requestedTitle);
                 })
                 .findFirst();
+    }
+
+    private Optional<ContentItem> findLegacyMovie(List<ContentItem> catalog,
+            KinopoiskCatalogClient.UserRating rating) {
+        String russianTitle = normalize(rating.nameRu());
+        String originalTitle = normalize(rating.nameOriginal());
+        return catalog.stream()
+                .filter(item -> item.getKinopoiskFilmId() == null)
+                .filter(item -> rating.year() == null || item.getReleaseYear() == null
+                        || rating.year().equals(item.getReleaseYear()))
+                .filter(item -> matches(normalize(item.getTitle()), russianTitle, originalTitle)
+                        || matches(normalize(item.getOriginalTitle()), russianTitle, originalTitle))
+                .findFirst();
+    }
+
+    private boolean isSeries(String type) {
+        return type != null && (type.contains("TV_SERIES") || type.contains("MINI_SERIES")
+                || type.contains("TV_SHOW"));
     }
 
     private boolean matches(String value, String... candidates) {

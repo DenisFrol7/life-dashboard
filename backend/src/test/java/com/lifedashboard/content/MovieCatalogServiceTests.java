@@ -3,6 +3,7 @@ package com.lifedashboard.content;
 import com.lifedashboard.common.error.DuplicateResourceException;
 import com.lifedashboard.content.myshows.KinopoiskCatalogClient;
 import com.lifedashboard.content.dto.ContentItemRequest;
+import com.lifedashboard.data.DataTransferService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -18,6 +19,8 @@ import static org.mockito.Mockito.*;
 class MovieCatalogServiceTests {
     @Mock ContentItemRepository items;
     @Mock KinopoiskCatalogClient kinopoisk;
+    @Mock ContentService contentService;
+    @Mock DataTransferService dataTransfer;
 
     @Test
     void marksSearchResultThatAlreadyExists() {
@@ -79,5 +82,5 @@ class MovieCatalogServiceTests {
         verify(items).save(existing);
     }
 
-    private MovieCatalogService service() { return new MovieCatalogService(items, kinopoisk, 1L); }
+    private MovieCatalogService service() { return new MovieCatalogService(items, kinopoisk, contentService, dataTransfer, 1L); }
 }
