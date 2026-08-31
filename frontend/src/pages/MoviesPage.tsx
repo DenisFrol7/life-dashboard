@@ -46,7 +46,7 @@ export function MoviesPage() {
 }
 
 function KinopoiskRatingsDialog({ onClose, onImported }: { onClose: () => void; onImported: () => void }) {
-  const [profileId, setProfileId] = useState('1135567')
+  const [profileId, setProfileId] = useState('')
   const [preview, setPreview] = useState<KinopoiskRatingsPreview | null>(null)
   const [result, setResult] = useState<KinopoiskRatingsImportResult | null>(null)
   const [enrichment, setEnrichment] = useState<KinopoiskMovieEnrichmentResult | null>(null)
@@ -61,7 +61,7 @@ function KinopoiskRatingsDialog({ onClose, onImported }: { onClose: () => void; 
       {error && <div className="form-error">{error}</div>}
       {enrichment && <div className="notice success"><strong>Подробные данные обновлены</strong><span>Обновлено: {enrichment.updated}. Осталось: {enrichment.remaining}.{enrichment.quotaExhausted ? ' Лимит исчерпан — продолжите завтра.' : ''}</span></div>}
       {result ? <div className="notice success"><strong>Импорт завершён</strong><span>Добавлено: {result.created}. Обновлено: {result.updated}. Пропущено: {result.skipped}.</span></div> : <>
-        <div className="kinopoisk-profile-input"><label>ID профиля<input value={profileId} onChange={(event) => setProfileId(event.target.value)} disabled={loading} /></label><button className="primary-button" type="button" disabled={loading || !profileId.trim()} onClick={() => void load()}>{loading && !preview ? 'Загружаем 40 страниц…' : 'Загрузить оценки'}</button></div>
+        <div className="kinopoisk-profile-input"><label>ID профиля<input value={profileId} placeholder="Например, 1234567" onChange={(event) => setProfileId(event.target.value)} disabled={loading} /></label><button className="primary-button" type="button" disabled={loading || !profileId.trim()} onClick={() => void load()}>{loading && !preview ? 'Загружаем страницы…' : 'Загрузить оценки'}</button></div>
         {loading && <p className="form-hint">Операция может занять несколько минут. Не закрывайте окно.</p>}
         {preview && <><div className="myshows-preview-summary kinopoisk-summary"><div><span>Всего оценок</span><strong>{preview.totalRatings}</strong></div><div><span>Фильмы</span><strong>{preview.movieCount}</strong></div><div><span>Уже в каталоге</span><strong>{preview.existingCount}</strong></div><div><span>Новые</span><strong>{preview.newCount}</strong></div></div><p className="form-hint">Сериалов исключено: {preview.seriesCount}. Дата просмотра недоступна и не будет добавлена в статистику дня.</p><div className="kinopoisk-ratings-list">{preview.movies.map((item) => <article key={item.filmId} className={item.existingContentId ? 'existing' : ''}>{item.posterUrlPreview ? <img src={item.posterUrlPreview} alt="" /> : <span>🎬</span>}<div><strong>{item.title}</strong><small>{item.originalTitle && item.originalTitle !== item.title ? `${item.originalTitle} · ` : ''}{item.year ?? 'Год неизвестен'}{item.genre ? ` · ${item.genre}` : ''}</small></div><b>{item.userRating ? `${item.userRating}/10` : 'Без оценки'}</b><em>{item.existingContentId ? 'Обновить' : 'Добавить'}</em></article>)}</div></>}
       </>}
