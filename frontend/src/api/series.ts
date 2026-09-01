@@ -15,11 +15,16 @@ export type ViewingEpisode = Episode & { watches: Watch[] }
 export type ViewingSeason = Season & { completion?: SeasonCompletion; episodes: ViewingEpisode[] }
 export type ViewingStructure = { seasons: ViewingSeason[] }
 export type SeriesCatalogItem = Omit<Series, 'itemType' | 'xboxPlayAnywhere'> & { libraryId: number | null; userStatus: LibraryStatus | null; rating: number | null; favorite: boolean; startedAt: string | null; completedAt: string | null; personalNote: string | null; seasonCount: number; episodeCount: number; watchedEpisodeCount: number; watchedMinutes: number }
+export type KinopoiskSeriesCandidate = { filmId: number; nameRu: string | null; nameOriginal: string | null; year: string | null; existingContentId: number | null }
+export type KinopoiskSeriesDetails = { filmId: number; title: string; originalTitle: string | null; releaseYear: number | null; description: string | null; coverUrl: string | null; releaseStatus: ReleaseStatus; genre: string | null; seasonCount: number; episodeCount: number; existingContentId: number | null }
 
 export const getSeries = () => apiRequest<Series[]>('/api/content?type=SERIES')
 export const getSeriesCatalog = () => apiRequest<SeriesCatalogItem[]>('/api/series')
 export const getSeriesById = (id: number) => apiRequest<Series>(`/api/content/${id}`)
 export const createSeries = (input: SeriesInput) => apiRequest<Series>('/api/content', { method: 'POST', body: JSON.stringify(input) })
+export const searchKinopoiskSeries = (query: string) => apiRequest<KinopoiskSeriesCandidate[]>(`/api/series/kinopoisk/search?query=${encodeURIComponent(query)}`)
+export const previewKinopoiskSeries = (filmId: number) => apiRequest<KinopoiskSeriesDetails>(`/api/series/kinopoisk/${filmId}`)
+export const createKinopoiskSeries = (filmId: number, input: SeriesInput) => apiRequest<Series>(`/api/series/kinopoisk/${filmId}`, { method: 'POST', body: JSON.stringify(input) })
 export const updateSeries = (id: number, input: SeriesInput) => apiRequest<Series>(`/api/content/${id}`, { method: 'PUT', body: JSON.stringify(input) })
 export const deleteSeries = (id: number) => apiRequest<void>(`/api/content/${id}`, { method: 'DELETE' })
 export const getSeriesLibrary = () => apiRequest<SeriesLibraryEntry[]>('/api/library')
