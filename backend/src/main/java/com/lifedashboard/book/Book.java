@@ -13,9 +13,12 @@ public class Book {
     @Enumerated(EnumType.STRING) @Column(name = "book_format", nullable = false, length = 20) private BookFormat bookFormat;
     @Column(name = "page_count") private Integer pageCount;
     @Column(name = "duration_minutes") private Integer durationMinutes;
+    @Column(name = "google_books_id", length = 100) private String googleBooksId;
+    @Column(length = 20) private String isbn;
     protected Book() {}
     public Book(ContentItem content) { this.content = content; }
-    public void update(String author, BookFormat bookFormat, Integer pageCount, Integer durationMinutes) { this.author=author; this.bookFormat=bookFormat; this.pageCount=pageCount; this.durationMinutes=durationMinutes; }
+    public void update(String author, BookFormat bookFormat, Integer pageCount, Integer durationMinutes, String googleBooksId, String isbn) { this.author=author; this.bookFormat=bookFormat; this.pageCount=pageCount; this.durationMinutes=durationMinutes; this.googleBooksId=googleBooksId; this.isbn=isbn; }
     public Long getId(){return id;} public ContentItem getContent(){return content;} public String getAuthor(){return author;}
     public BookFormat getBookFormat(){return bookFormat;} public Integer getPageCount(){return pageCount;} public Integer getDurationMinutes(){return durationMinutes;}
+    public String getGoogleBooksId(){return googleBooksId;} public String getIsbn(){return isbn;}
 }

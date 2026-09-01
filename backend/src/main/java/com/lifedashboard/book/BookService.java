@@ -19,13 +19,14 @@ public class BookService {
     private final ContentItemRepository contentItems;
     private final UserContentRepository library;
     private final ContentService contentService;
+    private final BookCoverStorage covers;
     private final long userId;
 
     public BookService(BookRepository books, BookProgressRepository progress, ReadingSessionRepository sessions,
-            ContentItemRepository contentItems, UserContentRepository library, ContentService contentService,
+            ContentItemRepository contentItems, UserContentRepository library, ContentService contentService, BookCoverStorage covers,
             @Value("${app.default-user-id}") long userId) {
         this.books=books; this.progress=progress; this.sessions=sessions; this.contentItems=contentItems;
-        this.library=library; this.contentService=contentService; this.userId=userId;
+        this.library=library; this.contentService=contentService; this.covers=covers; this.userId=userId;
     }
 
     public List<BookResponse> getAll() {
@@ -48,17 +49,20 @@ public class BookService {
     public BookResponse get(Long id) { return response(find(id)); }
 
     @Transactional public BookResponse create(BookRequest request) {
-        validateBook(request);
-        var content=contentService.create(contentRequest(request));
-        Book book=new Book(contentItems.findById(content.id()).orElseThrow()); apply(book,request);
+        validateBook(request); validateDuplicate(request);
+        BookRequest localized=withCover(request,covers.localize(request.coverUrl()));
+        var content=contentService.create(contentRequest(localized));
+        Book book=new Book(contentItems.findById(content.id()).orElseThrow()); apply(book,localized);
         return response(books.save(book));
     }
     @Transactional public BookResponse update(Long id,BookRequest request) {
-        validateBook(request); Book book=find(id);
-        contentService.update(book.getContent().getId(),contentRequest(request)); apply(book,request);
+        validateBook(request); Book book=find(id);String previous=book.getContent().getCoverUrl();
+        BookRequest localized=withCover(request,covers.localize(request.coverUrl()));
+        contentService.update(book.getContent().getId(),contentRequest(localized)); apply(book,localized);
+        if(!Objects.equals(previous,localized.coverUrl()))covers.deleteIfLocal(previous);
         return response(book);
     }
-    @Transactional public void delete(Long id) { contentService.delete(find(id).getContent().getId()); }
+    @Transactional public void delete(Long id) { Book book=find(id);String cover=book.getContent().getCoverUrl();contentService.delete(book.getContent().getId());covers.deleteIfLocal(cover); }
     @Transactional public BookResponse putLibrary(Long id,LibraryEntryRequest request) {
         Book book=find(id); contentService.putInLibrary(book.getContent().getId(),request);
         if(request.status()==UserContentStatus.COMPLETED) completeProgress(book,findLibrary(book));
@@ -119,14 +123,21 @@ public class BookService {
         if(audio&&(request.durationMinutes()==null||request.pageCount()!=null)) throw new InvalidRequestException("Audiobook requires durationMinutes and must not have pageCount");
         if(!audio&&(request.pageCount()==null||request.durationMinutes()!=null)) throw new InvalidRequestException("Paper and electronic books require pageCount and must not have durationMinutes");
     }
+    private void validateDuplicate(BookRequest request) {
+        String googleId=normalize(request.googleBooksId()), isbn=normalizeIsbn(request.isbn());
+        if(googleId!=null&&books.findByGoogleBooksId(googleId).isPresent()) throw new InvalidRequestException("This Google Books edition is already in the catalog");
+        if(isbn!=null&&books.findFirstByIsbn(isbn).isPresent()) throw new InvalidRequestException("A book with this ISBN is already in the catalog");
+    }
     private void validateSession(Book book,ReadingSessionRequest request) {
         if(book.getBookFormat()==BookFormat.AUDIOBOOK&&request.pagesRead()!=0) throw new InvalidRequestException("Audiobook session must not contain pagesRead");
         if(book.getBookFormat()!=BookFormat.AUDIOBOOK&&request.listenedMinutes()!=0) throw new InvalidRequestException("Reading session must not contain listenedMinutes");
     }
-    private void apply(Book book,BookRequest request) { book.update(request.author().trim(),request.bookFormat(),request.pageCount(),request.durationMinutes()); }
+    private void apply(Book book,BookRequest request) { book.update(request.author().trim(),request.bookFormat(),request.pageCount(),request.durationMinutes(),normalize(request.googleBooksId()),normalizeIsbn(request.isbn())); }
     private void apply(ReadingSession value,ReadingSessionRequest request) { value.update(request.startedAt(),request.durationMinutes(),request.pagesRead(),request.listenedMinutes(),normalize(request.note())); }
     private ContentItemRequest contentRequest(BookRequest r) { return new ContentItemRequest(r.title(),null,ContentType.BOOK,null,r.releaseYear(),r.description(),r.coverUrl(),null,ReleaseStatus.RELEASED,r.genre(),null,null,false); }
+    private BookRequest withCover(BookRequest r,String coverUrl) { return new BookRequest(r.title(),r.author(),r.bookFormat(),r.pageCount(),r.durationMinutes(),r.releaseYear(),r.genre(),coverUrl,r.description(),r.googleBooksId(),r.isbn()); }
     private String normalize(String value) { return value==null||value.isBlank()?null:value.trim(); }
+    private String normalizeIsbn(String value) { String normalized=normalize(value); return normalized==null?null:normalized.replaceAll("[^0-9Xx]","").toUpperCase(Locale.ROOT); }
     private BookResponse response(Book book) {
         UserContent entry=library.findByUserIdAndContentId(userId,book.getContent().getId()).orElse(null);
         BookProgress current=entry==null?null:progress.findByUserContentId(entry.getId()).orElse(null);
@@ -141,7 +152,7 @@ public class BookService {
         List<ReadingSessionResponse> sessionHistory=history.stream()
                 .map((@NonNull ReadingSession session)->sessionResponse(session)).toList();
         ContentItem c=book.getContent();
-        return new BookResponse(book.getId(),c.getId(),c.getTitle(),book.getAuthor(),book.getBookFormat(),book.getPageCount(),book.getDurationMinutes(),c.getReleaseYear(),c.getGenre(),c.getCoverUrl(),c.getDescription(),entry==null?null:entry.getId(),entry==null?null:entry.getStatus(),entry==null?null:entry.getRating(),entry!=null&&entry.isFavorite(),entry==null?null:entry.getPersonalNote(),entry==null?null:entry.getStartedAt(),entry==null?null:entry.getCompletedAt(),entry==null?null:page,entry==null?null:minute,percent,sessionHistory);
+        return new BookResponse(book.getId(),c.getId(),c.getTitle(),book.getAuthor(),book.getBookFormat(),book.getPageCount(),book.getDurationMinutes(),c.getReleaseYear(),c.getGenre(),c.getCoverUrl(),c.getDescription(),book.getGoogleBooksId(),book.getIsbn(),entry==null?null:entry.getId(),entry==null?null:entry.getStatus(),entry==null?null:entry.getRating(),entry!=null&&entry.isFavorite(),entry==null?null:entry.getPersonalNote(),entry==null?null:entry.getStartedAt(),entry==null?null:entry.getCompletedAt(),entry==null?null:page,entry==null?null:minute,percent,sessionHistory);
     }
     private ReadingSessionResponse sessionResponse(ReadingSession value) { return new ReadingSessionResponse(value.getId(),value.getStartedAt(),value.getDurationMinutes(),value.getPagesRead(),value.getListenedMinutes(),value.getNote()); }
 }

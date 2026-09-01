@@ -1,47 +1,1008 @@
-import { useCallback,useEffect,useMemo,useState,type FormEvent } from 'react'
-import { useNavigate } from 'react-router'
-import { Plus, Search } from 'lucide-react'
-import { createBook,createReadingSession,deleteBook,deleteReadingSession,getBooks,putBookLibrary,putBookProgress,removeBookLibrary,updateBook,updateReadingSession,type Book,type BookFormat,type BookInput,type BookLibraryInput,type ReadingSession,type ReadingSessionInput } from '../api/books'
-import type { LibraryStatus } from '../api/movies'
-import { bookFormatLabels, bookStatusLabels, progressText } from './bookUi'
-import { ErrorState, LoadingState } from '../components/AsyncState'
-import { useToast } from '../components/ToastContext'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
+import { useNavigate } from "react-router";
+import { Plus, Search } from "lucide-react";
+import {
+  createBook,
+  createReadingSession,
+  deleteBook,
+  deleteReadingSession,
+  getBooks,
+  putBookLibrary,
+  putBookProgress,
+  removeBookLibrary,
+  searchGoogleBooks,
+  updateBook,
+  updateReadingSession,
+  uploadBookCover,
+  type Book,
+  type BookFormat,
+  type BookInput,
+  type BookLibraryInput,
+  type GoogleBookCandidate,
+  type ReadingSession,
+  type ReadingSessionInput,
+} from "../api/books";
+import type { LibraryStatus } from "../api/movies";
+import { bookFormatLabels, bookStatusLabels, progressText } from "./bookUi";
+import { ErrorState, LoadingState } from "../components/AsyncState";
+import { useToast } from "../components/ToastContext";
 
-const emptyBook:BookInput={title:'',author:'',bookFormat:'PAPER',pageCount:null,durationMinutes:null,releaseYear:null,genre:null,coverUrl:null,description:null}
-const localDateTime=(value:string)=>{const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16)}
+const emptyBook: BookInput = {
+  title: "",
+  author: "",
+  bookFormat: "PAPER",
+  pageCount: null,
+  durationMinutes: null,
+  releaseYear: null,
+  genre: null,
+  coverUrl: null,
+  description: null,
+  googleBooksId: null,
+  isbn: null,
+};
+const localDateTime = (value: string) => {
+  const d = new Date(value);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+};
 
-export function BooksPage(){
- const navigate=useNavigate();const [books,setBooks]=useState<Book[]>([]);const [editing,setEditing]=useState<Book|'new'|null>(null);const [query,setQuery]=useState('');const [status,setStatus]=useState<LibraryStatus|''>('');const [loading,setLoading]=useState(true);const [error,setError]=useState<string|null>(null)
- const load=useCallback(async()=>{setLoading(true);setError(null);try{setBooks(await getBooks())}catch(reason){setError(reason instanceof Error?reason.message:'Не удалось загрузить книги')}finally{setLoading(false)}},[])
- useEffect(()=>{void load()},[load])
- const visible=useMemo(()=>{const q=query.trim().toLocaleLowerCase('ru-RU');return books.filter(book=>(!q||`${book.title} ${book.author}`.toLocaleLowerCase('ru-RU').includes(q))&&(!status||book.status===status))},[books,query,status])
- const libraryBooks=books.filter(book=>book.libraryEntryId)
- const sessionCount=books.reduce((sum,book)=>sum+book.sessions.length,0)
- const readingMinutes=books.reduce((sum,book)=>sum+book.sessions.reduce((bookSum,session)=>bookSum+session.durationMinutes,0),0)
- if(loading)return <LoadingState message="Загружаем книги…"/>
- if(error)return <ErrorState title="Не удалось загрузить книги" message={error} onRetry={()=>void load()}/>
- return <div className="movies-page series-page books-page"><section className="media-toolbar series-media-toolbar"><div className="series-status-tabs book-status-tabs" aria-label="Фильтр книг по статусу">{([
-   ['', 'Все'], ['NOT_STARTED', 'Не начато'], ['IN_PROGRESS', 'Читаю'], ['PLANNED', 'В планах'], ['COMPLETED', 'Прочитано'],
-  ] as const).map(([value,label])=><button key={value||'all'} className={status===value?'active':''} onClick={()=>setStatus(value)}>{label}</button>)}</div><div className="journal-search series-search"><span><Search /></span><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Найти книгу или автора"/></div><button className="primary-button series-add-button media-add-button icon-button" onClick={()=>setEditing('new')}><Plus />Добавить книгу</button></section>
- <section className="series-catalog-layout"><div className="series-catalog-main">
- {error&&<div className="notice error movies-error"><strong>Ошибка</strong><span>{error}</span></div>}
- {loading?<div className="loading"><span/>Загружаем книги…</div>:visible.length===0?<div className="media-empty"><span>▥</span><h2>Книг пока нет</h2><p>Добавьте первую книгу в библиотеку.</p></div>:<section className="movie-grid series-catalog-grid">{visible.map(book=><article className="series-list-card book-list-card" key={book.id}><button className="series-list-cover book-list-cover" onClick={()=>navigate(`/books/${book.id}`)} style={book.coverUrl?{backgroundImage:`url(${book.coverUrl})`}:undefined}><span>{book.title.slice(0,1)}</span>{book.favorite&&<i>♥</i>}<em>{bookFormatLabels[book.bookFormat]}</em></button><div className="series-list-content"><div className="series-list-heading"><button onClick={()=>navigate(`/books/${book.id}`)}>{book.title}</button></div><p className="book-list-author">{book.author}</p><div className="movie-list-meta"><span>{book.releaseYear??'—'}</span>{book.genre&&<span>{book.genre}</span>}<span>{bookFormatLabels[book.bookFormat]}</span></div>{book.status?<div className="series-list-inline-status"><span className={`media-status ${book.status.toLowerCase()}`}>{bookStatusLabels[book.status]}</span></div>:<button className="add-library-button book-list-add" onClick={()=>setEditing(book)}>+ В библиотеку</button>}{book.libraryEntryId&&<div className="series-list-progress-row book-list-progress"><strong>{progressText(book)} <small>· {Math.round(book.progressPercent)}%</small></strong><div className="series-list-progress"><span style={{width:`${book.progressPercent}%`}}/></div></div>}</div><div className="series-list-side book-list-side">{book.rating?<strong className="series-list-score">{book.rating}/10</strong>:<span className="book-no-rating">Без оценки</span>}</div></article>)}</section>}
- </div><aside className="series-statistics"><p className="eyebrow">Общая статистика</p><h2>Книги</h2><dl><div><dt>Количество книг</dt><dd>{books.length}</dd></div><div><dt>В библиотеке</dt><dd>{libraryBooks.length}</dd></div><div><dt>Не начато</dt><dd>{libraryBooks.filter(book=>book.status==='NOT_STARTED').length}</dd></div><div><dt>Читаю</dt><dd>{libraryBooks.filter(book=>book.status==='IN_PROGRESS').length}</dd></div><div><dt>В планах</dt><dd>{libraryBooks.filter(book=>book.status==='PLANNED').length}</dd></div><div><dt>Прочитано</dt><dd>{libraryBooks.filter(book=>book.status==='COMPLETED').length}</dd></div><div className="series-stat-total"><dt>Бумажные</dt><dd>{books.filter(book=>book.bookFormat==='PAPER').length}</dd></div><div><dt>Электронные</dt><dd>{books.filter(book=>book.bookFormat==='EBOOK').length}</dd></div><div><dt>Аудиокниги</dt><dd>{books.filter(book=>book.bookFormat==='AUDIOBOOK').length}</dd></div><div className="series-stat-total"><dt>Сеансы чтения</dt><dd>{sessionCount}</dd></div><div><dt>Время чтения</dt><dd>{Math.floor(readingMinutes/60)} ч {readingMinutes%60} мин</dd></div></dl></aside></section>
- {editing&&<BookForm book={editing==='new'?undefined:editing} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);void load()}}/>}
- </div>
+export function BooksPage() {
+  const navigate = useNavigate();
+  const [books, setBooks] = useState<Book[]>([]);
+  const [editing, setEditing] = useState<Book | "new" | null>(null);
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<LibraryStatus | "">("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setBooks(await getBooks());
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Не удалось загрузить книги",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  const visible = useMemo(() => {
+    const q = query.trim().toLocaleLowerCase("ru-RU");
+    return books.filter(
+      (book) =>
+        (!q ||
+          `${book.title} ${book.author}`
+            .toLocaleLowerCase("ru-RU")
+            .includes(q)) &&
+        (!status || book.status === status),
+    );
+  }, [books, query, status]);
+  const libraryBooks = books.filter((book) => book.libraryEntryId);
+  const sessionCount = books.reduce(
+    (sum, book) => sum + book.sessions.length,
+    0,
+  );
+  const readingMinutes = books.reduce(
+    (sum, book) =>
+      sum +
+      book.sessions.reduce(
+        (bookSum, session) => bookSum + session.durationMinutes,
+        0,
+      ),
+    0,
+  );
+  if (loading) return <LoadingState message="Загружаем книги…" />;
+  if (error)
+    return (
+      <ErrorState
+        title="Не удалось загрузить книги"
+        message={error}
+        onRetry={() => void load()}
+      />
+    );
+  return (
+    <div className="movies-page series-page books-page">
+      <section className="media-toolbar series-media-toolbar">
+        <div
+          className="series-status-tabs book-status-tabs"
+          aria-label="Фильтр книг по статусу"
+        >
+          {(
+            [
+              ["", "Все"],
+              ["NOT_STARTED", "Не начато"],
+              ["IN_PROGRESS", "Читаю"],
+              ["PLANNED", "В планах"],
+              ["COMPLETED", "Прочитано"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value || "all"}
+              className={status === value ? "active" : ""}
+              onClick={() => setStatus(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="journal-search series-search">
+          <span>
+            <Search />
+          </span>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Найти книгу или автора"
+          />
+        </div>
+        <button
+          className="primary-button series-add-button media-add-button icon-button"
+          onClick={() => setEditing("new")}
+        >
+          <Plus />
+          Добавить книгу
+        </button>
+      </section>
+      <section className="series-catalog-layout">
+        <div className="series-catalog-main">
+          {error && (
+            <div className="notice error movies-error">
+              <strong>Ошибка</strong>
+              <span>{error}</span>
+            </div>
+          )}
+          {loading ? (
+            <div className="loading">
+              <span />
+              Загружаем книги…
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="media-empty">
+              <span>▥</span>
+              <h2>Книг пока нет</h2>
+              <p>Добавьте первую книгу в библиотеку.</p>
+            </div>
+          ) : (
+            <section className="movie-grid series-catalog-grid">
+              {visible.map((book) => (
+                <article
+                  className="series-list-card book-list-card"
+                  key={book.id}
+                >
+                  <button
+                    className="series-list-cover book-list-cover"
+                    onClick={() => navigate(`/books/${book.id}`)}
+                    style={
+                      book.coverUrl
+                        ? { backgroundImage: `url(${book.coverUrl})` }
+                        : undefined
+                    }
+                  >
+                    <span>{book.title.slice(0, 1)}</span>
+                    {book.favorite && <i>♥</i>}
+                    <em>{bookFormatLabels[book.bookFormat]}</em>
+                  </button>
+                  <div className="series-list-content">
+                    <div className="series-list-heading">
+                      <button onClick={() => navigate(`/books/${book.id}`)}>
+                        {book.title}
+                      </button>
+                    </div>
+                    <p className="book-list-author">{book.author}</p>
+                    <div className="movie-list-meta">
+                      <span>{book.releaseYear ?? "—"}</span>
+                      {book.genre && <span>{book.genre}</span>}
+                      <span>{bookFormatLabels[book.bookFormat]}</span>
+                    </div>
+                    {book.status ? (
+                      <div className="series-list-inline-status">
+                        <span
+                          className={`media-status ${book.status.toLowerCase()}`}
+                        >
+                          {bookStatusLabels[book.status]}
+                        </span>
+                      </div>
+                    ) : (
+                      <button
+                        className="add-library-button book-list-add"
+                        onClick={() => setEditing(book)}
+                      >
+                        + В библиотеку
+                      </button>
+                    )}
+                    {book.libraryEntryId && (
+                      <div className="series-list-progress-row book-list-progress">
+                        <strong>
+                          {progressText(book)}{" "}
+                          <small>· {Math.round(book.progressPercent)}%</small>
+                        </strong>
+                        <div className="series-list-progress">
+                          <span style={{ width: `${book.progressPercent}%` }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="series-list-side book-list-side">
+                    <strong className="series-list-score">
+                      {book.rating ? `${book.rating}/10` : "Без оценки"}
+                    </strong>
+                  </div>
+                </article>
+              ))}
+            </section>
+          )}
+        </div>
+        <aside className="series-statistics">
+          <p className="eyebrow">Общая статистика</p>
+          <h2>Книги</h2>
+          <dl>
+            <div>
+              <dt>Количество книг</dt>
+              <dd>{books.length}</dd>
+            </div>
+            <div>
+              <dt>В библиотеке</dt>
+              <dd>{libraryBooks.length}</dd>
+            </div>
+            <div>
+              <dt>Не начато</dt>
+              <dd>
+                {
+                  libraryBooks.filter((book) => book.status === "NOT_STARTED")
+                    .length
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>Читаю</dt>
+              <dd>
+                {
+                  libraryBooks.filter((book) => book.status === "IN_PROGRESS")
+                    .length
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>В планах</dt>
+              <dd>
+                {
+                  libraryBooks.filter((book) => book.status === "PLANNED")
+                    .length
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>Прочитано</dt>
+              <dd>
+                {
+                  libraryBooks.filter((book) => book.status === "COMPLETED")
+                    .length
+                }
+              </dd>
+            </div>
+            <div className="series-stat-total">
+              <dt>Бумажные</dt>
+              <dd>
+                {books.filter((book) => book.bookFormat === "PAPER").length}
+              </dd>
+            </div>
+            <div>
+              <dt>Электронные</dt>
+              <dd>
+                {books.filter((book) => book.bookFormat === "EBOOK").length}
+              </dd>
+            </div>
+            <div>
+              <dt>Аудиокниги</dt>
+              <dd>
+                {books.filter((book) => book.bookFormat === "AUDIOBOOK").length}
+              </dd>
+            </div>
+            <div className="series-stat-total">
+              <dt>Сеансы чтения</dt>
+              <dd>{sessionCount}</dd>
+            </div>
+            <div>
+              <dt>Время чтения</dt>
+              <dd>
+                {Math.floor(readingMinutes / 60)} ч {readingMinutes % 60} мин
+              </dd>
+            </div>
+          </dl>
+        </aside>
+      </section>
+      {editing && (
+        <BookForm
+          book={editing === "new" ? undefined : editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void load();
+          }}
+        />
+      )}
+    </div>
+  );
 }
 
-export function BookForm({book,onClose,onSaved,onDeleted}:{book?:Book;onClose:()=>void;onSaved:()=>void;onDeleted?:()=>void}){
- const {showToast}=useToast()
- const [item,setItem]=useState<BookInput>(book?{title:book.title,author:book.author,bookFormat:book.bookFormat,pageCount:book.pageCount,durationMinutes:book.durationMinutes,releaseYear:book.releaseYear,genre:book.genre,coverUrl:book.coverUrl,description:book.description}:emptyBook)
- const [inLibrary,setInLibrary]=useState(Boolean(book?.libraryEntryId));const [library,setLibrary]=useState<BookLibraryInput>({status:book?.status??'NOT_STARTED',rating:book?.rating??null,favorite:book?.favorite??false,startedAt:book?.startedAt??null,completedAt:book?.completedAt??null,personalNote:book?.personalNote??null});const [saving,setSaving]=useState(false);const [error,setError]=useState<string|null>(null)
- const set=<K extends keyof BookInput>(key:K,value:BookInput[K])=>setItem(current=>({...current,[key]:value}));const setLib=<K extends keyof BookLibraryInput>(key:K,value:BookLibraryInput[K])=>setLibrary(current=>({...current,[key]:value}))
- const changeFormat=(format:BookFormat)=>setItem(current=>({...current,bookFormat:format,pageCount:format==='AUDIOBOOK'?null:current.pageCount,durationMinutes:format==='AUDIOBOOK'?current.durationMinutes:null}))
- const submit=async(e:FormEvent)=>{e.preventDefault();setSaving(true);setError(null);try{const saved=book?await updateBook(book.id,item):await createBook(item);if(inLibrary)await putBookLibrary(saved.id,library);else if(book?.libraryEntryId)await removeBookLibrary(saved.id);showToast(book?'Книга обновлена':'Книга добавлена');onSaved()}catch(reason){setError(reason instanceof Error?reason.message:'Не удалось сохранить книгу')}finally{setSaving(false)}}
- const remove=async()=>{if(!book||!confirm(`Удалить «${book.title}»?`))return;try{await deleteBook(book.id);showToast('Книга удалена');(onDeleted??onSaved)()}catch(reason){setError(reason instanceof Error?reason.message:'Не удалось удалить книгу')}}
- return <div className="modal-backdrop"><form className="habit-form book-form" onSubmit={e=>void submit(e)}><div className="form-heading"><div><p className="eyebrow">Книги</p><h2>{book?'Редактирование':'Новая книга'}</h2></div><button type="button" onClick={onClose}>×</button></div>{error&&<div className="form-error">{error}</div>}<label>Название<input required maxLength={300} value={item.title} onChange={e=>set('title',e.target.value)}/></label><label>Автор<input required maxLength={300} value={item.author} onChange={e=>set('author',e.target.value)}/></label><div className="form-grid"><label>Формат<select value={item.bookFormat} onChange={e=>changeFormat(e.target.value as BookFormat)}>{Object.entries(bookFormatLabels).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>{item.bookFormat==='AUDIOBOOK'?<label>Продолжительность, минут<input required min="1" type="number" value={item.durationMinutes??''} onChange={e=>set('durationMinutes',e.target.value?Number(e.target.value):null)}/></label>:<label>Количество страниц<input required min="1" type="number" value={item.pageCount??''} onChange={e=>set('pageCount',e.target.value?Number(e.target.value):null)}/></label>}<label>Год<input min="1" type="number" value={item.releaseYear??''} onChange={e=>set('releaseYear',e.target.value?Number(e.target.value):null)}/></label><label>Жанр<input maxLength={100} value={item.genre??''} onChange={e=>set('genre',e.target.value||null)}/></label></div><label>URL обложки<input type="url" value={item.coverUrl??''} onChange={e=>set('coverUrl',e.target.value||null)}/></label><label>Описание<textarea rows={3} value={item.description??''} onChange={e=>set('description',e.target.value||null)}/></label><fieldset className="library-fields"><legend>Моя библиотека</legend><label className="all-day-check"><input type="checkbox" checked={inLibrary} onChange={e=>setInLibrary(e.target.checked)}/>Добавить в библиотеку</label>{inLibrary&&<><div className="form-grid"><label>Статус<select value={library.status} onChange={e=>setLib('status',e.target.value as LibraryStatus)}>{Object.entries(bookStatusLabels).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label><label>Оценка<select value={library.rating??''} onChange={e=>setLib('rating',e.target.value?Number(e.target.value):null)}><option value="">Без оценки</option>{Array.from({length:10},(_,i)=>i+1).map(value=><option key={value}>{value}</option>)}</select></label></div><label className="favorite-check"><input type="checkbox" checked={library.favorite} onChange={e=>setLib('favorite',e.target.checked)}/>В избранном</label><label>Заметка<textarea rows={2} value={library.personalNote??''} onChange={e=>setLib('personalNote',e.target.value||null)}/></label></>}</fieldset><div className="form-buttons">{book&&<button className="danger-button" type="button" onClick={()=>void remove()}>Удалить</button>}<button className="secondary-button" type="button" onClick={onClose}>Отмена</button><button className="primary-button" disabled={saving}>{saving?'Сохраняем…':'Сохранить'}</button></div></form></div>
+export function BookForm({
+  book,
+  onClose,
+  onSaved,
+  onDeleted,
+}: {
+  book?: Book;
+  onClose: () => void;
+  onSaved: () => void;
+  onDeleted?: () => void;
+}) {
+  const { showToast } = useToast();
+  const [item, setItem] = useState<BookInput>(
+    book
+      ? {
+          title: book.title,
+          author: book.author,
+          bookFormat: book.bookFormat,
+          pageCount: book.pageCount,
+          durationMinutes: book.durationMinutes,
+          releaseYear: book.releaseYear,
+          genre: book.genre,
+          coverUrl: book.coverUrl,
+          description: book.description,
+          googleBooksId: book.googleBooksId,
+          isbn: book.isbn,
+        }
+      : emptyBook,
+  );
+  const [inLibrary, setInLibrary] = useState(Boolean(book?.libraryEntryId));
+  const [library, setLibrary] = useState<BookLibraryInput>({
+    status: book?.status ?? "NOT_STARTED",
+    rating: book?.rating ?? null,
+    favorite: book?.favorite ?? false,
+    startedAt: book?.startedAt ?? null,
+    completedAt: book?.completedAt ?? null,
+    personalNote: book?.personalNote ?? null,
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [catalogQuery, setCatalogQuery] = useState("");
+  const [candidates, setCandidates] = useState<GoogleBookCandidate[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchCompleted, setSearchCompleted] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const set = <K extends keyof BookInput>(key: K, value: BookInput[K]) =>
+    setItem((current) => ({ ...current, [key]: value }));
+  const setLib = <K extends keyof BookLibraryInput>(
+    key: K,
+    value: BookLibraryInput[K],
+  ) => setLibrary((current) => ({ ...current, [key]: value }));
+  const changeFormat = (format: BookFormat) =>
+    setItem((current) => ({
+      ...current,
+      bookFormat: format,
+      pageCount: format === "AUDIOBOOK" ? null : current.pageCount,
+      durationMinutes: format === "AUDIOBOOK" ? current.durationMinutes : null,
+    }));
+  const searchCatalog = async () => {
+    const value = catalogQuery.trim();
+    if (value.length < 2) return;
+    setSearching(true);
+    setSearchCompleted(false);
+    setError(null);
+    try {
+      setCandidates(await searchGoogleBooks(value));
+      setSearchCompleted(true);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось выполнить поиск в Google Books",
+      );
+    } finally {
+      setSearching(false);
+    }
+  };
+  const selectCandidate = (candidate: GoogleBookCandidate) => {
+    if (candidate.existingBookId) return;
+    setItem({
+      ...emptyBook,
+      title: candidate.title,
+      author: candidate.author,
+      pageCount: candidate.pageCount,
+      releaseYear: candidate.releaseYear,
+      genre: candidate.genre,
+      coverUrl: candidate.coverUrl,
+      description: candidate.description,
+      googleBooksId: candidate.googleBooksId,
+      isbn: candidate.isbn,
+    });
+    setCandidates([]);
+  };
+  const uploadCover = async (file?: File) => {
+    if (!file) return;
+    setUploadingCover(true);
+    setError(null);
+    try {
+      const uploaded = await uploadBookCover(file);
+      set("coverUrl", uploaded.coverUrl);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Не удалось загрузить обложку");
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      const saved = book
+        ? await updateBook(book.id, item)
+        : await createBook(item);
+      if (inLibrary) await putBookLibrary(saved.id, library);
+      else if (book?.libraryEntryId) await removeBookLibrary(saved.id);
+      showToast(book ? "Книга обновлена" : "Книга добавлена");
+      onSaved();
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Не удалось сохранить книгу",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+  const remove = async () => {
+    if (!book || !confirm(`Удалить «${book.title}»?`)) return;
+    try {
+      await deleteBook(book.id);
+      showToast("Книга удалена");
+      (onDeleted ?? onSaved)();
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Не удалось удалить книгу",
+      );
+    }
+  };
+  return (
+    <div className="modal-backdrop">
+      <form className="habit-form book-form" onSubmit={(e) => void submit(e)}>
+        <div className="form-heading">
+          <div>
+            <p className="eyebrow">Книги</p>
+            <h2>{book ? "Редактирование" : "Новая книга"}</h2>
+          </div>
+          <button type="button" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        {error && <div className="form-error">{error}</div>}
+        {!book && (
+          <section className="kinopoisk-movie-search">
+            <div>
+              <input
+                value={catalogQuery}
+                onChange={(e) => setCatalogQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void searchCatalog();
+                  }
+                }}
+                placeholder="Введите название книги или ISBN"
+              />
+              <button
+                className="secondary-button"
+                type="button"
+                disabled={searching || catalogQuery.trim().length < 2}
+                onClick={() => void searchCatalog()}
+              >
+                {searching ? "Ищем…" : "Найти в Google Books"}
+              </button>
+            </div>
+            {item.googleBooksId && (
+              <p>
+                Издание выбрано. Проверьте данные и при необходимости замените
+                URL обложки.
+              </p>
+            )}
+            {candidates.length > 0 && (
+              <div className="kinopoisk-movie-results">
+                {candidates.map((candidate) => (
+                  <button
+                    type="button"
+                    key={candidate.googleBooksId}
+                    disabled={Boolean(candidate.existingBookId)}
+                    onClick={() => selectCandidate(candidate)}
+                  >
+                    {candidate.coverUrl ? (
+                      <img src={candidate.coverUrl} alt="" />
+                    ) : (
+                      <span>▥</span>
+                    )}
+                    <span>
+                      <strong>{candidate.title}</strong>
+                      <small>
+                        {candidate.author}
+                        {candidate.publisher ? ` · ${candidate.publisher}` : ""}
+                        {candidate.publishedDate
+                          ? ` · ${candidate.publishedDate}`
+                          : ""}
+                        {candidate.isbn ? ` · ISBN ${candidate.isbn}` : ""}
+                        {candidate.existingBookId ? " · Уже в каталоге" : ""}
+                      </small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {searchCompleted && candidates.length === 0 && (
+              <p className="form-hint">
+                Книга не найдена в Google Books. Проверьте ISBN или заполните
+                данные вручную.
+              </p>
+            )}
+          </section>
+        )}
+        <label>
+          Название
+          <input
+            required
+            maxLength={300}
+            value={item.title}
+            onChange={(e) => set("title", e.target.value)}
+          />
+        </label>
+        <label>
+          Автор
+          <input
+            required
+            maxLength={300}
+            value={item.author}
+            onChange={(e) => set("author", e.target.value)}
+          />
+        </label>
+        <div className="form-grid">
+          <label>
+            Формат
+            <select
+              value={item.bookFormat}
+              onChange={(e) => changeFormat(e.target.value as BookFormat)}
+            >
+              {Object.entries(bookFormatLabels).map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {item.bookFormat === "AUDIOBOOK" ? (
+            <label>
+              Продолжительность, минут
+              <input
+                required
+                min="1"
+                type="number"
+                value={item.durationMinutes ?? ""}
+                onChange={(e) =>
+                  set(
+                    "durationMinutes",
+                    e.target.value ? Number(e.target.value) : null,
+                  )
+                }
+              />
+            </label>
+          ) : (
+            <label>
+              Количество страниц
+              <input
+                required
+                min="1"
+                type="number"
+                value={item.pageCount ?? ""}
+                onChange={(e) =>
+                  set(
+                    "pageCount",
+                    e.target.value ? Number(e.target.value) : null,
+                  )
+                }
+              />
+            </label>
+          )}
+          <label>
+            Год
+            <input
+              min="1"
+              type="number"
+              value={item.releaseYear ?? ""}
+              onChange={(e) =>
+                set(
+                  "releaseYear",
+                  e.target.value ? Number(e.target.value) : null,
+                )
+              }
+            />
+          </label>
+          <label>
+            Жанр
+            <input
+              maxLength={100}
+              value={item.genre ?? ""}
+              onChange={(e) => set("genre", e.target.value || null)}
+            />
+          </label>
+        </div>
+        <label>
+          ISBN
+          <input
+            maxLength={20}
+            value={item.isbn ?? ""}
+            onChange={(e) => set("isbn", e.target.value || null)}
+            placeholder="ISBN конкретного издания"
+          />
+        </label>
+        <label>
+          URL обложки
+          <input
+            type="text"
+            inputMode="url"
+            value={item.coverUrl ?? ""}
+            onChange={(e) => set("coverUrl", e.target.value || null)}
+          />
+        </label>
+        <label>
+          Файл обложки
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            disabled={uploadingCover}
+            onChange={(e) => void uploadCover(e.target.files?.[0])}
+          />
+          <small className="book-cover-upload-hint">
+            {uploadingCover
+              ? "Загружаем обложку…"
+              : "JPEG, PNG или WebP, не более 5 МБ"}
+          </small>
+        </label>
+        <label>
+          Описание
+          <textarea
+            rows={3}
+            value={item.description ?? ""}
+            onChange={(e) => set("description", e.target.value || null)}
+          />
+        </label>
+        <fieldset className="library-fields">
+          <legend>Моя библиотека</legend>
+          <label className="all-day-check">
+            <input
+              type="checkbox"
+              checked={inLibrary}
+              onChange={(e) => setInLibrary(e.target.checked)}
+            />
+            Добавить в библиотеку
+          </label>
+          {inLibrary && (
+            <>
+              <div className="form-grid">
+                <label>
+                  Статус
+                  <select
+                    value={library.status}
+                    onChange={(e) =>
+                      setLib("status", e.target.value as LibraryStatus)
+                    }
+                  >
+                    {Object.entries(bookStatusLabels).map(([key, label]) => (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Оценка
+                  <select
+                    value={library.rating ?? ""}
+                    onChange={(e) =>
+                      setLib(
+                        "rating",
+                        e.target.value ? Number(e.target.value) : null,
+                      )
+                    }
+                  >
+                    <option value="">Без оценки</option>
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map(
+                      (value) => (
+                        <option key={value}>{value}</option>
+                      ),
+                    )}
+                  </select>
+                </label>
+              </div>
+              <label className="favorite-check">
+                <input
+                  type="checkbox"
+                  checked={library.favorite}
+                  onChange={(e) => setLib("favorite", e.target.checked)}
+                />
+                В избранном
+              </label>
+              <label>
+                Заметка
+                <textarea
+                  rows={2}
+                  value={library.personalNote ?? ""}
+                  onChange={(e) =>
+                    setLib("personalNote", e.target.value || null)
+                  }
+                />
+              </label>
+            </>
+          )}
+        </fieldset>
+        <div className="form-buttons">
+          {book && (
+            <button
+              className="danger-button"
+              type="button"
+              onClick={() => void remove()}
+            >
+              Удалить
+            </button>
+          )}
+          <button className="secondary-button" type="button" onClick={onClose}>
+            Отмена
+          </button>
+          <button className="primary-button" disabled={saving || searching || uploadingCover}>
+            {saving ? "Сохраняем…" : "Сохранить"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
 }
 
-export function ProgressForm({book,onClose,onSaved}:{book:Book;onClose:()=>void;onSaved:()=>void}){const audio=book.bookFormat==='AUDIOBOOK';const [value,setValue]=useState(audio?book.currentMinute??0:book.currentPage??0);const [error,setError]=useState<string|null>(null);const submit=async(e:FormEvent)=>{e.preventDefault();try{await putBookProgress(book.id,audio?null:value,audio?value:null);onSaved()}catch(reason){setError(reason instanceof Error?reason.message:'Не удалось обновить прогресс')}};return <div className="modal-backdrop"><form className="habit-form compact-book-form" onSubmit={e=>void submit(e)}><div className="form-heading"><div><p className="eyebrow">Прогресс</p><h2>{book.title}</h2></div><button type="button" onClick={onClose}>×</button></div>{error&&<div className="form-error">{error}</div>}<label>{audio?'Текущая позиция, минут':'Текущая страница'}<input required min="0" max={(audio?book.durationMinutes:book.pageCount)??undefined} type="number" value={value} onChange={e=>setValue(Number(e.target.value))}/></label><div className="form-buttons"><button className="secondary-button" type="button" onClick={onClose}>Отмена</button><button className="primary-button">Сохранить</button></div></form></div>}
+export function ProgressForm({
+  book,
+  onClose,
+  onSaved,
+}: {
+  book: Book;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const audio = book.bookFormat === "AUDIOBOOK";
+  const [value, setValue] = useState(
+    audio ? (book.currentMinute ?? 0) : (book.currentPage ?? 0),
+  );
+  const [error, setError] = useState<string | null>(null);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      await putBookProgress(
+        book.id,
+        audio ? null : value,
+        audio ? value : null,
+      );
+      onSaved();
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось обновить прогресс",
+      );
+    }
+  };
+  return (
+    <div className="modal-backdrop">
+      <form
+        className="habit-form compact-book-form"
+        onSubmit={(e) => void submit(e)}
+      >
+        <div className="form-heading">
+          <div>
+            <p className="eyebrow">Прогресс</p>
+            <h2>{book.title}</h2>
+          </div>
+          <button type="button" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        {error && <div className="form-error">{error}</div>}
+        <label>
+          {audio ? "Текущая позиция, минут" : "Текущая страница"}
+          <input
+            required
+            min="0"
+            max={(audio ? book.durationMinutes : book.pageCount) ?? undefined}
+            type="number"
+            value={value}
+            onChange={(e) => setValue(Number(e.target.value))}
+          />
+        </label>
+        <div className="form-buttons">
+          <button className="secondary-button" type="button" onClick={onClose}>
+            Отмена
+          </button>
+          <button className="primary-button">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  );
+}
 
-export function SessionForm({book,session,onClose,onSaved}:{book:Book;session?:ReadingSession;onClose:()=>void;onSaved:()=>void}){const audio=book.bookFormat==='AUDIOBOOK';const [input,setInput]=useState<ReadingSessionInput>(session?{startedAt:session.startedAt,durationMinutes:session.durationMinutes,pagesRead:session.pagesRead,listenedMinutes:session.listenedMinutes,note:session.note}:{startedAt:new Date().toISOString(),durationMinutes:30,pagesRead:0,listenedMinutes:0,note:null});const [error,setError]=useState<string|null>(null);const submit=async(e:FormEvent)=>{e.preventDefault();try{if(session)await updateReadingSession(session.id,input);else await createReadingSession(book.id,input);onSaved()}catch(reason){setError(reason instanceof Error?reason.message:'Не удалось сохранить сеанс')}};const remove=async()=>{if(!session||!confirm('Удалить сеанс чтения?'))return;try{await deleteReadingSession(session.id);onSaved()}catch(reason){setError(reason instanceof Error?reason.message:'Не удалось удалить сеанс')}};return <div className="modal-backdrop"><form className="habit-form compact-book-form" onSubmit={e=>void submit(e)}><div className="form-heading"><div><p className="eyebrow">Сеанс чтения</p><h2>{book.title}</h2></div><button type="button" onClick={onClose}>×</button></div>{error&&<div className="form-error">{error}</div>}<label>Начало<input type="datetime-local" value={localDateTime(input.startedAt)} onChange={e=>setInput(current=>({...current,startedAt:new Date(e.target.value).toISOString()}))}/></label><div className="form-grid"><label>Продолжительность, минут<input min="1" type="number" value={input.durationMinutes} onChange={e=>setInput(current=>({...current,durationMinutes:Number(e.target.value)}))}/></label>{audio?<label>Прослушано, минут<input min="0" type="number" value={input.listenedMinutes} onChange={e=>setInput(current=>({...current,listenedMinutes:Number(e.target.value)}))}/></label>:<label>Прочитано страниц<input min="0" type="number" value={input.pagesRead} onChange={e=>setInput(current=>({...current,pagesRead:Number(e.target.value)}))}/></label>}</div><label>Заметка<textarea rows={3} value={input.note??''} onChange={e=>setInput(current=>({...current,note:e.target.value||null}))}/></label><p className="form-hint">После сохранения прогресс изменится автоматически.</p><div className="form-buttons">{session&&<button className="danger-button" type="button" onClick={()=>void remove()}>Удалить</button>}<button className="secondary-button" type="button" onClick={onClose}>Отмена</button><button className="primary-button">Сохранить</button></div></form></div>}
+export function SessionForm({
+  book,
+  session,
+  onClose,
+  onSaved,
+}: {
+  book: Book;
+  session?: ReadingSession;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const audio = book.bookFormat === "AUDIOBOOK";
+  const [input, setInput] = useState<ReadingSessionInput>(
+    session
+      ? {
+          startedAt: session.startedAt,
+          durationMinutes: session.durationMinutes,
+          pagesRead: session.pagesRead,
+          listenedMinutes: session.listenedMinutes,
+          note: session.note,
+        }
+      : {
+          startedAt: new Date().toISOString(),
+          durationMinutes: 30,
+          pagesRead: 0,
+          listenedMinutes: 0,
+          note: null,
+        },
+  );
+  const [error, setError] = useState<string | null>(null);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      if (session) await updateReadingSession(session.id, input);
+      else await createReadingSession(book.id, input);
+      onSaved();
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Не удалось сохранить сеанс",
+      );
+    }
+  };
+  const remove = async () => {
+    if (!session || !confirm("Удалить сеанс чтения?")) return;
+    try {
+      await deleteReadingSession(session.id);
+      onSaved();
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Не удалось удалить сеанс",
+      );
+    }
+  };
+  return (
+    <div className="modal-backdrop">
+      <form
+        className="habit-form compact-book-form"
+        onSubmit={(e) => void submit(e)}
+      >
+        <div className="form-heading">
+          <div>
+            <p className="eyebrow">Сеанс чтения</p>
+            <h2>{book.title}</h2>
+          </div>
+          <button type="button" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        {error && <div className="form-error">{error}</div>}
+        <label>
+          Начало
+          <input
+            type="datetime-local"
+            value={localDateTime(input.startedAt)}
+            onChange={(e) =>
+              setInput((current) => ({
+                ...current,
+                startedAt: new Date(e.target.value).toISOString(),
+              }))
+            }
+          />
+        </label>
+        <div className="form-grid">
+          <label>
+            Продолжительность, минут
+            <input
+              min="1"
+              type="number"
+              value={input.durationMinutes}
+              onChange={(e) =>
+                setInput((current) => ({
+                  ...current,
+                  durationMinutes: Number(e.target.value),
+                }))
+              }
+            />
+          </label>
+          {audio ? (
+            <label>
+              Прослушано, минут
+              <input
+                min="0"
+                type="number"
+                value={input.listenedMinutes}
+                onChange={(e) =>
+                  setInput((current) => ({
+                    ...current,
+                    listenedMinutes: Number(e.target.value),
+                  }))
+                }
+              />
+            </label>
+          ) : (
+            <label>
+              Прочитано страниц
+              <input
+                min="0"
+                type="number"
+                value={input.pagesRead}
+                onChange={(e) =>
+                  setInput((current) => ({
+                    ...current,
+                    pagesRead: Number(e.target.value),
+                  }))
+                }
+              />
+            </label>
+          )}
+        </div>
+        <label>
+          Заметка
+          <textarea
+            rows={3}
+            value={input.note ?? ""}
+            onChange={(e) =>
+              setInput((current) => ({
+                ...current,
+                note: e.target.value || null,
+              }))
+            }
+          />
+        </label>
+        <p className="form-hint">
+          После сохранения прогресс изменится автоматически.
+        </p>
+        <div className="form-buttons">
+          {session && (
+            <button
+              className="danger-button"
+              type="button"
+              onClick={() => void remove()}
+            >
+              Удалить
+            </button>
+          )}
+          <button className="secondary-button" type="button" onClick={onClose}>
+            Отмена
+          </button>
+          <button className="primary-button">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  );
+}

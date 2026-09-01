@@ -29,6 +29,7 @@ server:
 app:
   default-user-id: ${DEFAULT_USER_ID:1}
   backup-directory: ${BACKUP_DIRECTORY:../backups}
+  book-covers-directory: ${BOOK_COVERS_DIRECTORY:../data/uploads/book-covers}
 
 springdoc:
   api-docs:
