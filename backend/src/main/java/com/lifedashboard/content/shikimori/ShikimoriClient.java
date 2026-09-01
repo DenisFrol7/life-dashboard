@@ -22,7 +22,7 @@ public class ShikimoriClient {
         try {
             JsonNode response = client.get().uri(uri -> uri.path("/api/animes")
                             .queryParam("search", query).queryParam("limit", 12).build())
-                    .header(HttpHeaders.USER_AGENT, "LifeDashboard/1.4.0 (personal local application)")
+                    .header(HttpHeaders.USER_AGENT, "LifeDashboard/1.5.0 (personal local application)")
                     .header(HttpHeaders.ACCEPT, "application/json").retrieve().body(JsonNode.class);
             List<AnimeCandidate> result = new ArrayList<>();
             if (response == null) return result;
@@ -48,7 +48,7 @@ public class ShikimoriClient {
     public AnimeDetails getAnime(long id) {
         try {
             JsonNode node = client.get().uri("/api/animes/{id}", id)
-                    .header(HttpHeaders.USER_AGENT, "LifeDashboard/1.4.0 (personal local application)")
+                    .header(HttpHeaders.USER_AGENT, "LifeDashboard/1.5.0 (personal local application)")
                     .header(HttpHeaders.ACCEPT, "application/json").retrieve().body(JsonNode.class);
             if (node == null) throw new InvalidRequestException("Shikimori returned an empty response");
             List<String> genres = new ArrayList<>();
