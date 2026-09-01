@@ -14,8 +14,10 @@ import com.lifedashboard.user.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.math.RoundingMode;
 import java.util.*;
 
 @Service
@@ -92,9 +94,9 @@ public class TimelineService {
         for (HabitEntry entry : habitEntries.findAllByHabitUserIdAndEntryDate(userId, date)) {
             Habit habit = entry.getHabit();
             String detail = entry.isSkipped() ? "Пропущено" : habit.getTrackingType() == TrackingType.BOOLEAN
-                    ? "Выполнено" : entry.getValue() + (habit.getUnit() == null ? "" : " " + habit.getUnit());
+                    ? "Выполнено" : habitValue(habit, entry);
             result.add(item("habit-" + entry.getId(), "habit", null, habit.getName(), detail,
-                    null, null, !entry.isSkipped()));
+                    null, null, habitCompleted(habit, entry)));
         }
     }
 
@@ -176,4 +178,23 @@ public class TimelineService {
     }
     private String time(Instant value, ZoneId zone) { return value.atZone(zone).format(TIME_FORMAT); }
     private String duration(long minutes) { return minutes / 60 + " ч " + minutes % 60 + " мин"; }
+    private String habitValue(Habit habit, HabitEntry entry) {
+        if (habit.getDataSource() == HabitDataSource.SLEEP_DURATION) {
+            long minutes = entry.getValue().setScale(0, RoundingMode.HALF_UP).longValue();
+            return duration(minutes);
+        }
+        return entry.getValue().stripTrailingZeros().toPlainString()
+                + (habit.getUnit() == null ? "" : " " + habit.getUnit());
+    }
+
+    private boolean habitCompleted(Habit habit, HabitEntry entry) {
+        if (entry.isSkipped() || entry.getValue() == null) return false;
+        if (habit.getTrackingType() == TrackingType.BOOLEAN) {
+            return entry.getValue().compareTo(BigDecimal.ONE) == 0;
+        }
+        BigDecimal target = entry.getTargetValueSnapshot() == null
+                ? habit.getTargetValue()
+                : entry.getTargetValueSnapshot();
+        return target == null || entry.getValue().compareTo(target) >= 0;
+    }
 }

@@ -9,6 +9,11 @@ import com.lifedashboard.game.dto.GameLibraryRequest;
 import com.lifedashboard.game.dto.GameSessionRequest;
 import com.lifedashboard.journal.*;
 import com.lifedashboard.journal.dto.JournalEntryRequest;
+import com.lifedashboard.habit.*;
+import com.lifedashboard.habit.dto.HabitEntryRequest;
+import com.lifedashboard.habit.dto.HabitRequest;
+import java.math.BigDecimal;
+import java.util.Set;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -30,7 +35,9 @@ class TimelineServiceIntegrationTests {
     @Autowired GameSessionService gameSessionService;
     @Autowired GamingPlatformRepository platforms;
     @Autowired GameSourceRepository sources;
+    @Autowired HabitService habitService;
     private Long journalId;
+    private Long habitId;
 
     @BeforeEach void setUp() { cleanup(); }
     @AfterEach void tearDown() { cleanup(); }
@@ -73,7 +80,30 @@ class TimelineServiceIntegrationTests {
         assertTrue(gameItem.detail().contains("Story mission"));
     }
 
+    @Test
+    void formatsAutomatedSleepHabitValueAsDuration() {
+        habitId = habitService.create(new HabitRequest("Sleep timeline test", null, TrackingType.DURATION,
+                HabitDataSource.SLEEP_DURATION, BigDecimal.valueOf(480), "часов", HabitScheduleType.DAILY,
+                DATE, null, HabitStatus.ACTIVE, Set.of())).id();
+        habitService.putEntry(habitId, DATE, new HabitEntryRequest(new BigDecimal("465.00"), false, null));
+
+        var habitItem = timeline.get(DATE).stream()
+                .filter(item -> item.kind().equals("habit") && item.title().equals("Sleep timeline test"))
+                .findFirst().orElseThrow();
+
+        assertEquals("7 ч 45 мин", habitItem.detail());
+        assertFalse(habitItem.completed());
+
+        habitService.putEntry(habitId, DATE, new HabitEntryRequest(BigDecimal.valueOf(480), false, null));
+        var completedHabitItem = timeline.get(DATE).stream()
+                .filter(item -> item.kind().equals("habit") && item.title().equals("Sleep timeline test"))
+                .findFirst().orElseThrow();
+
+        assertTrue(completedHabitItem.completed());
+    }
+
     private void cleanup() {
+        if (habitId != null) { habitService.delete(habitId); habitId = null; }
         if (journalId != null) { journalService.delete(journalId); journalId = null; }
         activityRepository.findByUserIdAndActivityDate(1L, DATE).ifPresent(activityRepository::delete);
         contentRepository.findByTitle(GAME_TITLE).ifPresent(contentRepository::delete);
