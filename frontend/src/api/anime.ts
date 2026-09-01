@@ -5,6 +5,11 @@ export type AnimeSummary = { id: number; title: string; originalTitle: string | 
 export type AnimeEpisode = { id: number; episodeNumber: number; title: string; durationMinutes: number | null; releaseDate: string | null; watched: boolean; watchCount: number }
 export type AnimeSeason = { id: number; seasonNumber: number; title: string | null; releaseYear: number | null; episodes: AnimeEpisode[] }
 export type AnimeDetails = Omit<AnimeSummary, 'seasonCount' | 'episodeCount' | 'watchedEpisodeCount'> & { description: string | null; startedAt: string | null; completedAt: string | null; personalNote: string | null; seasons: AnimeSeason[] }
+export type ShikimoriPreviewItem = { shikimoriId: number; title: string; originalTitle: string | null; status: string; score: number | null; watchedEpisodes: number; rewatches: number; existingContentId: number | null }
+export type ShikimoriImportPreview = { token: string; total: number; completed: number; watching: number; planned: number; existing: number; items: ShikimoriPreviewItem[]; warnings: string[] }
+export type ShikimoriImportResult = { total: number; animeCreated: number; moviesCreated: number; updated: number; skipped: number; episodeWatches: number; backupFile: string }
+export type ShikimoriAnimeCandidate = { shikimoriId: number; title: string; originalTitle: string | null; kind: string | null; status: string | null; coverUrl: string | null; existingContentId: number | null }
+export type ShikimoriAnimeDetails = { shikimoriId: number; title: string; originalTitle: string | null; releaseYear: number | null; description: string | null; coverUrl: string | null; releaseStatus: ReleaseStatus; genre: string | null; durationMinutes: number | null; episodeCount: number; existingContentId: number | null }
 export type AnimeInput = Pick<AnimeDetails, 'title' | 'originalTitle' | 'releaseYear' | 'description' | 'coverUrl' | 'releaseStatus'>
 
 export const getAnime = () => apiRequest<AnimeSummary[]>('/api/anime')
@@ -17,3 +22,8 @@ export const removeAnimeLibrary = (id: number) => apiRequest<void>(`/api/anime/$
 export const createAnimeSeason = (id: number, seasonNumber: number) => apiRequest<AnimeDetails>(`/api/anime/${id}/seasons`, { method: 'POST', body: JSON.stringify({ seasonNumber, title: null, releaseYear: null }) })
 export const createAnimeEpisode = (seasonId: number, episodeNumber: number, title: string) => apiRequest<AnimeDetails>(`/api/anime/seasons/${seasonId}/episodes`, { method: 'POST', body: JSON.stringify({ episodeNumber, title, durationMinutes: null, releaseDate: null }) })
 export const watchAnimeEpisode = (episodeId: number) => apiRequest<AnimeDetails>(`/api/anime/episodes/${episodeId}/watches`, { method: 'POST', body: JSON.stringify({ watchedAt: null }) })
+export const previewShikimoriImport = (file: File) => { const body = new FormData(); body.append('file', file); return apiRequest<ShikimoriImportPreview>('/api/anime/shikimori/preview', { method: 'POST', body }) }
+export const importShikimori = (token: string) => apiRequest<ShikimoriImportResult>(`/api/anime/shikimori/import/${encodeURIComponent(token)}`, { method: 'POST' })
+export const searchShikimoriAnime = (query: string) => apiRequest<ShikimoriAnimeCandidate[]>(`/api/anime/shikimori/search?query=${encodeURIComponent(query)}`)
+export const previewShikimoriAnime = (id: number) => apiRequest<ShikimoriAnimeDetails>(`/api/anime/shikimori/${id}`)
+export const createShikimoriAnime = (id: number, input: AnimeInput) => apiRequest<AnimeDetails>(`/api/anime/shikimori/${id}`, { method: 'POST', body: JSON.stringify(input) })

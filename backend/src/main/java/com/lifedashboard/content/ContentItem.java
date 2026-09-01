@@ -37,6 +37,8 @@ public class ContentItem {
     private Long kinopoiskFilmId;
     @Column(name = "kinopoisk_enriched_at")
     private Instant kinopoiskEnrichedAt;
+    @Column(name = "shikimori_id")
+    private Long shikimoriId;
     @Enumerated(EnumType.STRING) @Column(name = "release_status", nullable = false, length = 20)
     private ReleaseStatus releaseStatus;
 
@@ -69,4 +71,6 @@ public class ContentItem {
     public void setKinopoiskFilmId(Long kinopoiskFilmId) { this.kinopoiskFilmId = kinopoiskFilmId; }
     public Instant getKinopoiskEnrichedAt() { return kinopoiskEnrichedAt; }
     public void markKinopoiskEnriched() { this.kinopoiskEnrichedAt = Instant.now(); }
+    public Long getShikimoriId() { return shikimoriId; }
+    public void setShikimoriId(Long shikimoriId) { this.shikimoriId = shikimoriId; }
 }

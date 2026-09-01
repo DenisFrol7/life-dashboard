@@ -35,7 +35,9 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   try {
     response = await fetch(`${apiBaseUrl}${path}`, {
       ...init,
-      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      headers: init?.body instanceof FormData
+        ? init.headers
+        : { 'Content-Type': 'application/json', ...init?.headers },
     })
   } catch (reason) {
     throw new Error(getApiErrorMessage(reason, 'Не удалось выполнить запрос.'))
