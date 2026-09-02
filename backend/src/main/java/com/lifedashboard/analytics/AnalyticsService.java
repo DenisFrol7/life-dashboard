@@ -38,7 +38,7 @@ public class AnalyticsService {
         String timezone = jdbc.query("SELECT timezone FROM users WHERE id = :userId",
                 new MapSqlParameterSource("userId", userId),
                 result -> result.next() ? result.getString(1) : null);
-        if (timezone == null) throw new ResourceNotFoundException("Default user was not found");
+        if (timezone == null) throw new ResourceNotFoundException("Пользователь по умолчанию не найден");
         ZoneId zone = ZoneId.of(timezone);
         LocalDate effectiveTo = to == null ? LocalDate.now(zone) : to;
         LocalDate effectiveFrom = allTime ? earliestDate(effectiveTo, zone)
@@ -55,13 +55,13 @@ public class AnalyticsService {
     }
 
     private void validate(LocalDate from, LocalDate to, boolean allTime) {
-        if (to.isBefore(from)) throw new InvalidRequestException("to must not be before from");
+        if (to.isBefore(from)) throw new InvalidRequestException("Конец периода не может быть раньше его начала");
         long days = ChronoUnit.DAYS.between(from, to);
         if (!allTime && days >= MAX_DAYS) {
-            throw new InvalidRequestException("Analytics period must not exceed 366 days");
+            throw new InvalidRequestException("Период аналитики не может превышать 366 дней");
         }
         if (allTime && days >= MAX_ALL_TIME_DAYS) {
-            throw new InvalidRequestException("All-time analytics period must not exceed 100 years");
+            throw new InvalidRequestException("Период аналитики за всё время не может превышать 100 лет");
         }
     }
 

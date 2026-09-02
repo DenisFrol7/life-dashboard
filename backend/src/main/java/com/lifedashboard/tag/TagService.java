@@ -34,7 +34,7 @@ public class TagService {
         String slug = normalizeSlug(request.slug());
         ensureUnique(slug, null);
         User user = userRepository.findById(defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Default user with id " + defaultUserId + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь с идентификатором " + defaultUserId + " не найден"));
         Tag tag = new Tag(user);
         tag.update(request.name().trim(), slug);
         return toResponse(tagRepository.save(tag));
@@ -66,7 +66,7 @@ public class TagService {
 
     Tag findTag(Long id) {
         return tagRepository.findByIdAndUserId(id, defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Tag with id " + id + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Тег с идентификатором " + id + " не найден"));
     }
 
     private void ensureUnique(String slug, Long excludedId) {
@@ -74,7 +74,7 @@ public class TagService {
                 ? tagRepository.existsByUserIdAndSlug(defaultUserId, slug)
                 : tagRepository.existsByUserIdAndSlugAndIdNot(defaultUserId, slug, excludedId);
         if (exists) {
-            throw new DuplicateResourceException("Tag slug is already in use");
+            throw new DuplicateResourceException("Такой адрес тега уже используется");
         }
     }
 

@@ -48,7 +48,7 @@ public class MovieCatalogService {
 
     public MovieCatalogPageResponse getPage(int page, int size, String query, UserContentStatus status) {
         if (page < 0 || size < 1 || size > 100)
-            throw new InvalidRequestException("Movie page must be non-negative and size must be between 1 and 100");
+            throw new InvalidRequestException("Номер страницы фильмов не может быть отрицательным, а размер должен быть от 1 до 100");
         List<MovieCatalogResponse> all = getAll();
         String normalized = Optional.ofNullable(normalize(query)).orElse("");
         List<MovieCatalogResponse> filtered = all.stream()
@@ -70,7 +70,7 @@ public class MovieCatalogService {
 
     public List<KinopoiskMovieCandidate> searchKinopoisk(String query) {
         if (query == null || query.trim().length() < 2)
-            throw new InvalidRequestException("Movie search query must contain at least 2 characters");
+            throw new InvalidRequestException("Запрос для поиска фильма должен содержать не менее 2 символов");
         return kinopoisk.searchMovies(query.trim()).stream().map(candidate -> new KinopoiskMovieCandidate(
                 candidate.filmId(), candidate.nameRu(), candidate.nameOriginal(), candidate.year(),
                 candidate.posterUrlPreview(), items.findByKinopoiskFilmId(candidate.filmId())
@@ -110,7 +110,7 @@ public class MovieCatalogService {
     public KinopoiskRatingsImportResult importRatings(String profileId) {
         KinopoiskRatingsPreview preview = ratingsCache.get(profileId);
         if (preview == null)
-            throw new InvalidRequestException("Load the Kinopoisk ratings preview before confirming import");
+            throw new InvalidRequestException("Перед подтверждением импорта загрузите предварительный просмотр оценок Кинопоиска");
         String backupFile = dataTransfer.createAutomaticBackup().toString();
         int created = 0;
         int updated = 0;
@@ -141,7 +141,7 @@ public class MovieCatalogService {
     @Transactional
     public KinopoiskMovieEnrichmentResult enrichMovies(int batchSize) {
         if (batchSize < 1 || batchSize > 400)
-            throw new InvalidRequestException("Movie enrichment batch size must be between 1 and 400");
+            throw new InvalidRequestException("За один раз можно обновить от 1 до 400 фильмов");
         List<ContentItem> pending = items
                 .findAllByItemTypeAndKinopoiskFilmIdIsNotNullAndKinopoiskEnrichedAtIsNullOrderByIdAsc(ContentType.MOVIE);
         int total = pending.size();
@@ -174,12 +174,12 @@ public class MovieCatalogService {
     @Transactional
     public ContentItemResponse createFromKinopoisk(long filmId, ContentItemRequest request) {
         items.findByKinopoiskFilmId(filmId).ifPresent(existing -> {
-            throw new DuplicateResourceException("Kinopoisk movie already exists in catalog with id " + existing.getId());
+            throw new DuplicateResourceException("Фильм Кинопоиска уже есть в каталоге с идентификатором " + existing.getId());
         });
         var details = kinopoisk.getMovie(filmId);
         if (request.itemType() != ContentType.MOVIE
                 || (request.format() != ContentFormat.LIVE_ACTION && request.format() != ContentFormat.ANIMATION))
-            throw new InvalidRequestException("Kinopoisk catalog entry must be a movie");
+            throw new InvalidRequestException("Выбранная запись Кинопоиска должна быть фильмом");
         ContentItem item = findLegacyMovie(details, request).orElseGet(() -> new ContentItem(request.title().trim()));
         item.update(request.title().trim(), trim(request.originalTitle()), ContentType.MOVIE, request.format(),
                 request.releaseYear(), trim(request.description()), trim(request.coverUrl()), request.durationMinutes(),

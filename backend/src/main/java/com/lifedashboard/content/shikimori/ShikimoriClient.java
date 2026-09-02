@@ -36,12 +36,12 @@ public class ShikimoriClient {
             }
             return List.copyOf(result);
         } catch (RestClientResponseException exception) {
-            throw new InvalidRequestException("Shikimori API request failed with status "
+            throw new InvalidRequestException("Запрос к API Shikimori завершился ошибкой "
                     + exception.getStatusCode().value());
         } catch (RuntimeException exception) {
             if (exception instanceof InvalidRequestException invalid) throw invalid;
             log.warn("Failed to search Shikimori for '{}': {}", query, exception.toString(), exception);
-            throw new InvalidRequestException("Could not search Shikimori API");
+            throw new InvalidRequestException("Не удалось выполнить поиск через API Shikimori");
         }
     }
 
@@ -50,7 +50,7 @@ public class ShikimoriClient {
             JsonNode node = client.get().uri("/api/animes/{id}", id)
                     .header(HttpHeaders.USER_AGENT, "LifeDashboard/1.5.0 (personal local application)")
                     .header(HttpHeaders.ACCEPT, "application/json").retrieve().body(JsonNode.class);
-            if (node == null) throw new InvalidRequestException("Shikimori returned an empty response");
+            if (node == null) throw new InvalidRequestException("Shikimori вернул пустой ответ");
             List<String> genres = new ArrayList<>();
             for (JsonNode genre : node.path("genres")) {
                 String value = text(genre, "russian");
@@ -64,13 +64,13 @@ public class ShikimoriClient {
                     date(text(node, "aired_on")), date(text(node, "released_on")),
                     text(node, "description"), image, String.join(", ", genres));
         } catch (RestClientResponseException exception) {
-            throw new InvalidRequestException("Shikimori API request failed with status "
+            throw new InvalidRequestException("Запрос к API Shikimori завершился ошибкой "
                     + exception.getStatusCode().value());
         } catch (InvalidRequestException exception) {
             throw exception;
         } catch (RuntimeException exception) {
             log.warn("Failed to load Shikimori anime {}: {}", id, exception.toString(), exception);
-            throw new InvalidRequestException("Could not process Shikimori API response for anime " + id);
+            throw new InvalidRequestException("Не удалось обработать ответ API Shikimori для аниме " + id);
         }
     }
 

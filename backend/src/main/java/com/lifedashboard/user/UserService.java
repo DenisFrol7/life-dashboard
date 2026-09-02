@@ -79,7 +79,7 @@ public class UserService {
 
     private User findById(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User with id " + id + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь с идентификатором " + id + " не найден"));
     }
 
     private void ensureUnique(String username, String email, Long excludedId) {
@@ -87,7 +87,7 @@ public class UserService {
                 ? userRepository.existsByUsername(username)
                 : userRepository.existsByUsernameAndIdNot(username, excludedId);
         if (usernameExists) {
-            throw new DuplicateResourceException("Username is already in use");
+            throw new DuplicateResourceException("Это имя пользователя уже используется");
         }
 
         if (email == null) {
@@ -97,7 +97,7 @@ public class UserService {
                 ? userRepository.existsByEmail(email)
                 : userRepository.existsByEmailAndIdNot(email, excludedId);
         if (emailExists) {
-            throw new DuplicateResourceException("Email is already in use");
+            throw new DuplicateResourceException("Этот адрес электронной почты уже используется");
         }
     }
 

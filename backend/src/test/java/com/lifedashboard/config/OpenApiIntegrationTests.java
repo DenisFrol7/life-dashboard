@@ -47,7 +47,7 @@ class OpenApiIntegrationTests {
         mockMvc.perform(get("/api/dashboard").param("date", "not-a-date"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.message").value("Malformed request"))
+                .andExpect(jsonPath("$.message").value("Некорректный формат запроса"))
                 .andExpect(jsonPath("$.path").value("/api/dashboard"));
     }
 }

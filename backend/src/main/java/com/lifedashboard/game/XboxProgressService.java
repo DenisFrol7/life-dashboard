@@ -31,28 +31,28 @@ public class XboxProgressService {
     public XboxProgressResponse get(Long libraryEntryId) {
         findXboxGame(libraryEntryId);
         return response(progressRepository.findByLibraryEntryId(libraryEntryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Xbox progress was not found")));
+                .orElseThrow(() -> new ResourceNotFoundException("Прогресс Xbox не найден")));
     }
     @Transactional
     public void delete(Long libraryEntryId) {
         findXboxGame(libraryEntryId);
         XboxGameProgress progress = progressRepository.findByLibraryEntryId(libraryEntryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Xbox progress was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Прогресс Xbox не найден"));
         progressRepository.delete(progress);
     }
     private UserGame findXboxGame(Long id) {
         UserGame game = gameRepository.findByIdAndUserContentUserId(id, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Game library entry with id " + id + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Копия игры с идентификатором " + id + " не найдена"));
         String code = game.getPlatform().getCode();
         if (!code.startsWith("XBOX_") && !code.equals("ORIGINAL_XBOX"))
-            throw new InvalidRequestException("Xbox progress is only available for Xbox platforms");
+            throw new InvalidRequestException("Прогресс Xbox доступен только для платформ Xbox");
         return game;
     }
     private void validate(XboxProgressRequest r) {
         if (r.unlockedAchievements() > r.totalAchievements())
-            throw new InvalidRequestException("unlockedAchievements must not exceed totalAchievements");
+            throw new InvalidRequestException("Количество полученных достижений не может превышать их общее количество");
         if (r.earnedGamerscore() > r.totalGamerscore())
-            throw new InvalidRequestException("earnedGamerscore must not exceed totalGamerscore");
+            throw new InvalidRequestException("Полученный Gamerscore не может превышать общий Gamerscore");
     }
     private double percent(int value, int total) {
         return total == 0 ? 0.0 : Math.round(value * 10000.0 / total) / 100.0;

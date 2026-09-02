@@ -80,9 +80,9 @@ public class AnimeService {
     }
     private ContentItem findAnime(Long id) {
         ContentItem item = items.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Anime with id " + id + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Аниме с идентификатором " + id + " не найдено"));
         if (item.getItemType() != ContentType.ANIME)
-            throw new ResourceNotFoundException("Anime with id " + id + " was not found");
+            throw new ResourceNotFoundException("Аниме с идентификатором " + id + " не найдено");
         return item;
     }
     private ContentItemRequest contentRequest(AnimeRequest r) {

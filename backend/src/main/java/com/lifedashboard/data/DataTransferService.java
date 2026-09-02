@@ -64,10 +64,10 @@ public class DataTransferService {
     @Transactional
     public DataTransferResponse importData(byte[] content) {
         if (content == null || content.length == 0) {
-            throw new InvalidRequestException("Import file is empty");
+            throw new InvalidRequestException("Файл импорта пуст");
         }
         if (content.length > MAX_IMPORT_BYTES) {
-            throw new InvalidRequestException("Import file is larger than 50 MB");
+            throw new InvalidRequestException("Размер файла импорта превышает 50 МБ");
         }
 
         String json = new String(content, StandardCharsets.UTF_8);
@@ -121,27 +121,27 @@ public class DataTransferService {
             List<String> archiveTables = jdbc.queryForList(
                     "SELECT jsonb_object_keys(CAST(? AS jsonb) -> 'tables')", String.class, json);
             if (formatVersion == null || formatVersion != FORMAT_VERSION) {
-                throw new InvalidRequestException("Unsupported import format version");
+                throw new InvalidRequestException("Версия формата импорта не поддерживается");
             }
             if (!schemaVersion().equals(archiveSchema)) {
-                throw new InvalidRequestException("Import file was created for a different database schema");
+                throw new InvalidRequestException("Файл импорта создан для другой версии структуры базы данных");
             }
             if (!new HashSet<>(currentTables).equals(new HashSet<>(archiveTables))
                     || currentTables.size() != archiveTables.size()) {
-                throw new InvalidRequestException("Import file contains an incompatible table set");
+                throw new InvalidRequestException("Файл импорта содержит несовместимый набор таблиц");
             }
             for (String table : currentTables) {
                 Boolean array = jdbc.queryForObject(
                         "SELECT jsonb_typeof(CAST(? AS jsonb) -> 'tables' -> ?) = 'array'",
                         Boolean.class, json, table);
                 if (!Boolean.TRUE.equals(array)) {
-                    throw new InvalidRequestException("Invalid data for table " + table);
+                    throw new InvalidRequestException("Некорректные данные для таблицы " + table);
                 }
             }
         } catch (InvalidRequestException exception) {
             throw exception;
         } catch (DataAccessException exception) {
-            throw new InvalidRequestException("Import file is not a valid Life Dashboard archive");
+            throw new InvalidRequestException("Файл импорта не является корректным архивом Life Dashboard");
         }
     }
 
@@ -152,7 +152,7 @@ public class DataTransferService {
                     + BACKUP_TIMESTAMP.format(Instant.now(clock)) + ".json");
             return Files.writeString(file, content, StandardCharsets.UTF_8);
         } catch (IOException exception) {
-            throw new IllegalStateException("Could not create the automatic backup before import", exception);
+            throw new IllegalStateException("Не удалось создать автоматическую резервную копию перед импортом", exception);
         }
     }
 
@@ -218,7 +218,7 @@ public class DataTransferService {
             });
         }
         if (result.size() != tables.size()) {
-            throw new IllegalStateException("Database table dependencies contain a cycle");
+            throw new IllegalStateException("В зависимостях таблиц базы данных обнаружен цикл");
         }
         return result;
     }
@@ -246,7 +246,7 @@ public class DataTransferService {
 
     private String quote(String identifier) {
         if (!identifier.matches("[a-z][a-z0-9_]*")) {
-            throw new IllegalArgumentException("Unsafe database identifier");
+            throw new IllegalArgumentException("Недопустимый идентификатор базы данных");
         }
         return '"' + identifier + '"';
     }

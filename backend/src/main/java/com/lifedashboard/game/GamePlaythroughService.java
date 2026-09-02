@@ -49,11 +49,11 @@ public class GamePlaythroughService {
         playthroughs.delete(findPlaythrough(id));
     }
     private UserGame findGame(Long id) { return games.findByIdAndUserContentUserId(id, userId)
-            .orElseThrow(() -> new ResourceNotFoundException("Game library entry with id " + id + " was not found")); }
+            .orElseThrow(() -> new ResourceNotFoundException("Копия игры с идентификатором " + id + " не найдена")); }
     private GamePlaythrough findPlaythrough(Long id) {
         return playthroughs.findByIdAndLibraryEntryUserContentUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Game playthrough with id " + id + " was not found"));
+                        "Прохождение игры с идентификатором " + id + " не найдено"));
     }
     private GamePlaythroughResponse response(GamePlaythrough item) {
         return new GamePlaythroughResponse(item.getId(), item.getLibraryEntry().getId(),

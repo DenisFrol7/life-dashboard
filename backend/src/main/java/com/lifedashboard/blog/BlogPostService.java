@@ -58,7 +58,7 @@ public class BlogPostService {
     public BlogPostResponse createFromJournal(Long journalEntryId, BlogPostFromJournalRequest request) {
         JournalEntry journalEntry = journalEntryRepository.findByIdAndUserId(journalEntryId, defaultUserId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Journal entry with id " + journalEntryId + " was not found"));
+                        "Запись журнала с идентификатором " + journalEntryId + " не найдена"));
         String slug = normalizeSlug(request.slug());
         ensureUnique(slug, null);
         String title = normalizeNullable(request.title());
@@ -85,7 +85,7 @@ public class BlogPostService {
             Instant publishedTo
     ) {
         if (publishedFrom != null && publishedTo != null && publishedTo.isBefore(publishedFrom)) {
-            throw new InvalidRequestException("publishedTo must not be before publishedFrom");
+            throw new InvalidRequestException("Конец периода публикации не может быть раньше его начала");
         }
         Specification<BlogPost> specification = (root, query, builder) ->
                 builder.equal(root.get("user").get("id"), defaultUserId);
@@ -151,17 +151,17 @@ public class BlogPostService {
 
     private BlogPost findPost(Long id) {
         return postRepository.findByIdAndUserId(id, defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Blog post with id " + id + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Запись блога с идентификатором " + id + " не найдена"));
     }
 
     private Tag findTag(Long id) {
         return tagRepository.findByIdAndUserId(id, defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Tag with id " + id + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Тег с идентификатором " + id + " не найден"));
     }
 
     private User findDefaultUser() {
         return userRepository.findById(defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Default user with id " + defaultUserId + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь с идентификатором " + defaultUserId + " не найден"));
     }
 
     private void ensureUnique(String slug, Long excludedId) {
@@ -169,7 +169,7 @@ public class BlogPostService {
                 ? postRepository.existsByUserIdAndSlug(defaultUserId, slug)
                 : postRepository.existsByUserIdAndSlugAndIdNot(defaultUserId, slug, excludedId);
         if (exists) {
-            throw new DuplicateResourceException("Blog post slug is already in use");
+            throw new DuplicateResourceException("Такой адрес записи блога уже используется");
         }
     }
 

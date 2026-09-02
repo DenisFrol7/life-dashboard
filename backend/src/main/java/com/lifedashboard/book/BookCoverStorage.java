@@ -33,14 +33,14 @@ public class BookCoverStorage {
     public BookCoverStorage(@Value("${app.book-covers-directory:../data/uploads/book-covers}") String directory) {
         this.directory = Path.of(directory).toAbsolutePath().normalize();
         try { Files.createDirectories(this.directory); }
-        catch (IOException e) { throw new IllegalStateException("Could not create book covers directory", e); }
+        catch (IOException e) { throw new IllegalStateException("Не удалось создать каталог обложек книг", e); }
     }
 
     public String store(MultipartFile file) {
-        if (file == null || file.isEmpty()) throw new InvalidRequestException("Choose a non-empty cover image");
-        if (file.getSize() > MAX_BYTES) throw new InvalidRequestException("Book cover must not exceed 5 MB");
+        if (file == null || file.isEmpty()) throw new InvalidRequestException("Выберите непустой файл обложки");
+        if (file.getSize() > MAX_BYTES) throw new InvalidRequestException("Размер обложки не может превышать 5 МБ");
         try { return storeBytes(readLimited(file.getInputStream()), file.getContentType()); }
-        catch (IOException e) { throw new InvalidRequestException("Could not read the uploaded book cover"); }
+        catch (IOException e) { throw new InvalidRequestException("Не удалось прочитать загруженную обложку книги"); }
     }
 
     public String localize(String coverUrl) {
@@ -59,29 +59,29 @@ public class BookCoverStorage {
                     int status = http.getResponseCode();
                     if (status >= 300 && status < 400) {
                         String location = http.getHeaderField("Location");
-                        if (location == null) throw new InvalidRequestException("Cover URL redirects without a destination");
+                        if (location == null) throw new InvalidRequestException("Адрес обложки перенаправляет без указания нового адреса");
                         uri = uri.resolve(location);
                         continue;
                     }
-                    if (status < 200 || status >= 300) throw new InvalidRequestException("Cover download failed with status " + status);
+                    if (status < 200 || status >= 300) throw new InvalidRequestException("Не удалось загрузить обложку: код ответа " + status);
                 }
                 try (InputStream input = connection.getInputStream()) {
                     return storeBytes(readLimited(input), connection.getContentType());
                 }
             }
-            throw new InvalidRequestException("Cover URL has too many redirects");
+            throw new InvalidRequestException("При загрузке обложки произошло слишком много перенаправлений");
         } catch (InvalidRequestException e) {
             throw e;
         } catch (Exception e) {
-            throw new InvalidRequestException("Could not download the book cover");
+            throw new InvalidRequestException("Не удалось загрузить обложку книги");
         }
     }
 
     public Resource load(String filename) {
         Path path = resolve(filename);
-        if (!Files.isRegularFile(path)) throw new ResourceNotFoundException("Book cover was not found");
+        if (!Files.isRegularFile(path)) throw new ResourceNotFoundException("Обложка книги не найдена");
         try { return new UrlResource(path.toUri()); }
-        catch (Exception e) { throw new ResourceNotFoundException("Book cover was not found"); }
+        catch (Exception e) { throw new ResourceNotFoundException("Обложка книги не найдена"); }
     }
 
     public MediaType mediaType(String filename) {
@@ -100,7 +100,7 @@ public class BookCoverStorage {
     private String storeBytes(byte[] bytes, String declaredType) throws IOException {
         String type = detectType(bytes);
         if (type == null || (declaredType != null && declaredType.startsWith("image/") && !ALLOWED_TYPES.contains(type)))
-            throw new InvalidRequestException("Only JPEG, PNG and WebP covers are supported");
+            throw new InvalidRequestException("Поддерживаются только обложки в форматах JPEG, PNG и WebP");
         String extension = type.equals(MediaType.IMAGE_PNG_VALUE) ? ".png" : type.equals("image/webp") ? ".webp" : ".jpg";
         String filename = UUID.randomUUID() + extension;
         Files.write(resolve(filename), bytes, StandardOpenOption.CREATE_NEW);
@@ -112,7 +112,7 @@ public class BookCoverStorage {
         byte[] buffer = new byte[8192];
         int read;
         while ((read = input.read(buffer)) >= 0) {
-            if (output.size() + read > MAX_BYTES) throw new InvalidRequestException("Book cover must not exceed 5 MB");
+            if (output.size() + read > MAX_BYTES) throw new InvalidRequestException("Размер обложки не может превышать 5 МБ");
             output.write(buffer, 0, read);
         }
         return output.toByteArray();
@@ -127,17 +127,17 @@ public class BookCoverStorage {
 
     private void validateRemote(URI uri) throws Exception {
         if (!("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme())) || uri.getHost() == null)
-            throw new InvalidRequestException("Cover URL must use HTTP or HTTPS");
+            throw new InvalidRequestException("Адрес обложки должен использовать HTTP или HTTPS");
         for (InetAddress address : InetAddress.getAllByName(uri.getHost())) {
             if (address.isAnyLocalAddress() || address.isLoopbackAddress() || address.isLinkLocalAddress()
                     || address.isSiteLocalAddress() || address.isMulticastAddress())
-                throw new InvalidRequestException("Cover URL points to a private network address");
+                throw new InvalidRequestException("Адрес обложки указывает на ресурс в частной сети");
         }
     }
 
     private Path resolve(String filename) {
         Path result = directory.resolve(filename).normalize();
-        if (!result.getParent().equals(directory)) throw new InvalidRequestException("Invalid cover filename");
+        if (!result.getParent().equals(directory)) throw new InvalidRequestException("Некорректное имя файла обложки");
         return result;
     }
 

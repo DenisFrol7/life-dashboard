@@ -103,7 +103,7 @@ class CalendarEventControllerIntegrationTests {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("All-day events must not contain startTime or endTime"));
+                .andExpect(jsonPath("$.message").value("Для события на весь день нельзя указывать время начала или окончания"));
 
         mockMvc.perform(post("/api/calendar/events")
                         .contentType(MediaType.APPLICATION_JSON)

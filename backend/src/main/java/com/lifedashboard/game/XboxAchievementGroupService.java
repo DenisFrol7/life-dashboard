@@ -46,7 +46,7 @@ public class XboxAchievementGroupService {
     public void delete(Long id) {
         XboxAchievementGroup group = find(id);
         if (group.getGroupType() == XboxAchievementGroupType.BASE_GAME)
-            throw new InvalidRequestException("The base game achievement group cannot be deleted");
+            throw new InvalidRequestException("Группу достижений основной игры нельзя удалить");
         UserGame game = group.getLibraryEntry(); groups.delete(group); groups.flush(); recalculate(game);
     }
     @Transactional
@@ -78,22 +78,22 @@ public class XboxAchievementGroupService {
     }
     private void validate(XboxAchievementGroupRequest request) {
         if (request.unlockedAchievements() > request.totalAchievements())
-            throw new InvalidRequestException("unlockedAchievements must not exceed totalAchievements");
+            throw new InvalidRequestException("Количество полученных достижений не может превышать их общее количество");
         if (request.earnedGamerscore() > request.totalGamerscore())
-            throw new InvalidRequestException("earnedGamerscore must not exceed totalGamerscore");
+            throw new InvalidRequestException("Полученный Gamerscore не может превышать общий Gamerscore");
     }
     private void validateName(Long libraryId, String name, Long id) {
         if (groups.existsByLibraryEntryIdAndNameIgnoreCaseAndIdNot(libraryId, name.trim(), id))
-            throw new DuplicateResourceException("Achievement group name is already in use");
+            throw new DuplicateResourceException("Группа достижений с таким названием уже существует");
     }
     private XboxAchievementGroup find(Long id) { return groups.findByIdAndLibraryEntryUserContentUserId(id, userId)
-            .orElseThrow(() -> new ResourceNotFoundException("Xbox achievement group with id " + id + " was not found")); }
+            .orElseThrow(() -> new ResourceNotFoundException("Группа достижений Xbox с идентификатором " + id + " не найдена")); }
     private UserGame findXboxGame(Long id) {
         UserGame game = games.findByIdAndUserContentUserId(id, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Game library entry with id " + id + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Копия игры с идентификатором " + id + " не найдена"));
         String code = game.getPlatform().getCode();
         if (!code.startsWith("XBOX_") && !code.equals("ORIGINAL_XBOX"))
-            throw new InvalidRequestException("Achievement groups are only available for Xbox platforms");
+            throw new InvalidRequestException("Группы достижений доступны только для платформ Xbox");
         return game;
     }
     private double percent(int value, int total) { return total == 0 ? 0.0 : Math.round(value * 10000.0 / total) / 100.0; }

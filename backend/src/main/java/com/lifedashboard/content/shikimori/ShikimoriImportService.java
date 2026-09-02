@@ -65,12 +65,12 @@ public class ShikimoriImportService {
     @Transactional
     public ShikimoriImportResult importData(String token) {
         List<SourceItem> source = previews.remove(token);
-        if (source == null) throw new InvalidRequestException("Shikimori preview expired; load the file again");
+        if (source == null) throw new InvalidRequestException("Срок предварительного просмотра Shikimori истёк — загрузите файл ещё раз");
         List<ResolvedItem> resolved = new ArrayList<>();
         for (SourceItem item : source) {
             resolved.add(new ResolvedItem(item, shikimori.getAnime(item.id())));
             try { Thread.sleep(250); } catch (InterruptedException exception) {
-                Thread.currentThread().interrupt(); throw new InvalidRequestException("Shikimori import was interrupted");
+                Thread.currentThread().interrupt(); throw new InvalidRequestException("Импорт из Shikimori был прерван");
             }
         }
         String backup = dataTransfer.createAutomaticBackup().toString();
@@ -133,11 +133,11 @@ public class ShikimoriImportService {
     }
 
     private List<SourceItem> parse(MultipartFile file) {
-        if (file == null || file.isEmpty()) throw new InvalidRequestException("Shikimori export is empty");
-        if (file.getSize() > MAX_BYTES) throw new InvalidRequestException("Shikimori export is larger than 2 MB");
+        if (file == null || file.isEmpty()) throw new InvalidRequestException("Файл экспорта Shikimori пуст");
+        if (file.getSize() > MAX_BYTES) throw new InvalidRequestException("Размер экспорта Shikimori превышает 2 МБ");
         try {
             JsonNode root = mapper.readTree(file.getBytes());
-            if (!root.isArray()) throw new InvalidRequestException("Shikimori export must be a JSON array");
+            if (!root.isArray()) throw new InvalidRequestException("Экспорт Shikimori должен содержать массив JSON");
             List<SourceItem> result = new ArrayList<>();
             Set<Long> ids = new HashSet<>();
             for (JsonNode node : root) {
@@ -147,9 +147,9 @@ public class ShikimoriImportService {
                         text(node, "status"), node.path("score").asInt(), node.path("episodes").asInt(),
                         node.path("rewatches").asInt(), text(node, "text")));
             }
-            if (result.isEmpty()) throw new InvalidRequestException("Shikimori export does not contain anime");
+            if (result.isEmpty()) throw new InvalidRequestException("Экспорт Shikimori не содержит аниме");
             return List.copyOf(result);
-        } catch (IOException exception) { throw new InvalidRequestException("Could not read Shikimori export"); }
+        } catch (IOException exception) { throw new InvalidRequestException("Не удалось прочитать экспорт Shikimori"); }
     }
 
     private Optional<ContentItem> findExisting(SourceItem source) {

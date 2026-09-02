@@ -115,7 +115,7 @@ class JournalControllerIntegrationTests {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(tagJson("Second", slug.toUpperCase())))
                     .andExpect(status().isConflict())
-                    .andExpect(jsonPath("$.message").value("Tag slug is already in use"));
+                    .andExpect(jsonPath("$.message").value("Такой адрес тега уже используется"));
 
             mockMvc.perform(post("/api/journal")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -127,7 +127,7 @@ class JournalControllerIntegrationTests {
                             .param("from", "2099-04-30")
                             .param("to", "2099-04-01"))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.message").value("to must not be before from"));
+                    .andExpect(jsonPath("$.message").value("Конец периода не может быть раньше его начала"));
         } finally {
             if (tagId != null) {
                 Long remainingTagId = tagId;

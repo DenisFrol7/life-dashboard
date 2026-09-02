@@ -43,7 +43,7 @@ public class CalendarEventService {
     public CalendarEventResponse create(CalendarEventRequest request) {
         validate(request);
         User user = userRepository.findById(defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Default user with id " + defaultUserId + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь с идентификатором " + defaultUserId + " не найден"));
         CalendarEvent event = new CalendarEvent(user);
         apply(event, request);
         return toResponse(eventRepository.save(event));
@@ -78,7 +78,7 @@ public class CalendarEventService {
     public OccurrenceResponse putOccurrence(Long eventId, LocalDate date, OccurrenceRequest request) {
         CalendarEvent event = findEvent(eventId);
         if (date.isBefore(event.getStartDate()) || event.getRepeatUntil() != null && date.isAfter(event.getRepeatUntil())) {
-            throw new InvalidRequestException("Occurrence date is outside the event date range");
+            throw new InvalidRequestException("Дата выполнения находится вне периода события");
         }
         CalendarEventOccurrence occurrence = occurrenceRepository
                 .findByEventIdAndOccurrenceDate(eventId, date)
@@ -98,7 +98,7 @@ public class CalendarEventService {
     }
 
     public List<CalendarOccurrenceSummaryResponse> getOccurrences(LocalDate from, LocalDate to) {
-        if (to.isBefore(from)) throw new InvalidRequestException("to must not be before from");
+        if (to.isBefore(from)) throw new InvalidRequestException("Конец периода не может быть раньше его начала");
         return occurrenceRepository
                 .findAllByEventUserIdAndOccurrenceDateBetweenOrderByOccurrenceDateAsc(defaultUserId, from, to)
                 .stream().map(occurrence -> new CalendarOccurrenceSummaryResponse(
@@ -109,13 +109,13 @@ public class CalendarEventService {
     public void deleteOccurrence(Long eventId, LocalDate date) {
         findEvent(eventId);
         CalendarEventOccurrence occurrence = occurrenceRepository.findByEventIdAndOccurrenceDate(eventId, date)
-                .orElseThrow(() -> new ResourceNotFoundException("Occurrence for " + date + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Выполнение события за " + date + " не найдено"));
         occurrenceRepository.delete(occurrence);
     }
 
     private CalendarEvent findEvent(Long id) {
         return eventRepository.findByIdAndUserId(id, defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Calendar event with id " + id + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Событие календаря с идентификатором " + id + " не найдено"));
     }
 
     private void apply(CalendarEvent event, CalendarEventRequest request) {
@@ -132,20 +132,20 @@ public class CalendarEventService {
 
     private void validate(CalendarEventRequest request) {
         if (request.repeatUntil() != null && request.repeatUntil().isBefore(request.startDate())) {
-            throw new InvalidRequestException("repeatUntil must not be before startDate");
+            throw new InvalidRequestException("Дата окончания повторения не может быть раньше даты начала");
         }
         if (request.endTime() != null && request.startTime() != null && !request.endTime().isAfter(request.startTime())) {
-            throw new InvalidRequestException("endTime must be after startTime");
+            throw new InvalidRequestException("Время окончания должно быть позже времени начала");
         }
         if (request.allDay() && (request.startTime() != null || request.endTime() != null)) {
-            throw new InvalidRequestException("All-day events must not contain startTime or endTime");
+            throw new InvalidRequestException("Для события на весь день нельзя указывать время начала или окончания");
         }
         boolean hasDays = request.scheduleDays() != null && !request.scheduleDays().isEmpty();
         if (request.scheduleType() == ScheduleType.SELECTED_DAYS && !hasDays) {
-            throw new InvalidRequestException("scheduleDays are required for SELECTED_DAYS");
+            throw new InvalidRequestException("Для расписания по выбранным дням необходимо указать дни недели");
         }
         if (request.scheduleType() != ScheduleType.SELECTED_DAYS && hasDays) {
-            throw new InvalidRequestException("scheduleDays are only allowed for SELECTED_DAYS");
+            throw new InvalidRequestException("Дни недели можно указывать только для расписания по выбранным дням");
         }
     }
 

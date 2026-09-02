@@ -75,11 +75,11 @@ public class BookService {
         Book book=find(id); UserContent entry=findLibrary(book); BookProgress value=findProgress(entry);
         if(book.getBookFormat()==BookFormat.AUDIOBOOK) {
             int minute=request.currentMinute()==null?0:request.currentMinute();
-            if(minute>book.getDurationMinutes()) throw new InvalidRequestException("currentMinute must not exceed durationMinutes");
+            if(minute>book.getDurationMinutes()) throw new InvalidRequestException("Текущая минута не может превышать длительность аудиокниги");
             value.update(0,minute);
         } else {
             int page=request.currentPage()==null?0:request.currentPage();
-            if(page>book.getPageCount()) throw new InvalidRequestException("currentPage must not exceed pageCount");
+            if(page>book.getPageCount()) throw new InvalidRequestException("Текущая страница не может превышать количество страниц книги");
             value.update(page,0);
         }
         progress.save(value); return response(book);
@@ -113,24 +113,24 @@ public class BookService {
     }
     private BookProgress findProgress(UserContent entry) { return progress.findByUserContentId(entry.getId()).orElseGet(() -> new BookProgress(entry)); }
     private ReadingSession findSession(Long id) { return sessions.findByIdAndUserContentUserId(id,userId)
-            .orElseThrow(() -> new ResourceNotFoundException("Reading session with id "+id+" was not found")); }
-    private Book find(Long id) { return books.findById(id).orElseThrow(() -> new ResourceNotFoundException("Book with id "+id+" was not found")); }
+            .orElseThrow(() -> new ResourceNotFoundException("Сеанс чтения с идентификатором "+id+" не найден")); }
+    private Book find(Long id) { return books.findById(id).orElseThrow(() -> new ResourceNotFoundException("Книга с идентификатором "+id+" не найдена")); }
     private Book findByContent(Long contentId) { return books.findByContentId(contentId).orElseThrow(); }
     private UserContent findLibrary(Book book) { return library.findByUserIdAndContentId(userId,book.getContent().getId())
-            .orElseThrow(() -> new InvalidRequestException("Book must be in the library")); }
+            .orElseThrow(() -> new InvalidRequestException("Книга должна быть добавлена в библиотеку")); }
     private void validateBook(BookRequest request) {
         boolean audio=request.bookFormat()==BookFormat.AUDIOBOOK;
-        if(audio&&(request.durationMinutes()==null||request.pageCount()!=null)) throw new InvalidRequestException("Audiobook requires durationMinutes and must not have pageCount");
-        if(!audio&&(request.pageCount()==null||request.durationMinutes()!=null)) throw new InvalidRequestException("Paper and electronic books require pageCount and must not have durationMinutes");
+        if(audio&&(request.durationMinutes()==null||request.pageCount()!=null)) throw new InvalidRequestException("Для аудиокниги требуется длительность, а количество страниц указывать нельзя");
+        if(!audio&&(request.pageCount()==null||request.durationMinutes()!=null)) throw new InvalidRequestException("Для бумажной или электронной книги требуется количество страниц, а длительность указывать нельзя");
     }
     private void validateDuplicate(BookRequest request) {
         String googleId=normalize(request.googleBooksId()), isbn=normalizeIsbn(request.isbn());
-        if(googleId!=null&&books.findByGoogleBooksId(googleId).isPresent()) throw new InvalidRequestException("This Google Books edition is already in the catalog");
-        if(isbn!=null&&books.findFirstByIsbn(isbn).isPresent()) throw new InvalidRequestException("A book with this ISBN is already in the catalog");
+        if(googleId!=null&&books.findByGoogleBooksId(googleId).isPresent()) throw new InvalidRequestException("Это издание Google Books уже есть в каталоге");
+        if(isbn!=null&&books.findFirstByIsbn(isbn).isPresent()) throw new InvalidRequestException("Книга с таким ISBN уже есть в каталоге");
     }
     private void validateSession(Book book,ReadingSessionRequest request) {
-        if(book.getBookFormat()==BookFormat.AUDIOBOOK&&request.pagesRead()!=0) throw new InvalidRequestException("Audiobook session must not contain pagesRead");
-        if(book.getBookFormat()!=BookFormat.AUDIOBOOK&&request.listenedMinutes()!=0) throw new InvalidRequestException("Reading session must not contain listenedMinutes");
+        if(book.getBookFormat()==BookFormat.AUDIOBOOK&&request.pagesRead()!=0) throw new InvalidRequestException("Сеанс аудиокниги не может содержать количество прочитанных страниц");
+        if(book.getBookFormat()!=BookFormat.AUDIOBOOK&&request.listenedMinutes()!=0) throw new InvalidRequestException("Сеанс чтения не может содержать количество прослушанных минут");
     }
     private void apply(Book book,BookRequest request) { book.update(request.author().trim(),request.bookFormat(),request.pageCount(),request.durationMinutes(),normalize(request.googleBooksId()),normalizeIsbn(request.isbn())); }
     private void apply(ReadingSession value,ReadingSessionRequest request) { value.update(request.startedAt(),request.durationMinutes(),request.pagesRead(),request.listenedMinutes(),normalize(request.note())); }

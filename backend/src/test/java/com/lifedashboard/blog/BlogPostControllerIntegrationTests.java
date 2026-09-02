@@ -123,7 +123,7 @@ class BlogPostControllerIntegrationTests {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(postJson("Second", slug.toUpperCase(), "Content", "DRAFT")))
                     .andExpect(status().isConflict())
-                    .andExpect(jsonPath("$.message").value("Blog post slug is already in use"));
+                    .andExpect(jsonPath("$.message").value("Такой адрес записи блога уже используется"));
 
             mockMvc.perform(post("/api/blog/posts")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -137,7 +137,7 @@ class BlogPostControllerIntegrationTests {
                             .param("publishedFrom", "2100-01-01T00:00:00Z")
                             .param("publishedTo", "2000-01-01T00:00:00Z"))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.message").value("publishedTo must not be before publishedFrom"));
+                    .andExpect(jsonPath("$.message").value("Конец периода публикации не может быть раньше его начала"));
         } finally {
             if (postId != null) {
                 Long remainingPostId = postId;

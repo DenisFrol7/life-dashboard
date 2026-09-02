@@ -24,7 +24,7 @@ public class GoogleBooksService {
 
     public List<GoogleBookCandidate> search(String query) {
         String value = query == null ? "" : query.trim();
-        if (value.length() < 2) throw new InvalidRequestException("Book search query must contain at least 2 characters");
+        if (value.length() < 2) throw new InvalidRequestException("Запрос для поиска книги должен содержать не менее 2 символов");
 
         String digits = value.replaceAll("[^0-9Xx]", "");
         boolean isbnSearch = digits.length() >= 10;

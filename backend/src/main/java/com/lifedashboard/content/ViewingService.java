@@ -38,7 +38,7 @@ public class ViewingService {
     public SeasonResponse createSeason(Long contentId, SeasonRequest request) {
         ContentItem content = item(contentId); requireSeries(content);
         if (seasons.existsByContentIdAndSeasonNumber(contentId, request.seasonNumber()))
-            throw new DuplicateResourceException("Season number already exists");
+            throw new DuplicateResourceException("Сезон с таким номером уже существует");
         ContentSeason season = new ContentSeason(content);
         season.update(request.seasonNumber(), norm(request.title()), request.releaseYear());
         return response(seasons.save(season));
@@ -77,7 +77,7 @@ public class ViewingService {
     public SeasonResponse updateSeason(Long id, SeasonRequest request) {
         ContentSeason season = season(id); Long contentId = season.getContent().getId();
         if (seasons.existsByContentIdAndSeasonNumberAndIdNot(contentId, request.seasonNumber(), id))
-            throw new DuplicateResourceException("Season number already exists");
+            throw new DuplicateResourceException("Сезон с таким номером уже существует");
         season.update(request.seasonNumber(), norm(request.title()), request.releaseYear());
         return response(season);
     }
@@ -92,7 +92,7 @@ public class ViewingService {
     public EpisodeResponse createEpisode(Long seasonId, EpisodeRequest request) {
         ContentSeason season = season(seasonId);
         if (episodes.existsBySeasonIdAndEpisodeNumber(seasonId, request.episodeNumber()))
-            throw new DuplicateResourceException("Episode number already exists");
+            throw new DuplicateResourceException("Эпизод с таким номером уже существует");
         ContentEpisode episode = new ContentEpisode(season);
         episode.update(request.episodeNumber(), request.title().trim(), request.durationMinutes(), request.releaseDate());
         seasonCompletions.deleteByUserIdAndSeasonId(userId, seasonId);
@@ -133,7 +133,7 @@ public class ViewingService {
     public EpisodeResponse updateEpisode(Long id, EpisodeRequest request) {
         ContentEpisode episode = episode(id); Long seasonId = episode.getSeason().getId();
         if (episodes.existsBySeasonIdAndEpisodeNumberAndIdNot(seasonId, request.episodeNumber(), id))
-            throw new DuplicateResourceException("Episode number already exists");
+            throw new DuplicateResourceException("Эпизод с таким номером уже существует");
         episode.update(request.episodeNumber(), request.title().trim(), request.durationMinutes(), request.releaseDate());
         return response(episode);
     }
@@ -149,7 +149,7 @@ public class ViewingService {
     public void watchSeason(Long id, WatchRequest request) {
         ContentSeason season = season(id);
         List<ContentEpisode> seasonEpisodes = episodes.findAllBySeasonIdOrderByEpisodeNumber(id);
-        if (seasonEpisodes.isEmpty()) throw new InvalidRequestException("Season has no episodes");
+        if (seasonEpisodes.isEmpty()) throw new InvalidRequestException("В сезоне нет эпизодов");
         Instant completedAt = request == null ? null : request.watchedAt();
         Instant internalAt = completedAt == null ? Instant.now() : completedAt; User user = user();
         ensureLibrary(season.getContent(), user, internalAt);
@@ -196,7 +196,7 @@ public class ViewingService {
     @Transactional
     public WatchResponse watchMovie(Long id, WatchRequest request) {
         ContentItem content = item(id);
-        if (content.getItemType() != ContentType.MOVIE) throw new InvalidRequestException("Movie watch history is only available for MOVIE");
+        if (content.getItemType() != ContentType.MOVIE) throw new InvalidRequestException("История просмотров доступна только для фильмов");
         User user = user(); Instant watchedAt = time(request); UserContent entry = ensureLibrary(content, user, watchedAt);
         MovieWatch watch = movieWatches.save(new MovieWatch(user, content, watchedAt, movieWatches.maxNumber(id, userId) + 1));
         entry.changeStatus(UserContentStatus.COMPLETED, watch.getWatchedAt());
@@ -249,13 +249,13 @@ public class ViewingService {
     private void saveCompletion(ContentSeason season, Instant completedAt, int count) { SeasonCompletion completion = seasonCompletions.findByUserIdAndSeasonId(userId, season.getId()).orElseGet(() -> new SeasonCompletion(user(), season)); completion.update(completedAt, count); seasonCompletions.save(completion); }
     private UserContent ensureLibrary(ContentItem content, User user) { return ensureLibrary(content, user, Instant.now()); }
     private UserContent ensureLibrary(ContentItem content, User user, Instant startedAt) { return library.findByUserIdAndContentId(userId, content.getId()).orElseGet(() -> { UserContent entry = new UserContent(user, content); entry.update(UserContentStatus.IN_PROGRESS, null, false, startedAt, null, null); return library.save(entry); }); }
-    private void requireSeries(ContentItem content) { if (content.getItemType() != ContentType.SERIES && content.getItemType() != ContentType.ANIME) throw new InvalidRequestException("Seasons are only available for SERIES and ANIME"); }
-    private ContentItem item(Long id) { return items.findById(id).orElseThrow(() -> new ResourceNotFoundException("Content with id " + id + " was not found")); }
-    private ContentSeason season(Long id) { return seasons.findById(id).orElseThrow(() -> new ResourceNotFoundException("Season with id " + id + " was not found")); }
-    private ContentEpisode episode(Long id) { return episodes.findById(id).orElseThrow(() -> new ResourceNotFoundException("Episode with id " + id + " was not found")); }
-    private EpisodeWatch episodeWatch(Long id) { return episodeWatches.findByIdAndUserId(id, userId).orElseThrow(() -> new ResourceNotFoundException("Episode watch with id " + id + " was not found")); }
-    private MovieWatch movieWatch(Long id) { return movieWatches.findByIdAndUserId(id, userId).orElseThrow(() -> new ResourceNotFoundException("Movie watch with id " + id + " was not found")); }
-    private User user() { return users.findById(userId).orElseThrow(() -> new ResourceNotFoundException("Default user was not found")); }
+    private void requireSeries(ContentItem content) { if (content.getItemType() != ContentType.SERIES && content.getItemType() != ContentType.ANIME) throw new InvalidRequestException("Сезоны доступны только для сериалов и аниме"); }
+    private ContentItem item(Long id) { return items.findById(id).orElseThrow(() -> new ResourceNotFoundException("Материал с идентификатором " + id + " не найден")); }
+    private ContentSeason season(Long id) { return seasons.findById(id).orElseThrow(() -> new ResourceNotFoundException("Сезон с идентификатором " + id + " не найден")); }
+    private ContentEpisode episode(Long id) { return episodes.findById(id).orElseThrow(() -> new ResourceNotFoundException("Эпизод с идентификатором " + id + " не найден")); }
+    private EpisodeWatch episodeWatch(Long id) { return episodeWatches.findByIdAndUserId(id, userId).orElseThrow(() -> new ResourceNotFoundException("Просмотр эпизода с идентификатором " + id + " не найден")); }
+    private MovieWatch movieWatch(Long id) { return movieWatches.findByIdAndUserId(id, userId).orElseThrow(() -> new ResourceNotFoundException("Просмотр фильма с идентификатором " + id + " не найден")); }
+    private User user() { return users.findById(userId).orElseThrow(() -> new ResourceNotFoundException("Пользователь по умолчанию не найден")); }
     private Instant time(WatchRequest request) { return request == null || request.watchedAt() == null ? Instant.now() : request.watchedAt(); }
     private String norm(String value) { return value == null || value.isBlank() ? null : value.trim(); }
     private SeasonResponse response(ContentSeason season) { return new SeasonResponse(season.getId(), season.getContent().getId(), season.getSeasonNumber(), season.getTitle(), season.getReleaseYear()); }

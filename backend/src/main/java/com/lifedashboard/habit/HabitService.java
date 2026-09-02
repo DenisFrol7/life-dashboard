@@ -45,7 +45,7 @@ public class HabitService {
     public HabitResponse create(HabitRequest request) {
         validateHabit(request);
         User user = userRepository.findById(defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Default user with id " + defaultUserId + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь с идентификатором " + defaultUserId + " не найден"));
         Habit habit = new Habit(user);
         apply(habit, request);
         return toResponse(habitRepository.save(habit));
@@ -79,7 +79,7 @@ public class HabitService {
     public HabitEntryResponse putEntry(Long habitId, LocalDate date, HabitEntryRequest request) {
         Habit habit = findHabit(habitId);
         if (date.isBefore(habit.getStartDate()) || habit.getEndDate() != null && date.isAfter(habit.getEndDate())) {
-            throw new InvalidRequestException("Entry date is outside the habit date range");
+            throw new InvalidRequestException("Дата записи находится вне периода действия привычки");
         }
         validateEntry(habit, request);
         HabitEntry entry = entryRepository.findByHabitIdAndEntryDate(habitId, date)
@@ -106,39 +106,39 @@ public class HabitService {
     public void deleteEntry(Long habitId, LocalDate date) {
         findHabit(habitId);
         HabitEntry entry = entryRepository.findByHabitIdAndEntryDate(habitId, date)
-                .orElseThrow(() -> new ResourceNotFoundException("Habit entry for " + date + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Запись привычки за " + date + " не найдена"));
         entryRepository.delete(entry);
     }
 
     private Habit findHabit(Long id) {
         return habitRepository.findByIdAndUserId(id, defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Habit with id " + id + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Привычка с идентификатором " + id + " не найдена"));
     }
 
     private void validateHabit(HabitRequest request) {
         if (request.endDate() != null && request.endDate().isBefore(request.startDate())) {
-            throw new InvalidRequestException("endDate must not be before startDate");
+            throw new InvalidRequestException("Дата окончания привычки не может быть раньше даты начала");
         }
         boolean hasDays = request.scheduleDays() != null && !request.scheduleDays().isEmpty();
         if (request.scheduleType() == HabitScheduleType.SELECTED_DAYS && !hasDays) {
-            throw new InvalidRequestException("scheduleDays are required for SELECTED_DAYS");
+            throw new InvalidRequestException("Для расписания по выбранным дням необходимо указать дни недели");
         }
         if (request.scheduleType() != HabitScheduleType.SELECTED_DAYS && hasDays) {
-            throw new InvalidRequestException("scheduleDays are only allowed for SELECTED_DAYS");
+            throw new InvalidRequestException("Дни недели можно указывать только для расписания по выбранным дням");
         }
     }
 
     private void validateEntry(Habit habit, HabitEntryRequest request) {
         if (request.skipped() && request.value() != null) {
-            throw new InvalidRequestException("Skipped entries must not contain a value");
+            throw new InvalidRequestException("Пропущенная запись привычки не должна содержать значение");
         }
         if (!request.skipped() && request.value() == null) {
-            throw new InvalidRequestException("A non-skipped entry must contain a value");
+            throw new InvalidRequestException("Для непропущенной записи привычки необходимо указать значение");
         }
         if (!request.skipped() && habit.getTrackingType() == TrackingType.BOOLEAN
                 && request.value().compareTo(BigDecimal.ZERO) != 0
                 && request.value().compareTo(BigDecimal.ONE) != 0) {
-            throw new InvalidRequestException("BOOLEAN habit values must be 0 or 1");
+            throw new InvalidRequestException("Значение привычки типа «да/нет» должно быть равно 0 или 1");
         }
     }
 

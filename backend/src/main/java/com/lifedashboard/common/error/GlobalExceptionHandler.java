@@ -33,7 +33,7 @@ public class GlobalExceptionHandler {
     ) {
         String message = exception instanceof DuplicateResourceException
                 ? exception.getMessage()
-                : "The request conflicts with existing data";
+                : "Запрос конфликтует с существующими данными";
         return build(HttpStatus.CONFLICT, message, request, Map.of());
     }
 
@@ -44,9 +44,9 @@ public class GlobalExceptionHandler {
     ) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();
         exception.getBindingResult().getFieldErrors().forEach(error ->
-                fieldErrors.putIfAbsent(error.getField(), error.getDefaultMessage())
+                fieldErrors.putIfAbsent(error.getField(), validationMessage(error.getDefaultMessage()))
         );
-        return build(HttpStatus.BAD_REQUEST, "Validation failed", request, fieldErrors);
+        return build(HttpStatus.BAD_REQUEST, "Проверьте правильность заполнения полей", request, fieldErrors);
     }
 
     @ExceptionHandler(InvalidRequestException.class)
@@ -66,7 +66,7 @@ public class GlobalExceptionHandler {
             Exception exception,
             HttpServletRequest request
     ) {
-        return build(HttpStatus.BAD_REQUEST, "Malformed request", request, Map.of());
+        return build(HttpStatus.BAD_REQUEST, "Некорректный формат запроса", request, Map.of());
     }
 
     private ResponseEntity<ApiError> build(
@@ -78,11 +78,32 @@ public class GlobalExceptionHandler {
         ApiError error = new ApiError(
                 Instant.now(),
                 status.value(),
-                status.getReasonPhrase(),
+                statusName(status),
                 message,
                 request.getRequestURI(),
                 fieldErrors
         );
         return ResponseEntity.status(status).body(error);
+    }
+
+    private String validationMessage(String message) {
+        if (message == null) return "Некорректное значение";
+        if (message.equals("must not be null") || message.equals("must not be blank")) return "Поле обязательно для заполнения";
+        if (message.equals("must be a well-formed email address")) return "Введите корректный адрес электронной почты";
+        if (message.equals("must be greater than 0")) return "Значение должно быть больше 0";
+        if (message.equals("must be greater than or equal to 0")) return "Значение не может быть отрицательным";
+        if (message.startsWith("must be greater than or equal to ")) return "Значение должно быть не меньше " + message.substring(33);
+        if (message.startsWith("must be less than or equal to ")) return "Значение должно быть не больше " + message.substring(30);
+        if (message.startsWith("size must be between ")) return "Допустимая длина: " + message.substring(21);
+        return message;
+    }
+
+    private String statusName(HttpStatus status) {
+        return switch (status) {
+            case BAD_REQUEST -> "Некорректный запрос";
+            case NOT_FOUND -> "Не найдено";
+            case CONFLICT -> "Конфликт данных";
+            default -> "Ошибка";
+        };
     }
 }

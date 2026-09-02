@@ -62,7 +62,7 @@ class ContentControllerIntegrationTests {
                                  "releaseStatus":"RELEASED"}
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("format is not valid for itemType GAME"));
+                .andExpect(jsonPath("$.message").value("Выбранный формат не подходит для типа материала GAME"));
     }
 
     private void cleanup() {

@@ -69,7 +69,7 @@ public class ContentService {
     @Transactional
     public void removeFromLibrary(Long contentId) {
         UserContent entry = libraryRepository.findByUserIdAndContentId(defaultUserId, contentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Content " + contentId + " is not in the library"));
+                .orElseThrow(() -> new ResourceNotFoundException("Материал с идентификатором " + contentId + " не добавлен в библиотеку"));
         libraryRepository.delete(entry);
     }
 
@@ -79,11 +79,11 @@ public class ContentService {
             case ANIME -> r.format() == ContentFormat.ANIME;
             case GAME, BOOK -> r.format() == null;
         };
-        if (!valid) throw new InvalidRequestException("format is not valid for itemType " + r.itemType());
+        if (!valid) throw new InvalidRequestException("Выбранный формат не подходит для типа материала " + r.itemType());
     }
     private void validateDates(LibraryEntryRequest r) {
         if (r.completedAt() != null && r.startedAt() != null && r.completedAt().isBefore(r.startedAt()))
-            throw new InvalidRequestException("completedAt must not be before startedAt");
+            throw new InvalidRequestException("Дата завершения не может быть раньше даты начала");
     }
     private void apply(ContentItem item, ContentItemRequest r) {
         item.update(r.title().trim(), normalize(r.originalTitle()), r.itemType(), r.format(), r.releaseYear(),
@@ -99,9 +99,9 @@ public class ContentService {
         else entry.changeStatus(UserContentStatus.COMPLETED, entry.getCompletedAt());
     }
     private ContentItem findContent(Long id) { return contentRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Content with id " + id + " was not found")); }
+            .orElseThrow(() -> new ResourceNotFoundException("Материал с идентификатором " + id + " не найден")); }
     private User findUser() { return userRepository.findById(defaultUserId)
-            .orElseThrow(() -> new ResourceNotFoundException("Default user with id " + defaultUserId + " was not found")); }
+            .orElseThrow(() -> new ResourceNotFoundException("Пользователь с идентификатором " + defaultUserId + " не найден")); }
     private String normalize(String value) { return value == null || value.isBlank() ? null : value.trim(); }
     private ContentItemResponse toResponse(ContentItem i) { return new ContentItemResponse(i.getId(), i.getTitle(),
             i.getOriginalTitle(), i.getItemType(), i.getFormat(), i.getReleaseYear(), i.getDescription(),

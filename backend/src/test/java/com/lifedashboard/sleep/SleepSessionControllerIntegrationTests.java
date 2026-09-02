@@ -76,7 +76,7 @@ class SleepSessionControllerIntegrationTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(sessionJson("2099-02-02T05:00:00Z", "2099-02-01T21:00:00Z", 4, "Invalid")))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("endedAt must be after startedAt"));
+                .andExpect(jsonPath("$.message").value("Время окончания сна должно быть позже времени начала"));
 
         mockMvc.perform(post("/api/sleep-sessions")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -106,13 +106,13 @@ class SleepSessionControllerIntegrationTests {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Sleep stages must not exceed the session duration"));
+                .andExpect(jsonPath("$.message").value("Суммарная длительность фаз сна не может превышать длительность сессии"));
 
         mockMvc.perform(get("/api/sleep-sessions")
                         .param("from", "2099-02-02T05:00:00Z")
                         .param("to", "2099-02-02T05:00:00Z"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("to must be after from"));
+                .andExpect(jsonPath("$.message").value("Конец периода должен быть позже его начала"));
     }
 
     private String sessionJson(String startedAt, String endedAt, int qualityRating, String note) {

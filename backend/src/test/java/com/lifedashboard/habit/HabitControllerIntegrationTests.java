@@ -100,7 +100,7 @@ class HabitControllerIntegrationTests {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("scheduleDays are required for SELECTED_DAYS"));
+                .andExpect(jsonPath("$.message").value("Для расписания по выбранным дням необходимо указать дни недели"));
 
         String location = mockMvc.perform(post("/api/habits")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -113,7 +113,7 @@ class HabitControllerIntegrationTests {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"value\":10,\"skipped\":true}"))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.message").value("Skipped entries must not contain a value"));
+                    .andExpect(jsonPath("$.message").value("Пропущенная запись привычки не должна содержать значение"));
         } finally {
             habitRepository.findById(id).ifPresent(habitRepository::delete);
         }

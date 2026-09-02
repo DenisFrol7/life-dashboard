@@ -49,7 +49,7 @@ public class DailyActivityService {
 
     public List<DailyActivityResponse> getRange(LocalDate from, LocalDate to) {
         if (to.isBefore(from)) {
-            throw new InvalidRequestException("to must not be before from");
+            throw new InvalidRequestException("Конец периода не может быть раньше его начала");
         }
         return activityRepository.findAllByUserIdAndActivityDateBetweenOrderByActivityDateAsc(defaultUserId, from, to)
                 .stream()
@@ -65,12 +65,12 @@ public class DailyActivityService {
 
     private DailyActivity findByDate(LocalDate date) {
         return activityRepository.findByUserIdAndActivityDate(defaultUserId, date)
-                .orElseThrow(() -> new ResourceNotFoundException("Daily activity for " + date + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Данные об активности за " + date + " не найдены"));
     }
 
     private User findDefaultUser() {
         return userRepository.findById(defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Default user with id " + defaultUserId + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь с идентификатором " + defaultUserId + " не найден"));
     }
 
     private String normalizeNullable(String value) {

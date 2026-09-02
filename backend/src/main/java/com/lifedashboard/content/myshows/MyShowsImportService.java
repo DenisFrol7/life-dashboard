@@ -83,7 +83,7 @@ public class MyShowsImportService {
 
     @Transactional
     public MyShowsImportResult importData(MultipartFile file, MyShowsImportRequest request) {
-        if (file.isEmpty()) throw new InvalidRequestException("MyShows export file is empty");
+        if (file.isEmpty()) throw new InvalidRequestException("Файл экспорта MyShows пуст");
         Map<String, MyShowsImportRequest.Choice> choices = new HashMap<>();
         if (request != null && request.choices() != null) {
             for (var choice : request.choices()) choices.put(normalize(choice.sourceTitle()), choice);
@@ -96,7 +96,7 @@ public class MyShowsImportService {
             validateHeaders(seriesSheet, SERIES_HEADERS, formatter);
             validateHeaders(episodesSheet, EPISODE_HEADERS, formatter);
             User user = userRepository.findById(defaultUserId)
-                    .orElseThrow(() -> new InvalidRequestException("Default user was not found"));
+                    .orElseThrow(() -> new InvalidRequestException("Пользователь по умолчанию не найден"));
             Map<String, ContentItem> imported = new HashMap<>();
             Map<String, List<ContentItem>> existing = indexExisting(
                     contentRepository.findAllByItemTypeOrderByTitleAsc(ContentType.SERIES));
@@ -145,7 +145,7 @@ public class MyShowsImportService {
             int watches = importEpisodes(episodesSheet, formatter, imported, user);
             return new MyShowsImportResult(seriesCount, skipped, watches, backup.toString());
         } catch (IOException exception) {
-            throw new InvalidRequestException("Could not read MyShows XLSX export");
+            throw new InvalidRequestException("Не удалось прочитать экспорт MyShows в формате XLSX");
         }
     }
 
@@ -353,7 +353,7 @@ public class MyShowsImportService {
     }
 
     public MyShowsImportPreview preview(MultipartFile file) {
-        if (file.isEmpty()) throw new InvalidRequestException("MyShows export file is empty");
+        if (file.isEmpty()) throw new InvalidRequestException("Файл экспорта MyShows пуст");
         try (InputStream input = file.getInputStream(); Workbook workbook = WorkbookFactory.create(input)) {
             DataFormatter formatter = new DataFormatter(Locale.forLanguageTag("ru-RU"));
             Sheet seriesSheet = requiredSheet(workbook, "Сериалы");
@@ -402,13 +402,13 @@ public class MyShowsImportService {
                     Map.copyOf(statuses), List.copyOf(rows), List.copyOf(warnings));
         } catch (IOException | RuntimeException exception) {
             if (exception instanceof InvalidRequestException invalid) throw invalid;
-            throw new InvalidRequestException("Could not read MyShows XLSX export");
+            throw new InvalidRequestException("Не удалось прочитать экспорт MyShows в формате XLSX");
         }
     }
 
     private Sheet requiredSheet(Workbook workbook, String name) {
         Sheet sheet = workbook.getSheet(name);
-        if (sheet == null) throw new InvalidRequestException("MyShows export does not contain sheet: " + name);
+        if (sheet == null) throw new InvalidRequestException("В экспорте MyShows отсутствует лист: " + name);
         return sheet;
     }
 
@@ -416,7 +416,7 @@ public class MyShowsImportService {
         Row header = sheet.getRow(0);
         for (int column = 0; column < expected.size(); column++) {
             if (!expected.get(column).equals(value(header, column, formatter))) {
-                throw new InvalidRequestException("Unexpected columns on MyShows sheet: " + sheet.getSheetName());
+                throw new InvalidRequestException("Неожиданный набор столбцов на листе MyShows: " + sheet.getSheetName());
             }
         }
     }

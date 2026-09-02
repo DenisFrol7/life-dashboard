@@ -50,7 +50,7 @@ public class TimelineService {
 
     public List<TimelineItemResponse> get(LocalDate requestedDate) {
         User user = users.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Default user was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь по умолчанию не найден"));
         ZoneId zone = ZoneId.of(user.getTimezone());
         LocalDate date = requestedDate == null ? LocalDate.now(zone) : requestedDate;
         Instant from = date.atStartOfDay(zone).toInstant();

@@ -39,7 +39,7 @@ public class SleepSessionService {
     public SleepSessionResponse create(SleepSessionRequest request) {
         validateSession(request);
         User user = userRepository.findById(defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Default user with id " + defaultUserId + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь с идентификатором " + defaultUserId + " не найден"));
         SleepSession session = new SleepSession(user);
         apply(session, request);
         sessionRepository.saveAndFlush(session);
@@ -53,7 +53,7 @@ public class SleepSessionService {
 
     public List<SleepSessionResponse> getRange(Instant from, Instant to) {
         if (!to.isAfter(from)) {
-            throw new InvalidRequestException("to must be after from");
+            throw new InvalidRequestException("Конец периода должен быть позже его начала");
         }
         return sessionRepository.findOverlapping(defaultUserId, from, to).stream()
                 .map((@NonNull SleepSession session) -> toResponse(session))
@@ -86,12 +86,12 @@ public class SleepSessionService {
 
     private SleepSession findSession(Long id) {
         return sessionRepository.findByIdAndUserId(id, defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sleep session with id " + id + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Сессия сна с идентификатором " + id + " не найдена"));
     }
 
     private void validateSession(SleepSessionRequest request) {
         if (!request.endedAt().isAfter(request.startedAt())) {
-            throw new InvalidRequestException("endedAt must be after startedAt");
+            throw new InvalidRequestException("Время окончания сна должно быть позже времени начала");
         }
         long durationMinutes = Duration.between(request.startedAt(), request.endedAt()).toMinutes();
         long sleepStageMinutes = nullableMinutes(request.deepSleepMinutes())
@@ -99,7 +99,7 @@ public class SleepSessionService {
                 + nullableMinutes(request.remSleepMinutes())
                 + nullableMinutes(request.awakeMinutes());
         if (sleepStageMinutes > durationMinutes) {
-            throw new InvalidRequestException("Sleep stages must not exceed the session duration");
+            throw new InvalidRequestException("Суммарная длительность фаз сна не может превышать длительность сессии");
         }
     }
 

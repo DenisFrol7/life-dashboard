@@ -33,7 +33,7 @@ public class KinopoiskCatalogClient {
     }
 
     public List<KinopoiskMatchPreview.Candidate> searchSeries(String title) {
-        if (apiKey.isBlank()) throw new InvalidRequestException("KINOPOISK_API_KEY is not configured");
+        if (apiKey.isBlank()) throw new InvalidRequestException("Ключ KINOPOISK_API_KEY не настроен");
         try {
             JsonNode response = requestWithRetry(title);
             List<KinopoiskMatchPreview.Candidate> result = new ArrayList<>();
@@ -50,12 +50,12 @@ public class KinopoiskCatalogClient {
             if (exception instanceof InvalidRequestException invalid) throw invalid;
             log.warn("Failed to process Kinopoisk response for title '{}': {}", title,
                     exception.toString(), exception);
-            throw new InvalidRequestException("Could not connect to Kinopoisk API");
+            throw new InvalidRequestException("Не удалось подключиться к API Кинопоиска");
         }
     }
 
     public List<MovieCandidate> searchMovies(String title) {
-        if (apiKey.isBlank()) throw new InvalidRequestException("KINOPOISK_API_KEY is not configured");
+        if (apiKey.isBlank()) throw new InvalidRequestException("Ключ KINOPOISK_API_KEY не настроен");
         try {
             JsonNode response = requestWithRetry(title);
             List<MovieCandidate> result = new ArrayList<>();
@@ -73,14 +73,14 @@ public class KinopoiskCatalogClient {
             if (exception instanceof InvalidRequestException invalid) throw invalid;
             log.warn("Failed to process Kinopoisk movie search for title '{}': {}", title,
                     exception.toString(), exception);
-            throw new InvalidRequestException("Could not connect to Kinopoisk API");
+            throw new InvalidRequestException("Не удалось подключиться к API Кинопоиска");
         }
     }
 
     public MovieDetails getMovie(long filmId) {
         JsonNode details = requestWithRetry("/api/v2.2/films/" + filmId, null);
         if (details.path("serial").asBoolean(false) || isSeries(text(details, "type")))
-            throw new InvalidRequestException("Selected Kinopoisk item is a series, not a movie");
+            throw new InvalidRequestException("Выбранная запись Кинопоиска является сериалом, а не фильмом");
         List<String> genres = new ArrayList<>();
         for (JsonNode genre : details.path("genres")) {
             String value = text(genre, "genre");
@@ -97,9 +97,9 @@ public class KinopoiskCatalogClient {
     }
 
     public UserRatings getUserRatings(String profileId) {
-        if (apiKey.isBlank()) throw new InvalidRequestException("KINOPOISK_API_KEY is not configured");
+        if (apiKey.isBlank()) throw new InvalidRequestException("Ключ KINOPOISK_API_KEY не настроен");
         if (profileId == null || !profileId.matches("[A-Za-z0-9_-]+"))
-            throw new InvalidRequestException("Invalid Kinopoisk profile id");
+            throw new InvalidRequestException("Некорректный идентификатор профиля Кинопоиска");
         List<UserRating> ratings = new ArrayList<>();
         int total = 0;
         int totalPages = 1;
@@ -177,10 +177,10 @@ public class KinopoiskCatalogClient {
                         .body(JsonNode.class);
             } catch (RestClientResponseException exception) {
                 int status = exception.getStatusCode().value();
-                if (status == 401) throw new InvalidRequestException("Kinopoisk API key was rejected");
-                if (status == 402) throw new InvalidRequestException("Kinopoisk API daily quota is exhausted");
+                if (status == 401) throw new InvalidRequestException("API Кинопоиска отклонил ключ доступа (401)");
+                if (status == 402) throw new InvalidRequestException("Суточный лимит запросов API Кинопоиска исчерпан (402)");
                 if (status != 429) {
-                    throw new InvalidRequestException("Kinopoisk API request failed with status " + status);
+                    throw new InvalidRequestException("Запрос к API Кинопоиска завершился ошибкой " + status);
                 }
                 if (attempt == 3) {
                     throw new InvalidRequestException(
@@ -189,7 +189,7 @@ public class KinopoiskCatalogClient {
                 sleep(5_000L * (attempt + 1));
             }
         }
-        throw new IllegalStateException("Unreachable Kinopoisk retry state");
+        throw new IllegalStateException("Недостижимое состояние повторного запроса к Кинопоиску");
     }
 
     private void awaitRequestSlot() {
@@ -205,7 +205,7 @@ public class KinopoiskCatalogClient {
             Thread.sleep(millis);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            throw new InvalidRequestException("Kinopoisk search was interrupted");
+            throw new InvalidRequestException("Поиск в Кинопоиске был прерван");
         }
     }
 

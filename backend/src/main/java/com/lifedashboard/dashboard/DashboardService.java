@@ -40,7 +40,7 @@ public class DashboardService {
     }
 
     public DashboardResponse get(LocalDate date) {
-        User user = users.findById(userId).orElseThrow(() -> new ResourceNotFoundException("Default user was not found"));
+        User user = users.findById(userId).orElseThrow(() -> new ResourceNotFoundException("Пользователь по умолчанию не найден"));
         ZoneId zone = ZoneId.of(user.getTimezone());
         if (date == null) date = LocalDate.now(zone);
         return new DashboardResponse(date, activity(date), sleep(date, zone), habit(date), calendar(date),

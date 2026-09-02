@@ -40,7 +40,7 @@ public class JournalService {
     @Transactional
     public JournalEntryResponse create(JournalEntryRequest request) {
         User user = userRepository.findById(defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Default user with id " + defaultUserId + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь с идентификатором " + defaultUserId + " не найден"));
         JournalEntry entry = new JournalEntry(user);
         apply(entry, request);
         return toResponse(entryRepository.save(entry));
@@ -57,7 +57,7 @@ public class JournalService {
             String tagSlug
     ) {
         if (from != null && to != null && to.isBefore(from)) {
-            throw new InvalidRequestException("to must not be before from");
+            throw new InvalidRequestException("Конец периода не может быть раньше его начала");
         }
         String normalizedTag = tagSlug == null || tagSlug.isBlank()
                 ? null
@@ -116,12 +116,12 @@ public class JournalService {
 
     private JournalEntry findEntry(Long id) {
         return entryRepository.findByIdAndUserId(id, defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Journal entry with id " + id + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Запись журнала с идентификатором " + id + " не найдена"));
     }
 
     private Tag findTag(Long id) {
         return tagRepository.findByIdAndUserId(id, defaultUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Tag with id " + id + " was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Тег с идентификатором " + id + " не найден"));
     }
 
     private void apply(JournalEntry entry, JournalEntryRequest request) {

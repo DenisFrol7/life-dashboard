@@ -78,24 +78,24 @@ public class GameLibraryService {
 
     private void apply(UserGame game, GameLibraryRequest r) {
         if (r.completedAt() != null && r.startedAt() != null && r.completedAt().isBefore(r.startedAt()))
-            throw new InvalidRequestException("completedAt must not be before startedAt");
+            throw new InvalidRequestException("Дата завершения не может быть раньше даты начала");
         GamingPlatform platform = platforms.findById(r.platformId())
-                .orElseThrow(() -> new ResourceNotFoundException("Gaming platform was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Игровая платформа не найдена"));
         GameSource source = sources.findById(r.sourceId())
-                .orElseThrow(() -> new ResourceNotFoundException("Game source was not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Источник игры не найден"));
         if ((r.accessType() == GameAccessType.SUBSCRIPTION) != (source.getSourceType() == GameSourceType.SUBSCRIPTION))
-            throw new InvalidRequestException("accessType must match the selected source type");
+            throw new InvalidRequestException("Тип доступа должен соответствовать выбранному источнику игры");
         game.update(platform, source, r.accessType(), normalize(r.edition()), r.acquiredAt(), normalize(r.note()),
                 r.legacyPlaytimeMinutes(), r.status(), r.startedAt(), r.completedAt());
     }
     private void validateGame(ContentItem item) {
         if (item.getItemType() != ContentType.GAME)
-            throw new InvalidRequestException("Only content with itemType GAME can be added to the game library");
+            throw new InvalidRequestException("В игровую библиотеку можно добавлять только материалы типа «Игра»");
     }
     private ContentItem findContent(Long id) { return contentItems.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Content with id " + id + " was not found")); }
+            .orElseThrow(() -> new ResourceNotFoundException("Материал с идентификатором " + id + " не найден")); }
     private UserGame findGame(Long id) { return games.findByIdAndUserContentUserId(id, userId)
-            .orElseThrow(() -> new ResourceNotFoundException("Game library entry with id " + id + " was not found")); }
+            .orElseThrow(() -> new ResourceNotFoundException("Копия игры с идентификатором " + id + " не найдена")); }
     private String normalize(String value) { return value == null || value.isBlank() ? null : value.trim(); }
     private void syncCopyCompletion(UserGame game, GameLibraryRequest request, UserContentStatus previousStatus) {
         if (request.status() != UserContentStatus.COMPLETED || request.completedAt() == null) return;

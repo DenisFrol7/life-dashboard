@@ -97,7 +97,7 @@ class DataTransferIntegrationTests {
         Map<String, Long> rowsBefore = applicationTableRows();
 
         assertThatThrownBy(() -> service.importData(incompatible))
-                .hasMessage("Unsupported import format version");
+                .hasMessage("Версия формата импорта не поддерживается");
 
         assertThat(applicationTableRows()).isEqualTo(rowsBefore);
         try (var files = Files.list(backupDirectory)) {

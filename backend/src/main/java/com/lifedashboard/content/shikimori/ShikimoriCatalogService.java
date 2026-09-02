@@ -30,7 +30,7 @@ public class ShikimoriCatalogService {
 
     public List<ShikimoriAnimeCandidate> search(String query) {
         if (query == null || query.trim().length() < 2)
-            throw new InvalidRequestException("Shikimori search query must contain at least 2 characters");
+            throw new InvalidRequestException("Запрос для поиска в Shikimori должен содержать не менее 2 символов");
         return shikimori.search(query.trim()).stream().map(candidate -> new ShikimoriAnimeCandidate(
                 candidate.id(), first(candidate.russian(), candidate.name(), "Anime " + candidate.id()),
                 normalize(candidate.name()), candidate.kind(), candidate.status(), candidate.imageUrl(),
@@ -47,7 +47,7 @@ public class ShikimoriCatalogService {
     @Transactional
     public AnimeDetailsResponse create(long id, AnimeRequest request) {
         items.findByShikimoriId(id).ifPresent(existing -> {
-            throw new DuplicateResourceException("Shikimori anime already exists in catalog with id " + existing.getId());
+            throw new DuplicateResourceException("Аниме Shikimori уже есть в каталоге с идентификатором " + existing.getId());
         });
         ShikimoriClient.AnimeDetails details = Optional.ofNullable(previewCache.remove(id))
                 .orElseGet(() -> shikimori.getAnime(id));

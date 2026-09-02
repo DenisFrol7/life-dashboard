@@ -90,7 +90,7 @@ class DailyActivityControllerIntegrationTests {
                         .param("from", SECOND_DATE.toString())
                         .param("to", FIRST_DATE.toString()))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("to must not be before from"));
+                .andExpect(jsonPath("$.message").value("Конец периода не может быть раньше его начала"));
     }
 
     private void deleteIfPresent(LocalDate date) {

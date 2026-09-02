@@ -28,7 +28,7 @@ public class SeriesKinopoiskService {
 
     public List<KinopoiskSeriesCandidate> search(String query) {
         if (query == null || query.trim().length() < 2)
-            throw new InvalidRequestException("Kinopoisk search query must contain at least 2 characters");
+            throw new InvalidRequestException("Запрос для поиска в Кинопоиске должен содержать не менее 2 символов");
         return kinopoisk.searchSeries(query.trim()).stream().map(candidate ->
                 new KinopoiskSeriesCandidate(candidate.filmId(), candidate.nameRu(), candidate.nameEn(),
                         candidate.year(), items.findByKinopoiskFilmId(candidate.filmId())
@@ -45,9 +45,9 @@ public class SeriesKinopoiskService {
     @Transactional
     public ContentItemResponse create(long filmId, ContentItemRequest request) {
         if (request.itemType() != ContentType.SERIES)
-            throw new InvalidRequestException("Kinopoisk catalog entry must be a series");
+            throw new InvalidRequestException("Выбранная запись Кинопоиска должна быть сериалом");
         items.findByKinopoiskFilmId(filmId).ifPresent(existing -> {
-            throw new DuplicateResourceException("Kinopoisk series already exists in catalog with id " + existing.getId());
+            throw new DuplicateResourceException("Сериал Кинопоиска уже есть в каталоге с идентификатором " + existing.getId());
         });
         KinopoiskCatalogData catalog = Optional.ofNullable(previewCache.remove(filmId))
                 .orElseGet(() -> kinopoisk.getCatalog(filmId));
