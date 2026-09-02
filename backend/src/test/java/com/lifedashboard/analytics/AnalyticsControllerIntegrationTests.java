@@ -94,6 +94,11 @@ class AnalyticsControllerIntegrationTests {
                 INSERT INTO episode_watch_history(user_id, episode_id, watched_at, watch_number, is_bulk)
                 VALUES (1, ?, ?::date + time '12:00', 1, true)
                 """, episodeId, FROM);
+
+        mockMvc.perform(get("/api/analytics").param("from", FROM.toString()).param("to", TO.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.current.animeEpisodesWatched").value(0));
+
         jdbc.update("""
                 INSERT INTO season_completion_history(user_id, season_id, completed_at, episode_count)
                 VALUES (1, ?, NULL, 1)

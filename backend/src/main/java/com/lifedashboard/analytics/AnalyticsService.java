@@ -175,7 +175,7 @@ public class AnalyticsService {
                           AND completion.user_id = watch.user_id
                       WHERE watch.user_id = :userId AND watch.watched_at >= :fromInstant
                         AND watch.watched_at < :toInstant
-                        AND NOT (watch.is_bulk AND completion.id IS NOT NULL AND completion.completed_at IS NULL)) source
+                        AND (NOT watch.is_bulk OR completion.completed_at IS NOT NULL)) source
                 GROUP BY day
             ), reading AS (
                 SELECT day, SUM(pages_read) AS pages_read, SUM(duration_minutes) AS reading_minutes
