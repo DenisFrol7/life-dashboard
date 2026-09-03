@@ -305,7 +305,8 @@ html[data-theme="dark"] .platform-logo-badge { border-color: #294052; color: #dc
 html[data-theme="dark"] .platform-logo-badge.xbox > svg { color: #42dc70; }
 html[data-theme="dark"] .platform-logo-badge.pc > svg { color: #76bfff; }
 html[data-theme="dark"] .achievement-details-button { color: #c3cfdb; background: #172532; }
-html[data-theme="dark"] .achievement-groups-modal { color: var(--ink); background: #0f1924; box-shadow: 0 24px 70px #0009; }
+html[data-theme="dark"] .achievement-groups-modal,
+html[data-theme="dark"] .steam-achievements-modal { color: var(--ink); background: #0f1924; box-shadow: 0 24px 70px #0009; }
 html[data-theme="dark"] .achievement-group-list article,
 html[data-theme="dark"] .achievement-group-form { border-color: #263746; }
 html[data-theme="dark"] .achievement-group-list b { color: #e7edf5; }
@@ -314,6 +315,13 @@ html[data-theme="dark"] .achievement-group-list span,
 html[data-theme="dark"] .achievement-group-form label { color: #8f9baa; }
 html[data-theme="dark"] .achievement-group-list button { color: #c3cfdb; background: #172532; }
 html[data-theme="dark"] .achievement-group-list .group-delete { color: #efb8b5; background: #321d20; }
+html[data-theme="dark"] .steam-achievement { border-color: #263746; background: #111e2a; }
+html[data-theme="dark"] .steam-achievement strong { color: #e7edf5; }
+html[data-theme="dark"] .steam-achievement p,
+html[data-theme="dark"] .steam-achievement time,
+html[data-theme="dark"] .steam-sync-date,
+html[data-theme="dark"] .steam-achievements-modal-summary span { color: #8f9baa; }
+html[data-theme="dark"] .steam-achievement-placeholder { color: #8f9baa; background: #263746; }
 html[data-theme="dark"] .sessions-table > div { color: #c3cfdb; }
 html[data-theme="dark"] .sessions-table .sessions-head { color: #8f9baa; background: #111e2a; }
 html[data-theme="dark"] .sessions-table .positive { color: #67e98e; }
@@ -1176,7 +1184,8 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .movie-details-page .movie-personal-info p,
 .book-details-page .book-personal-info p,
 .game-details-page .game-personal-info p { font-size: 15px; }
-.xbox-detail-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 34%); gap: 14px; }
+.xbox-detail-row,
+.steam-detail-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 34%); gap: 14px; }
 .detail-card { padding: 17px; }
 .detail-card h2 { margin: 0 0 15px; color: #293944; font-size: 15px; }
 .xbox-progress-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -1213,6 +1222,33 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .achievement-group-form label { display: grid; gap: 5px; color: #5f675f; font-size: 10px; font-weight: 700; }
 .achievement-group-form input { width: 100%; padding: 9px; border: 1px solid #d9dfe2; border-radius: 8px; }
 .achievement-group-form > div:not(.form-buttons) { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.steam-progress-card { display: grid; align-content: start; gap: 12px; }
+.steam-progress-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.steam-progress-heading h2 { margin: 0; }
+.steam-progress-heading button { padding: 7px 10px; font-size: 11px; }
+.steam-progress-heading button svg { width: 14px; height: 14px; }
+.spinning { animation: spin .8s linear infinite; }
+.steam-sync-date { color: #74818a; font-size: 10px; }
+.steam-recent-achievements { display: grid; gap: 6px; margin-bottom: 4px; }
+.steam-achievements-modal { width: min(820px, 100%); max-height: calc(100vh - 40px); padding: 24px; overflow-y: auto; border-radius: 17px; background: #fff; }
+.steam-achievements-modal-summary { display: flex; align-items: baseline; gap: 10px; margin: 16px 0; }
+.steam-achievements-modal-summary strong { color: #293944; font-size: 20px; }
+.steam-achievements-modal-summary span { color: #74818a; font-size: 12px; }
+.steam-achievement-list { display: grid; gap: 8px; }
+.steam-achievement { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px; border: 1px solid #e2e8eb; border-radius: 10px; background: #f8fafb; }
+.steam-achievement.locked { opacity: .7; }
+.steam-achievement img,
+.steam-achievement-placeholder { width: 48px; height: 48px; border-radius: 7px; }
+.steam-achievement-placeholder { display: grid; place-items: center; color: #74818a; background: #e2e8eb; font-size: 22px; }
+.steam-achievement > div { display: grid; gap: 4px; min-width: 0; }
+.steam-achievement strong { overflow: hidden; color: #293944; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.steam-achievement p { margin: 0; color: #74818a; font-size: 10px; line-height: 1.4; }
+.steam-achievement time { color: #74818a; font-size: 10px; white-space: nowrap; }
+.steam-achievement.compact { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; padding: 5px 7px; }
+.steam-achievement.compact img,
+.steam-achievement.compact .steam-achievement-placeholder { width: 32px; height: 32px; border-radius: 5px; }
+.steam-achievement.compact strong { font-size: 10px; }
+.steam-achievement.compact time { font-size: 9px; }
 .game-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr) minmax(300px, 34%); gap: 14px; }
 .library-detail-list { display: grid; gap: 0; margin: 0; }
 .library-detail-list > div { display: grid; grid-template-columns: 115px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid #edf0f2; }
@@ -1330,7 +1366,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
   .game-main-info h1 { font-size: 23px; }
   .game-personal-info { grid-template-columns: 1fr; }
   .game-personal-info > div + div { padding-top: 13px; padding-left: 0; border-top: 1px solid #edf0f2; border-left: 0; }
-  .xbox-detail-row, .game-detail-grid { grid-template-columns: 1fr; }
+  .xbox-detail-row, .steam-detail-row, .game-detail-grid { grid-template-columns: 1fr; }
   .game-detail-grid > article:last-child { grid-column: auto; }
   .xbox-progress-columns { grid-template-columns: 1fr; }
   .sessions-table-card { overflow-x: auto; }

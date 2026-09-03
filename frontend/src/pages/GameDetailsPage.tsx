@@ -6,7 +6,7 @@ import {
   type FormEvent,
 } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, RefreshCw } from "lucide-react";
 import { PlatformBadge } from "../components/PlatformBadge";
 import {
   createGameLibrary,
@@ -21,9 +21,11 @@ import {
   getGameSessions,
   getPlatforms,
   getSources,
+  getSteamProgress,
   getXboxAchievementGroups,
   getXboxProgress,
   putXboxProgress,
+  syncSteamProgress,
   updateGameLibrary,
   updateGamePlaythrough,
   updateXboxAchievementGroup,
@@ -34,6 +36,8 @@ import {
   type GamePlaythroughInput,
   type GameSession,
   type Reference,
+  type SteamAchievement,
+  type SteamProgress,
   type XboxAchievementGroup,
   type XboxAchievementGroupInput,
   type XboxProgress,
@@ -59,6 +63,7 @@ const formatMinutes = (minutes: number) =>
 const isXbox = (entry: GameLibrary) =>
   entry.platform.code.startsWith("XBOX_") ||
   entry.platform.code === "ORIGINAL_XBOX";
+const isSteam = (entry: GameLibrary) => entry.source.code === "STEAM";
 
 export function GameDetailsPage() {
   const { id } = useParams();
@@ -71,6 +76,10 @@ export function GameDetailsPage() {
   );
   const [sessions, setSessions] = useState<GameSession[]>([]);
   const [progress, setProgress] = useState<XboxProgress | null>(null);
+  const [steamProgress, setSteamProgress] = useState<SteamProgress | null>(null);
+  const [syncingSteam, setSyncingSteam] = useState(false);
+  const [steamError, setSteamError] = useState<string | null>(null);
+  const [showSteamAchievements, setShowSteamAchievements] = useState(false);
   const [playthroughs, setPlaythroughs] = useState<GamePlaythrough[]>([]);
   const [editingPlaythrough, setEditingPlaythrough] = useState<
     GamePlaythrough | "new" | null
@@ -143,29 +152,45 @@ export function GameDetailsPage() {
     const selectedLibrary = libraries.find(
       (item) => item.id === selectedLibraryId,
     );
-    if (!selectedLibrary || !isXbox(selectedLibrary)) {
-      setProgress(null);
-      setAchievementGroups([]);
-      return;
-    }
     let cancelled = false;
-    void Promise.all([
-      getXboxProgress(selectedLibrary.id),
-      getXboxAchievementGroups(selectedLibrary.id),
-    ])
-      .then(([xbox, groups]) => {
-        if (cancelled) return;
-        setProgress(xbox);
-        setAchievementGroups(groups);
-      })
-      .catch((reason) => {
-        if (!cancelled)
-          setError(
-            reason instanceof Error
-              ? reason.message
-              : "Не удалось загрузить Xbox-прогресс",
-          );
-      });
+    setProgress(null);
+    setAchievementGroups([]);
+    setSteamProgress(null);
+    setSteamError(null);
+    setShowAchievementDetails(false);
+    setShowSteamAchievements(false);
+    if (selectedLibrary && isXbox(selectedLibrary)) {
+      void Promise.all([
+        getXboxProgress(selectedLibrary.id),
+        getXboxAchievementGroups(selectedLibrary.id),
+      ])
+        .then(([xbox, groups]) => {
+          if (cancelled) return;
+          setProgress(xbox);
+          setAchievementGroups(groups);
+        })
+        .catch((reason) => {
+          if (!cancelled)
+            setError(
+              reason instanceof Error
+                ? reason.message
+                : "Не удалось загрузить Xbox-прогресс",
+            );
+        });
+    } else if (selectedLibrary && isSteam(selectedLibrary)) {
+      void getSteamProgress(selectedLibrary.id)
+        .then((steamData) => {
+          if (!cancelled) setSteamProgress(steamData);
+        })
+        .catch((reason) => {
+          if (!cancelled)
+            setSteamError(
+              reason instanceof Error
+                ? reason.message
+                : "Не удалось загрузить Steam-прогресс",
+            );
+        });
+    }
     return () => {
       cancelled = true;
     };
@@ -207,6 +232,7 @@ export function GameDetailsPage() {
       </div>
     );
   const xbox = library ? isXbox(library) : false;
+  const steam = library ? isSteam(library) : false;
   const hasXbox = libraries.some(isXbox);
   const hasPc = libraries.some((entry) => entry.platform.code === "PC");
   const showRawgAttribution = Boolean(game.rawgSlug);
@@ -250,6 +276,38 @@ export function GameDetailsPage() {
       earnedGamerscore: 0,
     },
   );
+  const recentSteamAchievements = (steamProgress?.achievements ?? [])
+    .filter((item) => item.unlocked)
+    .slice(0, 3);
+  const steamCompleted100 = Boolean(
+    steamProgress &&
+      steamProgress.totalAchievements > 0 &&
+      steamProgress.achievementPercent >= 100,
+  );
+
+  const synchronizeSteam = async () => {
+    if (!library || !isSteam(library) || library.steamAppId == null) return;
+    setSyncingSteam(true);
+    setSteamError(null);
+    try {
+      const synchronized = await syncSteamProgress(library.id);
+      setSteamProgress(synchronized);
+      if (
+        synchronized.totalAchievements > 0 &&
+        synchronized.unlockedAchievements === synchronized.totalAchievements
+      ) {
+        await load();
+      }
+    } catch (reason) {
+      setSteamError(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось синхронизировать достижения Steam",
+      );
+    } finally {
+      setSyncingSteam(false);
+    }
+  };
 
   return (
     <div className="game-details-page">
@@ -421,6 +479,95 @@ export function GameDetailsPage() {
         </section>
       )}
 
+      {steam && library && (
+        <section className="steam-detail-row">
+          <article className="detail-card steam-progress-card">
+            <div className="steam-progress-heading">
+              <h2>Прогресс Steam</h2>
+              {library.steamAppId != null && (
+                <button
+                  className="secondary-button icon-button"
+                  disabled={syncingSteam}
+                  onClick={() => void synchronizeSteam()}
+                >
+                  <RefreshCw className={syncingSteam ? "spinning" : ""} />
+                  {syncingSteam
+                    ? "Синхронизируем…"
+                    : steamProgress
+                      ? "Обновить"
+                      : "Загрузить из Steam"}
+                </button>
+              )}
+            </div>
+            {steamError && <div className="form-error">{steamError}</div>}
+            {library.steamAppId == null ? (
+              <p className="muted">
+                У этой копии нет Steam App ID. Добавьте её через импорт Steam.
+              </p>
+            ) : steamProgress ? (
+              steamProgress.totalAchievements > 0 ? (
+                <Progress
+                  label="Достижения"
+                  value={`${steamProgress.unlockedAchievements} / ${steamProgress.totalAchievements}`}
+                  percent={steamProgress.achievementPercent}
+                />
+              ) : (
+                <p className="muted">У этой игры нет достижений Steam.</p>
+              )
+            ) : (
+              <p className="muted">
+                Нажмите «Загрузить из Steam», чтобы получить достижения этой копии.
+              </p>
+            )}
+            {steamProgress && (
+              <small className="steam-sync-date">
+                Обновлено: {formatDate(steamProgress.lastSyncedAt)}
+              </small>
+            )}
+          </article>
+          <article className="detail-card achievement-summary steam-achievement-summary">
+            <h2>Достижения Steam</h2>
+            {steamProgress && steamProgress.totalAchievements > 0 ? (
+              <>
+                {recentSteamAchievements.length > 0 ? (
+                  <div className="steam-recent-achievements">
+                    {recentSteamAchievements.map((achievement) => (
+                      <SteamAchievementRow
+                        achievement={achievement}
+                        compact
+                        key={achievement.apiName}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p>Полученных достижений пока нет.</p>
+                )}
+                <strong>
+                  {steamCompleted100
+                    ? "✓ Получено 100%"
+                    : `${steamProgress.unlockedAchievements} из ${steamProgress.totalAchievements} получено`}
+                </strong>
+                {steamProgress.lastUnlockedAt && (
+                  <span>
+                    Последнее достижение: {formatDate(steamProgress.lastUnlockedAt)}
+                  </span>
+                )}
+                <button
+                  className="achievement-details-button"
+                  onClick={() => setShowSteamAchievements(true)}
+                >
+                  Все достижения
+                </button>
+              </>
+            ) : (
+              <p className="muted">
+                {steamProgress ? "Достижений нет" : "Нет данных"}
+              </p>
+            )}
+          </article>
+        </section>
+      )}
+
       <section className="game-detail-grid">
         <article className="detail-card library-copies-card">
           <div className="library-card-heading">
@@ -500,6 +647,9 @@ export function GameDetailsPage() {
                     )?.source.name ?? "Неизвестный источник"}
                   </small>
                   <small>{formatDate(item.completedAt)}</small>
+                  {item.completionSource === "STEAM_ACHIEVEMENTS" && (
+                    <small>Автоматически · 100% достижений Steam</small>
+                  )}
                   {item.note && <small>{item.note}</small>}
                 </span>
                 <em>{formatMinutes(item.playtimeMinutes)}</em>
@@ -567,6 +717,12 @@ export function GameDetailsPage() {
           groups={achievementGroups}
           onClose={() => setShowAchievementDetails(false)}
           onSaved={() => void load()}
+        />
+      )}
+      {showSteamAchievements && steamProgress && (
+        <SteamAchievementsModal
+          progress={steamProgress}
+          onClose={() => setShowSteamAchievements(false)}
         />
       )}
       {editingPlaythrough && library && (
@@ -999,6 +1155,89 @@ function PlaythroughModal({
         </div>
       </form>
     </div>
+  );
+}
+
+function SteamAchievementsModal({
+  progress,
+  onClose,
+}: {
+  progress: SteamProgress;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section className="steam-achievements-modal">
+        <div className="form-heading">
+          <div>
+            <p className="eyebrow">Steam</p>
+            <h2>Достижения</h2>
+          </div>
+          <button type="button" aria-label="Закрыть" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <div className="steam-achievements-modal-summary">
+          <strong>
+            {progress.unlockedAchievements} / {progress.totalAchievements}
+          </strong>
+          <span>{Math.round(progress.achievementPercent)}% получено</span>
+        </div>
+        <div className="steam-achievement-list">
+          {progress.achievements.map((achievement) => (
+            <SteamAchievementRow
+              achievement={achievement}
+              key={achievement.apiName}
+            />
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function SteamAchievementRow({
+  achievement,
+  compact = false,
+}: {
+  achievement: SteamAchievement;
+  compact?: boolean;
+}) {
+  const image = achievement.unlocked
+    ? achievement.iconUrl
+    : achievement.lockedIconUrl;
+  return (
+    <article
+      className={`steam-achievement ${achievement.unlocked ? "unlocked" : "locked"}${compact ? " compact" : ""}`}
+    >
+      {image ? (
+        <img src={image} alt="" loading="lazy" />
+      ) : (
+        <span className="steam-achievement-placeholder" aria-hidden="true">
+          ◇
+        </span>
+      )}
+      <div>
+        <strong>{achievement.displayName}</strong>
+        {!compact && (
+          <p>
+            {achievement.hidden && !achievement.unlocked
+              ? "Скрытое достижение"
+              : achievement.description || "Без описания"}
+          </p>
+        )}
+      </div>
+      <time>
+        {achievement.unlocked
+          ? formatDate(achievement.unlockedAt)
+          : "Не получено"}
+      </time>
+    </article>
   );
 }
 

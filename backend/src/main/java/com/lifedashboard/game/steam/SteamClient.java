@@ -4,7 +4,7 @@ import com.lifedashboard.common.error.InvalidRequestException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -13,7 +13,10 @@ import tools.jackson.databind.JsonNode;
 import java.time.Instant;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @Component
 public class SteamClient {
@@ -28,8 +31,12 @@ public class SteamClient {
             @Value("${STEAM_ID64:}") String steamId64) {
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.steamId64 = steamId64 == null ? "" : steamId64.trim();
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(10));
+        requestFactory.setReadTimeout(Duration.ofSeconds(20));
         this.client = RestClient.builder()
                 .baseUrl("https://api.steampowered.com")
+                .requestFactory(requestFactory)
                 .defaultHeader("x-webapi-key", this.apiKey)
                 .build();
     }
@@ -89,6 +96,88 @@ public class SteamClient {
         }
     }
 
+    public SteamAchievementSnapshot achievements(long appId) {
+        ensureConfigured();
+        if (appId <= 0) throw new InvalidRequestException("Некорректный Steam App ID");
+        try {
+            JsonNode schemaRoot = client.get()
+                    .uri(uri -> uri.path("/ISteamUserStats/GetSchemaForGame/v2/")
+                            .queryParam("key", apiKey)
+                            .queryParam("appid", appId)
+                            .queryParam("l", "russian")
+                            .build())
+                    .retrieve().body(JsonNode.class);
+            JsonNode game = schemaRoot == null ? null : schemaRoot.path("game");
+            JsonNode definitions = game == null ? null
+                    : game.path("availableGameStats").path("achievements");
+            if (definitions == null || !definitions.isArray() || definitions.isEmpty()) {
+                return parseAchievements(appId, schemaRoot, null);
+            }
+
+            JsonNode playerRoot = client.get()
+                    .uri(uri -> uri.path("/ISteamUserStats/GetPlayerAchievements/v1/")
+                            .queryParam("key", apiKey)
+                            .queryParam("appid", appId)
+                            .queryParam("steamid", steamId64)
+                            .queryParam("l", "russian")
+                            .build())
+                    .retrieve().body(JsonNode.class);
+            return parseAchievements(appId, schemaRoot, playerRoot);
+        } catch (RestClientResponseException exception) {
+            log.debug("Steam achievement API error for app {}: status {}, body {}", appId,
+                    exception.getStatusCode().value(), exception.getResponseBodyAsString());
+            if (isPrivateProfileResponse(exception.getResponseBodyAsString())) {
+                throw privateProfileError();
+            }
+            throw apiError(exception);
+        } catch (RuntimeException exception) {
+            if (exception instanceof InvalidRequestException invalid) throw invalid;
+            log.warn("Steam achievement request failed for app {}: {}", appId,
+                    exception.getClass().getSimpleName());
+            throw new InvalidRequestException("Не удалось загрузить достижения из Steam");
+        }
+    }
+
+    SteamAchievementSnapshot parseAchievements(long appId, JsonNode schemaRoot, JsonNode playerRoot) {
+        JsonNode game = schemaRoot == null ? null : schemaRoot.path("game");
+        String gameName = game == null ? null : text(game, "gameName");
+        JsonNode definitions = game == null ? null
+                : game.path("availableGameStats").path("achievements");
+        if (definitions == null || !definitions.isArray() || definitions.isEmpty()) {
+            return new SteamAchievementSnapshot(appId, gameName, List.of());
+        }
+        JsonNode playerStats = playerRoot == null ? null : playerRoot.path("playerstats");
+        if (playerStats == null || !playerStats.path("success").asBoolean()) {
+            if (playerStats != null && isPrivateProfileResponse(text(playerStats, "error"))) {
+                throw privateProfileError();
+            }
+            throw new InvalidRequestException(
+                    "Steam не вернул достижения. Проверьте открытый доступ к игровой информации профиля");
+        }
+        Map<String, JsonNode> playerAchievements = new LinkedHashMap<>();
+        for (JsonNode achievement : playerStats.path("achievements")) {
+            String apiName = text(achievement, "apiname");
+            if (apiName != null) playerAchievements.put(apiName, achievement);
+        }
+
+        List<SteamAchievementData> result = new ArrayList<>();
+        for (JsonNode definition : definitions) {
+            String apiName = text(definition, "name");
+            if (apiName == null) continue;
+            JsonNode playerAchievement = playerAchievements.get(apiName);
+            boolean unlocked = playerAchievement != null
+                    && playerAchievement.path("achieved").asInt() == 1;
+            long unlockTime = unlocked ? playerAchievement.path("unlocktime").asLong() : 0L;
+            String displayName = text(definition, "displayName");
+            result.add(new SteamAchievementData(apiName,
+                    displayName == null ? apiName : displayName,
+                    text(definition, "description"), text(definition, "icon"),
+                    text(definition, "icongray"), definition.path("hidden").asInt() == 1,
+                    unlocked, unlockTime > 0 ? Instant.ofEpochSecond(unlockTime) : null));
+        }
+        return new SteamAchievementSnapshot(appId, gameName, List.copyOf(result));
+    }
+
     private String firstProfileName(JsonNode root) {
         if (root == null) throw new InvalidRequestException("SteamID64 не найден");
         for (JsonNode player : root.path("response").path("players")) {
@@ -114,6 +203,16 @@ public class SteamClient {
             default -> new InvalidRequestException(
                     "Запрос к Steam Web API завершился ошибкой " + exception.getStatusCode().value());
         };
+    }
+
+    private boolean isPrivateProfileResponse(String response) {
+        return response != null && response.toLowerCase(Locale.ROOT).contains("profile is not public");
+    }
+
+    private InvalidRequestException privateProfileError() {
+        return new InvalidRequestException(
+                "Steam не отдаёт достижения: откройте «Мой профиль» и «Доступ к игровой информации» "
+                        + "в Steam → Редактировать профиль → Приватность");
     }
 
     private String text(JsonNode node, String field) {

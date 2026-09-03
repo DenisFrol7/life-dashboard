@@ -45,6 +45,16 @@ public class GamePlaythroughService {
         item.getLibraryEntry().markCompleted(completedAt);
         return response(item);
     }
+    @Transactional
+    public boolean recordSteamAchievementCompletion(UserGame game, Instant completedAt) {
+        if (completedAt == null || playthroughs.existsByLibraryEntryId(game.getId())) return false;
+        GamePlaythrough result = new GamePlaythrough(game, playthroughs.maxNumber(game.getId()) + 1,
+                completedAt, game.getLegacyPlaytimeMinutes() + sessions.totalMinutes(game.getId(), userId),
+                GamePlaythroughSource.STEAM_ACHIEVEMENTS, null);
+        playthroughs.save(result);
+        game.markCompleted(completedAt);
+        return true;
+    }
     @Transactional public void delete(Long id) {
         playthroughs.delete(findPlaythrough(id));
     }
@@ -57,6 +67,7 @@ public class GamePlaythroughService {
     }
     private GamePlaythroughResponse response(GamePlaythrough item) {
         return new GamePlaythroughResponse(item.getId(), item.getLibraryEntry().getId(),
-                item.getPlaythroughNumber(), item.getCompletedAt(), item.getPlaytimeMinutes(), item.getNote());
+                item.getPlaythroughNumber(), item.getCompletedAt(), item.getPlaytimeMinutes(),
+                item.getCompletionSource(), item.getNote());
     }
 }

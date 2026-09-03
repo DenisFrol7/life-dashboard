@@ -103,6 +103,7 @@ public class GameLibraryService {
         if (previousStatus == UserContentStatus.COMPLETED && currentNumber > 0) {
             playthroughs.findByLibraryEntryIdAndPlaythroughNumber(game.getId(), currentNumber).ifPresent(item -> {
                 item.updateCompletedAt(request.completedAt());
+                item.markManual();
                 if (item.getPlaytimeMinutes() == 0 && game.getLegacyPlaytimeMinutes() > 0)
                     item.updatePlaytimeMinutes(game.getLegacyPlaytimeMinutes());
             });
@@ -119,6 +120,6 @@ public class GameLibraryService {
                 new ReferenceResponse(g.getSource().getId(), g.getSource().getCode(), g.getSource().getName(), g.getSource().getSourceType().name()),
                 g.getAccessType(), g.getEdition(), g.getAcquiredAt(), g.getNote(), g.getStatus(), u.getRating(),
                 u.isFavorite(), g.getStartedAt(), g.getCompletedAt(), u.getPersonalNote(),
-                g.getLegacyPlaytimeMinutes());
+                g.getLegacyPlaytimeMinutes(), g.getSteamAppId());
     }
 }

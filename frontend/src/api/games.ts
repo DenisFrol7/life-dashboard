@@ -127,6 +127,7 @@ export type GameLibrary = {
   completedAt: string | null;
   personalNote: string | null;
   legacyPlaytimeMinutes: number;
+  steamAppId: number | null;
 };
 export type GameLibraryInput = Pick<
   GameLibrary,
@@ -157,6 +158,27 @@ export type XboxProgressInput = Pick<
   | "totalGamerscore"
   | "earnedGamerscore"
 >;
+export type SteamAchievement = {
+  apiName: string;
+  displayName: string;
+  description: string | null;
+  iconUrl: string | null;
+  lockedIconUrl: string | null;
+  hidden: boolean;
+  unlocked: boolean;
+  unlockedAt: string | null;
+};
+export type SteamProgress = {
+  id: number;
+  libraryEntryId: number;
+  steamAppId: number;
+  totalAchievements: number;
+  unlockedAchievements: number;
+  achievementPercent: number;
+  lastUnlockedAt: string | null;
+  lastSyncedAt: string;
+  achievements: SteamAchievement[];
+};
 export type XboxLibrarySummary = {
   libraryEntryId: number;
   progress: XboxProgress;
@@ -190,6 +212,7 @@ export type GamePlaythrough = {
   playthroughNumber: number;
   completedAt: string;
   playtimeMinutes: number;
+  completionSource: "MANUAL" | "STEAM_ACHIEVEMENTS";
   note: string | null;
 };
 export type GamePlaythroughInput = Pick<
@@ -313,6 +336,22 @@ export const putXboxProgress = (libraryId: number, input: XboxProgressInput) =>
     method: "PUT",
     body: JSON.stringify(input),
   });
+export const getSteamProgress = async (libraryId: number) => {
+  try {
+    return await apiRequest<SteamProgress>(
+      `/api/games/library/${libraryId}/steam-progress`,
+    );
+  } catch (error) {
+    if (error instanceof ApiClientError && error.payload.status === 404)
+      return null;
+    throw error;
+  }
+};
+export const syncSteamProgress = (libraryId: number) =>
+  apiRequest<SteamProgress>(
+    `/api/games/library/${libraryId}/steam-progress/sync`,
+    { method: "POST" },
+  );
 export const getGameSessions = (from?: string, to?: string) => {
   const query = new URLSearchParams();
   if (from) query.set("from", from);
