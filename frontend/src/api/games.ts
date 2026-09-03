@@ -10,14 +10,59 @@ export type Game = {
   releaseYear: number | null;
   description: string | null;
   coverUrl: string | null;
+  backgroundUrl: string | null;
   durationMinutes: null;
   releaseStatus: ReleaseStatus;
   genre: string | null;
   developer: string | null;
   releaseDate: string | null;
   xboxPlayAnywhere: boolean;
+  rawgId: number | null;
+  rawgSlug: string | null;
+  steamGridDbGameId: number | null;
+  steamGridDbGridId: number | null;
 };
-export type GameInput = Omit<Game, "id">;
+export type GameInput = Omit<Game, "id" | "rawgId" | "rawgSlug">;
+export type RawgGameCandidate = {
+  rawgId: number;
+  slug: string;
+  title: string;
+  releaseDate: string | null;
+  backgroundUrl: string | null;
+  platforms: string[];
+  existingContentId: number | null;
+};
+export type RawgGameDetails = {
+  rawgId: number;
+  slug: string;
+  rawgUrl: string;
+  title: string;
+  originalTitle: string | null;
+  releaseYear: number | null;
+  releaseDate: string | null;
+  description: string | null;
+  backgroundUrl: string | null;
+  genre: string | null;
+  developer: string | null;
+  releaseStatus: ReleaseStatus;
+  platforms: string[];
+  existingContentId: number | null;
+};
+export type SteamGridDbGameCandidate = {
+  steamGridDbId: number;
+  name: string;
+  verified: boolean;
+  types: string[];
+};
+export type SteamGridDbCoverCandidate = {
+  steamGridDbGameId: number;
+  gridId: number;
+  imageUrl: string;
+  thumbnailUrl: string | null;
+  score: number;
+  style: string | null;
+  authorName: string | null;
+};
 export type Reference = {
   id: number;
   code: string;
@@ -146,6 +191,34 @@ export const updateGame = (id: number, input: GameInput) =>
     method: "PUT",
     body: JSON.stringify(input),
   });
+export const searchRawgGames = (query: string) =>
+  apiRequest<RawgGameCandidate[]>(
+    `/api/games/rawg/search?query=${encodeURIComponent(query)}`,
+  );
+export const previewRawgGame = (rawgId: number) =>
+  apiRequest<RawgGameDetails>(`/api/games/rawg/${rawgId}`);
+export const createRawgGame = (rawgId: number, input: GameInput) =>
+  apiRequest<Game>(`/api/games/rawg/${rawgId}`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+export const updateRawgGame = (
+  contentId: number,
+  rawgId: number,
+  input: GameInput,
+) =>
+  apiRequest<Game>(`/api/games/rawg/${rawgId}/content/${contentId}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+export const searchSteamGridDbGames = (query: string) =>
+  apiRequest<SteamGridDbGameCandidate[]>(
+    `/api/games/steamgriddb/search?query=${encodeURIComponent(query)}`,
+  );
+export const getSteamGridDbCovers = (steamGridDbGameId: number) =>
+  apiRequest<SteamGridDbCoverCandidate[]>(
+    `/api/games/steamgriddb/${steamGridDbGameId}/covers`,
+  );
 export const deleteGame = (id: number) =>
   apiRequest<void>(`/api/content/${id}`, { method: "DELETE" });
 export const getPlatforms = () =>

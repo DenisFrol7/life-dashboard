@@ -137,6 +137,7 @@ public class SeriesKinopoiskService {
         return new ContentItemResponse(item.getId(), item.getTitle(), item.getOriginalTitle(), item.getItemType(),
                 item.getFormat(), item.getReleaseYear(), item.getDescription(), item.getCoverUrl(),
                 item.getDurationMinutes(), item.getReleaseStatus(), item.getGenre(), item.getDeveloper(),
-                item.getReleaseDate(), item.isXboxPlayAnywhere());
+                item.getReleaseDate(), item.isXboxPlayAnywhere(), item.getRawgId(), item.getRawgSlug(),
+                item.getBackgroundUrl(), item.getSteamGridDbGameId(), item.getSteamGridDbGridId());
     }
 }

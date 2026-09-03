@@ -209,6 +209,7 @@ export function GameDetailsPage() {
   const xbox = library ? isXbox(library) : false;
   const hasXbox = libraries.some(isXbox);
   const hasPc = libraries.some((entry) => entry.platform.code === "PC");
+  const showRawgAttribution = Boolean(game.rawgSlug);
   const achievementPercent = progress?.achievementPercent ?? 0;
   const completed100 = Boolean(progress && achievementPercent >= 100);
   const baseAchievements = achievementGroups.find(
@@ -226,6 +227,14 @@ export function GameDetailsPage() {
     },
     null,
   );
+  const selectedPlaythroughCompletionDate = playthroughs.find(
+    (item) => item.libraryEntryId === library?.id,
+  )?.completedAt;
+  const achievementCompletionDate =
+    latestDlcCompletionDate ??
+    library?.completedAt ??
+    selectedPlaythroughCompletionDate ??
+    progress?.lastUpdatedAt;
   const dlcSummary = dlcAchievements.reduce(
     (sum, item) => ({
       totalAchievements: sum.totalAchievements + item.totalAchievements,
@@ -261,8 +270,8 @@ export function GameDetailsPage() {
         <div
           className="game-detail-cover"
           style={
-            game.coverUrl
-              ? { backgroundImage: `url(${game.coverUrl})` }
+            game.coverUrl ?? game.backgroundUrl
+              ? { backgroundImage: `url(${game.coverUrl ?? game.backgroundUrl})` }
               : undefined
           }
         >
@@ -292,6 +301,19 @@ export function GameDetailsPage() {
               </dd>
             </div>
           </dl>
+          {showRawgAttribution && (
+            <div className="game-source-attributions">
+              <a
+                className="rawg-attribution"
+                href={`https://rawg.io/games/${game.rawgSlug}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Данные об игре: <strong>RAWG</strong>
+                <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          )}
         </div>
         <div className="game-personal-info">
           <div>
@@ -376,9 +398,7 @@ export function GameDetailsPage() {
                 {progress.unlockedAchievements > 0 && (
                   <span>
                     {completed100
-                      ? formatDate(
-                          latestDlcCompletionDate ?? progress.lastUpdatedAt,
-                        )
+                      ? formatDate(achievementCompletionDate)
                       : lastAchievement
                         ? formatDate(lastAchievement.startedAt)
                         : formatDate(progress.lastUpdatedAt)}

@@ -23,6 +23,8 @@ public class ContentItem {
     private String description;
     @Column(name = "cover_url", columnDefinition = "text")
     private String coverUrl;
+    @Column(name = "background_url", columnDefinition = "text")
+    private String backgroundUrl;
     @Column(name = "duration_minutes")
     private Integer durationMinutes;
     @Column(length = 100)
@@ -39,6 +41,16 @@ public class ContentItem {
     private Instant kinopoiskEnrichedAt;
     @Column(name = "shikimori_id")
     private Long shikimoriId;
+    @Column(name = "rawg_id")
+    private Long rawgId;
+    @Column(name = "rawg_slug", length = 300)
+    private String rawgSlug;
+    @Column(name = "rawg_enriched_at")
+    private Instant rawgEnrichedAt;
+    @Column(name = "steamgriddb_game_id")
+    private Long steamGridDbGameId;
+    @Column(name = "steamgriddb_grid_id")
+    private Long steamGridDbGridId;
     @Enumerated(EnumType.STRING) @Column(name = "release_status", nullable = false, length = 20)
     private ReleaseStatus releaseStatus;
 
@@ -61,6 +73,7 @@ public class ContentItem {
     public Integer getReleaseYear() { return releaseYear; }
     public String getDescription() { return description; }
     public String getCoverUrl() { return coverUrl; }
+    public String getBackgroundUrl() { return backgroundUrl; }
     public Integer getDurationMinutes() { return durationMinutes; }
     public String getGenre() { return genre; }
     public String getDeveloper() { return developer; }
@@ -73,4 +86,19 @@ public class ContentItem {
     public void markKinopoiskEnriched() { this.kinopoiskEnrichedAt = Instant.now(); }
     public Long getShikimoriId() { return shikimoriId; }
     public void setShikimoriId(Long shikimoriId) { this.shikimoriId = shikimoriId; }
+    public Long getRawgId() { return rawgId; }
+    public String getRawgSlug() { return rawgSlug; }
+    public Instant getRawgEnrichedAt() { return rawgEnrichedAt; }
+    public void linkRawg(long rawgId, String rawgSlug) {
+        this.rawgId = rawgId;
+        this.rawgSlug = rawgSlug;
+        this.rawgEnrichedAt = Instant.now();
+    }
+    public Long getSteamGridDbGameId() { return steamGridDbGameId; }
+    public Long getSteamGridDbGridId() { return steamGridDbGridId; }
+    public void updateGameArtwork(String backgroundUrl, Long steamGridDbGameId, Long steamGridDbGridId) {
+        this.backgroundUrl = backgroundUrl;
+        this.steamGridDbGameId = steamGridDbGameId;
+        this.steamGridDbGridId = steamGridDbGridId;
+    }
 }

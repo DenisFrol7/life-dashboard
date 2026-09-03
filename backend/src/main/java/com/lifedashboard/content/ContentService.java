@@ -89,6 +89,8 @@ public class ContentService {
         item.update(r.title().trim(), normalize(r.originalTitle()), r.itemType(), r.format(), r.releaseYear(),
                 normalize(r.description()), normalize(r.coverUrl()), r.durationMinutes(), r.releaseStatus(),
                 normalize(r.genre()), normalize(r.developer()), r.releaseDate(), Boolean.TRUE.equals(r.xboxPlayAnywhere()));
+        if (r.itemType() == ContentType.GAME)
+            item.updateGameArtwork(normalize(r.backgroundUrl()), r.steamGridDbGameId(), r.steamGridDbGridId());
     }
     private void reconcileFullyWatchedStatus(ContentItem item, UserContent entry) {
         if (item.getItemType() != ContentType.SERIES && item.getItemType() != ContentType.ANIME) return;
@@ -106,7 +108,8 @@ public class ContentService {
     private ContentItemResponse toResponse(ContentItem i) { return new ContentItemResponse(i.getId(), i.getTitle(),
             i.getOriginalTitle(), i.getItemType(), i.getFormat(), i.getReleaseYear(), i.getDescription(),
             i.getCoverUrl(), i.getDurationMinutes(), i.getReleaseStatus(), i.getGenre(), i.getDeveloper(),
-            i.getReleaseDate(), i.isXboxPlayAnywhere()); }
+            i.getReleaseDate(), i.isXboxPlayAnywhere(), i.getRawgId(), i.getRawgSlug(), i.getBackgroundUrl(),
+            i.getSteamGridDbGameId(), i.getSteamGridDbGridId()); }
     private LibraryEntryResponse toResponse(UserContent e) { return new LibraryEntryResponse(e.getId(),
             toResponse(e.getContent()), e.getStatus(), e.getRating(), e.isFavorite(), e.getStartedAt(),
             e.getCompletedAt(), e.getPersonalNote()); }

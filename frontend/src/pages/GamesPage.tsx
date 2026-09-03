@@ -10,6 +10,7 @@ import { Plus, Search } from "lucide-react";
 import {
   createGame,
   createGameLibrary,
+  createRawgGame,
   createGameSession,
   deleteGame,
   deleteGameSession,
@@ -18,12 +19,17 @@ import {
   getGameSessions,
   getPlatforms,
   getSources,
+  getSteamGridDbCovers,
   getXboxAchievementGroups,
   getXboxLibrarySummary,
+  previewRawgGame,
   putGameProfile,
   putXboxProgress,
+  searchRawgGames,
+  searchSteamGridDbGames,
   updateGame,
   updateGameLibrary,
+  updateRawgGame,
   updateGameSession,
   type Game,
   type GameInput,
@@ -32,6 +38,9 @@ import {
   type GameSession,
   type GameSessionInput,
   type Reference,
+  type RawgGameCandidate,
+  type SteamGridDbCoverCandidate,
+  type SteamGridDbGameCandidate,
   type XboxAchievementGroup,
   type XboxProgress,
   type XboxProgressInput,
@@ -56,12 +65,15 @@ const emptyGame: GameInput = {
   releaseYear: null,
   description: null,
   coverUrl: null,
+  backgroundUrl: null,
   durationMinutes: null,
   releaseStatus: "RELEASED",
   genre: null,
   developer: null,
   releaseDate: null,
   xboxPlayAnywhere: false,
+  steamGridDbGameId: null,
+  steamGridDbGridId: null,
 };
 const emptyProgress: XboxProgressInput = {
   totalAchievements: 0,
@@ -341,8 +353,10 @@ export function GamesPage() {
                       className="series-list-cover game-poster"
                       onClick={() => navigate(`/games/${game.id}`)}
                       style={
-                        game.coverUrl
-                          ? { backgroundImage: `url(${game.coverUrl})` }
+                        game.backgroundUrl ?? game.coverUrl
+                          ? {
+                              backgroundImage: `url(${game.backgroundUrl ?? game.coverUrl})`,
+                            }
                           : undefined
                       }
                     >
@@ -366,9 +380,9 @@ export function GamesPage() {
                       <div className="movie-list-meta">
                         <span>{game.releaseYear ?? "—"}</span>
                         <span>{game.genre ?? "Жанр не указан"}</span>
-                        {sourceNames.length > 0 && (
-                          <span>{sourceNames.join(" · ")}</span>
-                        )}
+                        {sourceNames.map((name) => (
+                          <span key={name}>{name}</span>
+                        ))}
                       </div>
                       <div className="series-list-inline-status">
                         {entry ? (
@@ -385,11 +399,11 @@ export function GamesPage() {
                       </div>
                       {progress && (
                         <div className="game-catalog-progress">
-                          <strong>
-                            {progress.unlockedAchievements}{" "}
-                            <small>
-                              из {progress.totalAchievements} достижений
-                            </small>
+                          <strong className="game-catalog-achievements">
+                            <b>{progress.unlockedAchievements}</b>
+                            <small>из</small>
+                            <b>{progress.totalAchievements}</b>
+                            <small>достижений</small>
                           </strong>
                           <div className="series-list-progress">
                             <span
@@ -398,10 +412,12 @@ export function GamesPage() {
                               }}
                             />
                           </div>
-                          <small>
-                            {progress.earnedGamerscore} из{" "}
-                            {progress.totalGamerscore} G
-                          </small>
+                          <span className="game-catalog-gamerscore">
+                            <b>{progress.earnedGamerscore}</b>
+                            <small>из</small>
+                            <b>{progress.totalGamerscore}</b>
+                            <small>G</small>
+                          </span>
                         </div>
                       )}
                     </div>
@@ -528,6 +544,17 @@ export function GamesPage() {
           </dl>
         </aside>
       </section>
+      {visible.some((game) => game.rawgSlug) && (
+        <a
+          className="rawg-attribution rawg-catalog-attribution"
+          href="https://rawg.io"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Данные и изображения игр: <strong>RAWG</strong>
+          <span aria-hidden="true">↗</span>
+        </a>
+      )}
       <section className="game-sessions-panel game-sessions-bottom">
         <div className="panel-heading">
           <div>
@@ -659,6 +686,23 @@ function GameForm({
   const [inLibrary, setInLibrary] = useState(Boolean(library) || !game);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [catalogQuery, setCatalogQuery] = useState("");
+  const [candidates, setCandidates] = useState<RawgGameCandidate[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchCompleted, setSearchCompleted] = useState(false);
+  const [selectedRawgId, setSelectedRawgId] = useState<number | null>(
+    game?.rawgId ?? null,
+  );
+  const [artworkQuery, setArtworkQuery] = useState(
+    game?.originalTitle ?? game?.title ?? "",
+  );
+  const [artworkGames, setArtworkGames] = useState<
+    SteamGridDbGameCandidate[]
+  >([]);
+  const [artworkCovers, setArtworkCovers] = useState<
+    SteamGridDbCoverCandidate[]
+  >([]);
+  const [artworkSearching, setArtworkSearching] = useState(false);
   useEffect(() => {
     setXboxProgress(progress ?? emptyProgress);
   }, [progress]);
@@ -695,14 +739,121 @@ function GameForm({
       sourceId: source?.id ?? current.sourceId,
     }));
   };
+  const searchRawg = async () => {
+    const value = catalogQuery.trim();
+    if (value.length < 2) return;
+    setSearching(true);
+    setSearchCompleted(false);
+    setError(null);
+    try {
+      setCandidates(await searchRawgGames(value));
+      setSearchCompleted(true);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось выполнить поиск в RAWG",
+      );
+    } finally {
+      setSearching(false);
+    }
+  };
+  const selectRawgCandidate = async (candidate: RawgGameCandidate) => {
+    if (
+      candidate.existingContentId &&
+      candidate.existingContentId !== game?.id
+    )
+      return;
+    setSearching(true);
+    setError(null);
+    try {
+      const details = await previewRawgGame(candidate.rawgId);
+      if (details.existingContentId && details.existingContentId !== game?.id) {
+        setError("Эта игра RAWG уже связана с другой записью каталога");
+        return;
+      }
+      setItem((current) => ({
+        ...current,
+        title: details.title,
+        originalTitle: details.originalTitle,
+        releaseYear: details.releaseYear,
+        description: details.description,
+        backgroundUrl: details.backgroundUrl,
+        releaseStatus: details.releaseStatus,
+        genre: details.genre,
+        developer: details.developer,
+        releaseDate: details.releaseDate,
+      }));
+      setArtworkQuery(details.originalTitle ?? details.title);
+      setSelectedRawgId(details.rawgId);
+      setCandidates([]);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось загрузить карточку RAWG",
+      );
+    } finally {
+      setSearching(false);
+    }
+  };
+  const searchArtwork = async () => {
+    const value = artworkQuery.trim();
+    if (value.length < 2) return;
+    setArtworkSearching(true);
+    setError(null);
+    setArtworkCovers([]);
+    try {
+      setArtworkGames(await searchSteamGridDbGames(value));
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось выполнить поиск в SteamGridDB",
+      );
+    } finally {
+      setArtworkSearching(false);
+    }
+  };
+  const selectArtworkGame = async (candidate: SteamGridDbGameCandidate) => {
+    setArtworkSearching(true);
+    setError(null);
+    try {
+      const covers = await getSteamGridDbCovers(candidate.steamGridDbId);
+      setArtworkCovers(covers);
+      setArtworkGames([]);
+      if (covers.length === 0)
+        setError("Для этой игры нет вертикальных обложек 600×900");
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось загрузить обложки SteamGridDB",
+      );
+    } finally {
+      setArtworkSearching(false);
+    }
+  };
+  const selectArtworkCover = (cover: SteamGridDbCoverCandidate) => {
+    setItem((current) => ({
+      ...current,
+      coverUrl: cover.imageUrl,
+      steamGridDbGameId: cover.steamGridDbGameId,
+      steamGridDbGridId: cover.gridId,
+    }));
+  };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true);
     setError(null);
     try {
       const savedGame = game
-        ? await updateGame(game.id, item)
-        : await createGame(item);
+        ? selectedRawgId && selectedRawgId !== game.rawgId
+          ? await updateRawgGame(game.id, selectedRawgId, item)
+          : await updateGame(game.id, item)
+        : selectedRawgId
+          ? await createRawgGame(selectedRawgId, item)
+          : await createGame(item);
       if (inLibrary) {
         const copyProgress = {
           ...entry,
@@ -755,6 +906,168 @@ function GameForm({
           </button>
         </div>
         {error && <div className="form-error">{error}</div>}
+        <section className="kinopoisk-movie-search rawg-game-search">
+          <div>
+            <input
+              value={catalogQuery}
+              onChange={(event) => setCatalogQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void searchRawg();
+                }
+              }}
+              placeholder="Введите название игры"
+            />
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={searching || catalogQuery.trim().length < 2}
+              onClick={() => void searchRawg()}
+            >
+              {searching ? "Ищем…" : "Найти в RAWG"}
+            </button>
+          </div>
+          {selectedRawgId && (
+            <p>Игра связана с RAWG. Проверьте заполненные данные перед сохранением.</p>
+          )}
+          {candidates.length > 0 && (
+            <div className="kinopoisk-movie-results rawg-game-results">
+              {candidates.map((candidate) => {
+                const belongsToAnotherGame = Boolean(
+                  candidate.existingContentId &&
+                    candidate.existingContentId !== game?.id,
+                );
+                return (
+                  <button
+                    type="button"
+                    key={candidate.rawgId}
+                    disabled={belongsToAnotherGame}
+                    onClick={() => void selectRawgCandidate(candidate)}
+                  >
+                    {candidate.backgroundUrl ? (
+                      <img src={candidate.backgroundUrl} alt="" />
+                    ) : (
+                      <span>🎮</span>
+                    )}
+                    <span>
+                      <strong>{candidate.title}</strong>
+                      <small>
+                        {candidate.releaseDate
+                          ? candidate.releaseDate.slice(0, 4)
+                          : "Год не указан"}
+                        {candidate.platforms.length
+                          ? ` · ${candidate.platforms.join(", ")}`
+                          : ""}
+                        {belongsToAnotherGame ? " · Уже в каталоге" : ""}
+                      </small>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {searchCompleted && candidates.length === 0 && !selectedRawgId && (
+            <p className="form-hint">
+              Игра не найдена в RAWG. Можно заполнить данные вручную.
+            </p>
+          )}
+          {(candidates.length > 0 || selectedRawgId) && (
+            <a
+              className="rawg-attribution rawg-search-attribution"
+              href="https://rawg.io"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Данные и изображения: <strong>RAWG</strong>
+              <span aria-hidden="true">↗</span>
+            </a>
+          )}
+        </section>
+        <section className="kinopoisk-movie-search steamgriddb-cover-search">
+          <p className="steamgriddb-search-title">
+            Вертикальная обложка SteamGridDB
+          </p>
+          <div>
+            <input
+              value={artworkQuery}
+              onChange={(event) => setArtworkQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void searchArtwork();
+                }
+              }}
+              placeholder="Название игры для поиска обложки"
+            />
+            <button
+              className="secondary-button"
+              type="button"
+              disabled={artworkSearching || artworkQuery.trim().length < 2}
+              onClick={() => void searchArtwork()}
+            >
+              {artworkSearching ? "Ищем…" : "Найти обложку"}
+            </button>
+          </div>
+          {artworkGames.length > 0 && (
+            <div className="kinopoisk-movie-results steamgriddb-game-results">
+              {artworkGames.map((candidate) => (
+                <button
+                  type="button"
+                  key={candidate.steamGridDbId}
+                  onClick={() => void selectArtworkGame(candidate)}
+                >
+                  <span aria-hidden="true">▥</span>
+                  <span>
+                    <strong>{candidate.name}</strong>
+                    <small>
+                      {candidate.verified ? "Проверенная запись" : "Запись сообщества"}
+                      {candidate.types.length
+                        ? ` · ${candidate.types.join(", ")}`
+                        : ""}
+                    </small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          {artworkCovers.length > 0 && (
+            <div className="steamgriddb-cover-results">
+              {artworkCovers.map((cover) => (
+                <button
+                  type="button"
+                  className={
+                    item.steamGridDbGridId === cover.gridId ? "selected" : ""
+                  }
+                  key={cover.gridId}
+                  title={cover.authorName ? `Автор: ${cover.authorName}` : ""}
+                  onClick={() => selectArtworkCover(cover)}
+                >
+                  <img
+                    src={cover.thumbnailUrl ?? cover.imageUrl}
+                    alt={`Обложка ${item.title || artworkQuery}`}
+                  />
+                  {item.steamGridDbGridId === cover.gridId && <span>Выбрано</span>}
+                </button>
+              ))}
+            </div>
+          )}
+          {(artworkCovers.length > 0 || item.steamGridDbGridId) && (
+            <a
+              className="rawg-attribution rawg-search-attribution"
+              href={
+                item.steamGridDbGridId
+                  ? `https://www.steamgriddb.com/grid/${item.steamGridDbGridId}`
+                  : "https://www.steamgriddb.com"
+              }
+              target="_blank"
+              rel="noreferrer"
+            >
+              Обложки: <strong>SteamGridDB</strong>
+              <span aria-hidden="true">↗</span>
+            </a>
+          )}
+        </section>
         <label>
           Название
           <input
@@ -811,12 +1124,22 @@ function GameForm({
           </label>
         </div>
         <label>
-          URL обложки
+          URL вертикальной обложки
           <input
             type="url"
             value={item.coverUrl ?? ""}
             onChange={(event) =>
               setItemValue("coverUrl", event.target.value || null)
+            }
+          />
+        </label>
+        <label>
+          URL горизонтального фона
+          <input
+            type="url"
+            value={item.backgroundUrl ?? ""}
+            onChange={(event) =>
+              setItemValue("backgroundUrl", event.target.value || null)
             }
           />
         </label>

@@ -13,6 +13,7 @@ public interface ContentItemRepository extends JpaRepository<ContentItem, Long> 
     Optional<ContentItem> findByTitle(String title);
     Optional<ContentItem> findByKinopoiskFilmId(Long kinopoiskFilmId);
     Optional<ContentItem> findByShikimoriId(Long shikimoriId);
+    Optional<ContentItem> findByRawgId(Long rawgId);
     List<ContentItem> findAllByItemTypeAndKinopoiskFilmIdIsNotNullOrderByTitleAsc(ContentType itemType);
     List<ContentItem> findAllByItemTypeAndKinopoiskFilmIdIsNotNullAndKinopoiskEnrichedAtIsNullOrderByIdAsc(ContentType itemType);
 
