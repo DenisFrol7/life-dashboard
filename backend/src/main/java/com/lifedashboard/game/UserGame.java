@@ -29,6 +29,8 @@ public class UserGame {
     private String note;
     @Column(name = "legacy_playtime_minutes", nullable = false)
     private long legacyPlaytimeMinutes;
+    @Column(name = "steam_app_id")
+    private Long steamAppId;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20)
     private UserContentStatus status = UserContentStatus.NOT_STARTED;
     @Column(name = "started_at")
@@ -54,6 +56,8 @@ public class UserGame {
     public Instant getAcquiredAt() { return acquiredAt; }
     public String getNote() { return note; }
     public long getLegacyPlaytimeMinutes() { return legacyPlaytimeMinutes; }
+    public Long getSteamAppId() { return steamAppId; }
+    public void linkSteamApp(long steamAppId) { this.steamAppId = steamAppId; }
     public UserContentStatus getStatus() { return status; }
     public Instant getStartedAt() { return startedAt; }
     public Instant getCompletedAt() { return completedAt; }

@@ -6,7 +6,7 @@ import {
   type FormEvent,
 } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Plus, Search } from "lucide-react";
+import { Download, Plus, Search, X } from "lucide-react";
 import {
   createGame,
   createGameLibrary,
@@ -22,7 +22,10 @@ import {
   getSteamGridDbCovers,
   getXboxAchievementGroups,
   getXboxLibrarySummary,
+  importSteamGames,
+  prepareSteamImport,
   previewRawgGame,
+  previewSteamImport,
   putGameProfile,
   putXboxProgress,
   searchRawgGames,
@@ -41,6 +44,8 @@ import {
   type RawgGameCandidate,
   type SteamGridDbCoverCandidate,
   type SteamGridDbGameCandidate,
+  type SteamImportMatch,
+  type SteamImportPreview,
   type XboxAchievementGroup,
   type XboxProgress,
   type XboxProgressInput,
@@ -101,6 +106,7 @@ export function GamesPage() {
   const [editingSession, setEditingSession] = useState<
     GameSession | "new" | null
   >(null);
+  const [steamImportOpen, setSteamImportOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<LibraryStatus | "GAME_PASS" | "">("");
   const [platform, setPlatform] = useState("");
@@ -303,6 +309,13 @@ export function GamesPage() {
             </option>
           ))}
         </select>
+        <button
+          className="secondary-button icon-button steam-import-button"
+          onClick={() => setSteamImportOpen(true)}
+        >
+          <Download />
+          Импорт Steam
+        </button>
         <button
           className="primary-button series-add-button media-add-button icon-button"
           onClick={() => setEditing("new")}
@@ -619,6 +632,15 @@ export function GamesPage() {
           }}
         />
       )}
+      {steamImportOpen && (
+        <SteamImportPreviewDialog
+          onClose={() => setSteamImportOpen(false)}
+          onImported={() => {
+            setSteamImportOpen(false);
+            void load();
+          }}
+        />
+      )}
       {editingSession && (
         <GameSessionForm
           session={editingSession === "new" ? undefined : editingSession}
@@ -630,6 +652,348 @@ export function GamesPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+const steamMatchLabels: Record<SteamImportMatch, string> = {
+  ALREADY_IMPORTED: "Уже в библиотеке",
+  MATCHED: "Найдена карточка",
+  REVIEW: "Нужно проверить",
+  NEW: "Новая игра",
+};
+
+const formatSteamPlaytime = (minutes: number) => {
+  if (minutes <= 0) return "Не запускалась";
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return hours ? `${hours} ч ${remainder} мин` : `${remainder} мин`;
+};
+
+function SteamImportPreviewDialog({
+  onClose,
+  onImported,
+}: {
+  onClose: () => void;
+  onImported: () => void;
+}) {
+  const { showToast } = useToast();
+  const [preview, setPreview] = useState<SteamImportPreview | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState<{
+    completed: number;
+    total: number;
+  } | null>(null);
+  const [creatingBackup, setCreatingBackup] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<SteamImportMatch | "">("");
+  const [query, setQuery] = useState("");
+  const [excludedAppIds, setExcludedAppIds] = useState<Set<number>>(new Set());
+
+  const loadPreview = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setPreview(await previewSteamImport());
+      setExcludedAppIds(new Set());
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось загрузить библиотеку Steam",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPreview();
+  }, [loadPreview]);
+
+  const includedGames = useMemo(
+    () =>
+      preview?.games.filter((game) => !excludedAppIds.has(game.appId)) ?? [],
+    [excludedAppIds, preview],
+  );
+
+  const includedSummary = useMemo(
+    () => ({
+      total: includedGames.length,
+      totalPlaytimeMinutes: includedGames.reduce(
+        (total, game) => total + game.playtimeMinutes,
+        0,
+      ),
+      alreadyImported: includedGames.filter(
+        (game) => game.match === "ALREADY_IMPORTED",
+      ).length,
+      matchedExisting: includedGames.filter((game) => game.match === "MATCHED")
+        .length,
+      reviewRequired: includedGames.filter((game) => game.match === "REVIEW")
+        .length,
+      newGames: includedGames.filter((game) => game.match === "NEW").length,
+    }),
+    [includedGames],
+  );
+
+  const selectedForImport = useMemo(
+    () => includedGames.filter((game) => game.match !== "ALREADY_IMPORTED"),
+    [includedGames],
+  );
+
+  const visibleGames = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("ru-RU");
+    return includedGames.filter(
+      (game) =>
+        (!filter || game.match === filter) &&
+        (!normalized ||
+          game.title.toLocaleLowerCase("ru-RU").includes(normalized) ||
+          game.matchedContentTitle
+            ?.toLocaleLowerCase("ru-RU")
+            .includes(normalized)),
+    );
+  }, [filter, includedGames, query]);
+
+  const excludeGame = (appId: number) => {
+    setExcludedAppIds((current) => {
+      const next = new Set(current);
+      next.add(appId);
+      return next;
+    });
+  };
+
+  const runImport = async () => {
+    if (selectedForImport.length === 0) return;
+    const confirmed = window.confirm(
+      `Импортировать ${selectedForImport.length} игр? Перед записью backend автоматически создаст резервную копию. Данные и горизонтальные обложки загрузятся из RAWG, вертикальные — из SteamGridDB.`,
+    );
+    if (!confirmed) return;
+    setImporting(true);
+    setCreatingBackup(true);
+    setImportError(null);
+    setImportProgress({ completed: 0, total: selectedForImport.length });
+    let processed = 0;
+    try {
+      const appIds = selectedForImport.map((game) => game.appId);
+      const preparation = await prepareSteamImport(appIds);
+      setCreatingBackup(false);
+      const total = {
+        imported: 0,
+        catalogCreated: 0,
+        rawgEnriched: 0,
+        steamGridDbCovers: 0,
+      };
+      const batchSize = 5;
+      for (let offset = 0; offset < appIds.length; offset += batchSize) {
+        const batch = appIds.slice(offset, offset + batchSize);
+        const result = await importSteamGames(preparation.backupToken, batch);
+        total.imported += result.imported;
+        total.catalogCreated += result.catalogCreated;
+        total.rawgEnriched += result.rawgEnriched;
+        total.steamGridDbCovers += result.steamGridDbCovers;
+        processed = Math.min(offset + batch.length, appIds.length);
+        setImportProgress({
+          completed: processed,
+          total: appIds.length,
+        });
+      }
+      showToast(
+        `Импортировано: ${total.imported}. RAWG: ${total.rawgEnriched}, SteamGridDB: ${total.steamGridDbCovers}. Бэкап создан.`,
+      );
+      onImported();
+    } catch (reason) {
+      setImportError(
+        reason instanceof Error
+          ? `${reason.message}${processed ? ` Обработано: ${processed} из ${selectedForImport.length}.` : ""}`
+          : "Не удалось импортировать библиотеку Steam",
+      );
+    } finally {
+      setCreatingBackup(false);
+      setImporting(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <section className="steam-import-dialog">
+        <div className="form-heading">
+          <div>
+            <p className="eyebrow">Steam Web API</p>
+            <h2>Предпросмотр библиотеки</h2>
+          </div>
+          <button type="button" onClick={onClose} disabled={importing}>
+            ×
+          </button>
+        </div>
+
+        {loading && !preview && (
+          <div className="steam-import-loading">
+            <span />
+            Загружаем библиотеку Steam…
+          </div>
+        )}
+        {error && (
+          <div className="notice error steam-import-error">
+            <strong>Не удалось получить библиотеку</strong>
+            <span>{error}</span>
+            <button className="secondary-button" onClick={() => void loadPreview()}>
+              Повторить
+            </button>
+          </div>
+        )}
+
+        {preview && (
+          <>
+            <p className="steam-import-profile">
+              Профиль <strong>{preview.profileName}</strong> · {includedSummary.total} из{" "}
+              {preview.totalGames} игр ·{" "}
+              {Math.round(includedSummary.totalPlaytimeMinutes / 60).toLocaleString("ru-RU")} ч
+            </p>
+            <div className="steam-import-summary">
+              <div>
+                <span>Всего</span>
+                <strong>{includedSummary.total}</strong>
+              </div>
+              <div>
+                <span>Уже добавлены</span>
+                <strong>{includedSummary.alreadyImported}</strong>
+              </div>
+              <div>
+                <span>Совпадения</span>
+                <strong>{includedSummary.matchedExisting}</strong>
+              </div>
+              <div>
+                <span>Проверить</span>
+                <strong>{includedSummary.reviewRequired}</strong>
+              </div>
+              <div>
+                <span>Новые</span>
+                <strong>{includedSummary.newGames}</strong>
+              </div>
+            </div>
+            <div className="steam-import-controls">
+              <div className="steam-import-tabs">
+                {(
+                  [
+                    ["", "Все"],
+                    ["ALREADY_IMPORTED", "Добавлены"],
+                    ["MATCHED", "Совпадения"],
+                    ["REVIEW", "Проверить"],
+                    ["NEW", "Новые"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    className={filter === value ? "active" : ""}
+                    key={value || "all"}
+                    onClick={() => setFilter(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Найти в предпросмотре"
+              />
+            </div>
+            <div className="steam-import-list">
+              {visibleGames.map((game) => (
+                <article key={game.appId}>
+                  <div className="steam-import-game-icon">
+                    <span>{game.title.slice(0, 1)}</span>
+                    {game.iconUrl && (
+                      <img
+                        src={game.iconUrl}
+                        alt=""
+                        onError={(event) => {
+                          event.currentTarget.style.display = "none";
+                        }}
+                      />
+                    )}
+                  </div>
+                  <div className="steam-import-game-info">
+                    <a
+                      href={`https://store.steampowered.com/app/${game.appId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {game.title}
+                    </a>
+                    <small>
+                      App ID {game.appId} · {formatSteamPlaytime(game.playtimeMinutes)}
+                      {game.lastPlayedAt
+                        ? ` · запускалась ${new Intl.DateTimeFormat("ru-RU").format(new Date(game.lastPlayedAt))}`
+                        : ""}
+                    </small>
+                    {game.matchedContentTitle && (
+                      <em>В каталоге: {game.matchedContentTitle}</em>
+                    )}
+                  </div>
+                  <div className="steam-import-game-actions">
+                    <span className={`steam-import-match ${game.match.toLowerCase()}`}>
+                      {steamMatchLabels[game.match]}
+                    </span>
+                    <button
+                      type="button"
+                      className="steam-import-exclude"
+                      aria-label={`Исключить ${game.title} из импорта`}
+                      title="Исключить из импорта"
+                      onClick={() => excludeGame(game.appId)}
+                      disabled={importing}
+                    >
+                      <X />
+                    </button>
+                  </div>
+                </article>
+              ))}
+              {visibleGames.length === 0 && (
+                <p className="muted steam-import-empty">Ничего не найдено.</p>
+              )}
+            </div>
+            <div className="steam-import-footer">
+              <div>
+                <p>
+                  Перед первой записью создаётся один автоматический бэкап. Steam передаёт библиотеку и время, RAWG — данные и горизонтальную обложку, SteamGridDB — вертикальную.
+                </p>
+                {excludedAppIds.size > 0 && (
+                  <button
+                    type="button"
+                    className="steam-import-restore"
+                    onClick={() => setExcludedAppIds(new Set())}
+                    disabled={importing}
+                  >
+                    Вернуть исключённые ({excludedAppIds.size})
+                  </button>
+                )}
+                {importError && <p className="steam-import-save-error">{importError}</p>}
+              </div>
+              <div className="steam-import-footer-actions">
+                <button
+                  className="secondary-button"
+                  onClick={onClose}
+                  disabled={importing}
+                >
+                  Закрыть
+                </button>
+                <button
+                  className="primary-button"
+                  onClick={() => void runImport()}
+                  disabled={importing || selectedForImport.length === 0}
+                >
+                  {importing
+                    ? creatingBackup
+                      ? "Создаём бэкап…"
+                      : `Импортируем ${importProgress?.completed ?? 0}/${importProgress?.total ?? selectedForImport.length}`
+                    : `Импортировать (${selectedForImport.length})`}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 }

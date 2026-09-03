@@ -1029,6 +1029,55 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .game-status-tabs { flex: 1 1 100%; min-width: 0; }
 .game-catalog-search { flex: 1 1 180px; width: auto; min-width: 160px; }
 .game-platform-filter { flex: 0 0 155px; min-height: 40px; padding: 9px 30px 9px 11px; border: 1px solid #d9ddda; border-radius: 9px; color: #52616a; background: #fff; font-size: 11px; }
+.steam-import-button { flex: 0 0 auto; min-height: 40px; }
+.steam-import-dialog { display: flex; width: min(980px, 100%); max-height: calc(100vh - 40px); padding: 26px; overflow: hidden; border-radius: 20px; background: var(--paper); box-shadow: 0 30px 90px #07111a70; flex-direction: column; }
+.steam-import-profile { margin: 12px 0 14px; color: var(--muted); font-size: 12px; }
+.steam-import-profile strong { color: var(--ink); }
+.steam-import-summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.steam-import-summary > div { padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper-soft); }
+.steam-import-summary span,
+.steam-import-summary strong { display: block; }
+.steam-import-summary span { color: var(--muted); font-size: 10px; }
+.steam-import-summary strong { margin-top: 3px; color: var(--ink); font-family: Georgia, serif; font-size: 20px; }
+.steam-import-controls { display: grid; grid-template-columns: 1fr minmax(190px, 260px); gap: 12px; margin: 14px 0 10px; }
+.steam-import-controls > input { min-width: 0; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; outline: none; color: var(--ink); background: var(--paper); font-size: 11px; }
+.steam-import-tabs { display: flex; min-width: 0; overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; background: var(--paper-soft); }
+.steam-import-tabs button { padding: 8px 10px; border: 0; color: var(--muted); background: transparent; cursor: pointer; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.steam-import-tabs button.active { color: #fff; background: #58778b; }
+.steam-import-list { min-height: 180px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; }
+.steam-import-list article { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 9px 11px; border-top: 1px solid var(--line); }
+.steam-import-list article:first-child { border-top: 0; }
+.steam-import-game-icon { position: relative; display: grid; width: 72px; height: 32px; overflow: hidden; border-radius: 6px; color: #ffffff70; background: #263c4c; font-family: Georgia, serif; font-weight: 800; place-items: center; }
+.steam-import-game-icon img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: auto; }
+.steam-import-game-info { min-width: 0; }
+.steam-import-game-info a,
+.steam-import-game-info small,
+.steam-import-game-info em { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.steam-import-game-info a { color: #426f91; font-family: Georgia, serif; font-size: 13px; font-weight: 700; text-decoration: none; }
+.steam-import-game-info a:hover { text-decoration: underline; }
+.steam-import-game-info small { margin-top: 3px; color: var(--muted); font-size: 10px; }
+.steam-import-game-info em { margin-top: 3px; color: #5e7b67; font-size: 10px; font-style: normal; }
+.steam-import-game-actions { display: flex; align-items: center; gap: 7px; }
+.steam-import-match { padding: 5px 8px; border-radius: 7px; font-size: 9px; font-weight: 800; white-space: nowrap; }
+.steam-import-match.already_imported { color: #5b6b63; background: #e9eeeb; }
+.steam-import-match.matched { color: #527a5c; background: #e7f2e9; }
+.steam-import-match.review { color: #916838; background: #f7ead8; }
+.steam-import-match.new { color: #496985; background: #e8f0f6; }
+.steam-import-exclude { display: grid; width: 27px; height: 27px; padding: 0; border: 1px solid transparent; border-radius: 7px; color: #9a817a; background: transparent; cursor: pointer; place-items: center; }
+.steam-import-exclude:hover { border-color: #ead8d3; color: #a75043; background: #f8ebe7; }
+.steam-import-exclude svg { width: 15px; height: 15px; stroke-width: 2; }
+.steam-import-footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding-top: 14px; }
+.steam-import-footer > div:first-child { min-width: 0; }
+.steam-import-footer p { margin: 0; color: var(--muted); font-size: 11px; }
+.steam-import-restore { margin-top: 5px; padding: 0; border: 0; color: #52748a; background: transparent; cursor: pointer; font-size: 10px; text-decoration: underline; }
+.steam-import-footer-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+.steam-import-footer-actions button { white-space: nowrap; }
+.steam-import-save-error { margin-top: 6px !important; color: #a75043 !important; }
+.steam-import-loading { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 240px; color: var(--muted); }
+.steam-import-loading > span { width: 18px; height: 18px; border: 2px solid var(--line); border-top-color: #58778b; border-radius: 50%; animation: spin .8s linear infinite; }
+.steam-import-error { margin-top: 16px; }
+.steam-import-error button { align-self: flex-start; margin-top: 8px; }
+.steam-import-empty { padding: 30px; text-align: center; }
 .game-catalog-card { grid-template-columns: 144px minmax(0, 1fr) 150px; min-height: 97px; }
 .game-catalog-card .series-list-cover { width: 144px; height: 81px; background-size: cover; }
 .game-platform-badge { padding: 3px 6px; background: #557d62; font-family: Arial, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .1px; line-height: 1; }
@@ -1287,6 +1336,8 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
   .sessions-table-card { overflow-x: auto; }
   .achievement-group-list article { grid-template-columns: 1fr 1fr; }
   .achievement-group-list article > div:first-child { grid-column: 1 / -1; }
+  .steam-import-summary { grid-template-columns: repeat(3, 1fr); }
+  .steam-import-controls { grid-template-columns: 1fr; }
 }
 @media (max-width: 500px) {
   .sidebar nav { grid-template-columns: repeat(6, 50px); justify-content: start; }
@@ -1327,6 +1378,12 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
   .journal-reader { padding: 28px 20px; }
   .journal-reader header { flex-direction: column; }
   .journal-form { padding: 20px; }
+  .steam-import-dialog { padding: 18px; }
+  .steam-import-summary { grid-template-columns: repeat(2, 1fr); }
+  .steam-import-list article { grid-template-columns: 38px minmax(0, 1fr); }
+  .steam-import-match { grid-column: 2; justify-self: start; }
+  .steam-import-footer { align-items: stretch; flex-direction: column; }
+  .steam-import-footer button { align-self: flex-end; }
   .timeline-feed::before { left: 17px; }
   .timeline-feed article { grid-template-columns: 38px 1fr auto; padding-left: 0; }
   .timeline-time { grid-column: 2; grid-row: 1; text-align: left; }

@@ -13,6 +13,7 @@ import tools.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 public class SteamGridDbClient {
@@ -49,6 +50,29 @@ public class SteamGridDbClient {
             if (exception instanceof InvalidRequestException invalid) throw invalid;
             log.warn("SteamGridDB search failed for '{}': {}", query, exception.toString());
             throw new InvalidRequestException("Не удалось подключиться к API SteamGridDB");
+        }
+    }
+
+    public Optional<SteamGridDbGameCandidate> findBySteamAppId(long appId) {
+        ensureConfigured();
+        try {
+            JsonNode root = client.get().uri(uri -> uri.path("/games/steam/{id}").build(appId))
+                    .retrieve().body(JsonNode.class);
+            if (root == null) return Optional.empty();
+            JsonNode data = root.path("data");
+            if (data.isArray()) data = data.path(0);
+            long id = data.path("id").asLong();
+            String name = text(data, "name");
+            if (id <= 0 || name == null) return Optional.empty();
+            return Optional.of(new SteamGridDbGameCandidate(id, name,
+                    data.path("verified").asBoolean(), strings(data.path("types"))));
+        } catch (RestClientResponseException exception) {
+            if (exception.getStatusCode().value() == 404) return Optional.empty();
+            throw apiError(exception);
+        } catch (RuntimeException exception) {
+            if (exception instanceof InvalidRequestException invalid) throw invalid;
+            log.warn("SteamGridDB Steam app lookup failed for {}: {}", appId, exception.toString());
+            throw new InvalidRequestException("Не удалось найти игру из Steam в SteamGridDB");
         }
     }
 

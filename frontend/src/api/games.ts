@@ -63,6 +63,46 @@ export type SteamGridDbCoverCandidate = {
   style: string | null;
   authorName: string | null;
 };
+export type SteamImportMatch =
+  | "ALREADY_IMPORTED"
+  | "MATCHED"
+  | "REVIEW"
+  | "NEW";
+export type SteamImportPreviewItem = {
+  appId: number;
+  title: string;
+  playtimeMinutes: number;
+  lastPlayedAt: string | null;
+  iconUrl: string | null;
+  match: SteamImportMatch;
+  matchedContentId: number | null;
+  matchedContentTitle: string | null;
+  matchedLibraryEntryId: number | null;
+};
+export type SteamImportPreview = {
+  profileName: string;
+  totalGames: number;
+  totalPlaytimeMinutes: number;
+  alreadyImported: number;
+  matchedExisting: number;
+  reviewRequired: number;
+  newGames: number;
+  games: SteamImportPreviewItem[];
+};
+export type SteamImportResult = {
+  requested: number;
+  imported: number;
+  catalogCreated: number;
+  linkedExistingCatalog: number;
+  skippedAlreadyImported: number;
+  rawgEnriched: number;
+  steamGridDbCovers: number;
+  backupFile: string;
+};
+export type SteamImportPreparation = {
+  backupToken: string;
+  backupFile: string;
+};
 export type Reference = {
   id: number;
   code: string;
@@ -219,6 +259,18 @@ export const getSteamGridDbCovers = (steamGridDbGameId: number) =>
   apiRequest<SteamGridDbCoverCandidate[]>(
     `/api/games/steamgriddb/${steamGridDbGameId}/covers`,
   );
+export const previewSteamImport = () =>
+  apiRequest<SteamImportPreview>("/api/games/import/steam/preview");
+export const prepareSteamImport = (appIds: number[]) =>
+  apiRequest<SteamImportPreparation>("/api/games/import/steam/prepare", {
+    method: "POST",
+    body: JSON.stringify({ appIds }),
+  });
+export const importSteamGames = (backupToken: string, appIds: number[]) =>
+  apiRequest<SteamImportResult>("/api/games/import/steam", {
+    method: "POST",
+    body: JSON.stringify({ backupToken, appIds }),
+  });
 export const deleteGame = (id: number) =>
   apiRequest<void>(`/api/content/${id}`, { method: "DELETE" });
 export const getPlatforms = () =>
