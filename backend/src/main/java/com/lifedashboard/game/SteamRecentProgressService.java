@@ -12,11 +12,14 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class SteamRecentProgressService {
+    private static final int INITIAL_SYNC_BATCH_SIZE = 10;
     private final SteamClient steam;
     private final UserGameRepository gameRepository;
     private final SteamGameProgressRepository progressRepository;
@@ -35,16 +38,29 @@ public class SteamRecentProgressService {
 
     public SteamRecentSyncResponse syncRecent() {
         List<SteamOwnedGame> recentGames = steam.recentlyPlayedGames();
+        List<UserGame> steamCopies = gameRepository.findSteamCopies(userId);
         Map<Long, List<UserGame>> copiesByAppId = new HashMap<>();
-        for (UserGame copy : gameRepository.findSteamCopies(userId)) {
+        for (UserGame copy : steamCopies) {
             copiesByAppId.computeIfAbsent(copy.getSteamAppId(), ignored -> new ArrayList<>())
                     .add(copy);
         }
+        List<Long> copyIds = steamCopies.stream().map(UserGame::getId).toList();
+        Map<Long, SteamGameProgress> progressByCopyId = new HashMap<>();
+        if (!copyIds.isEmpty()) {
+            for (SteamGameProgress progress : progressRepository.findAllByLibraryEntryIdIn(copyIds)) {
+                progressByCopyId.put(progress.getLibraryEntry().getId(), progress);
+            }
+        }
+        Set<Long> missingBefore = new HashSet<>(copyIds);
+        missingBefore.removeAll(progressByCopyId.keySet());
 
         List<GameResult> results = new ArrayList<>();
+        Set<Long> handledCopyIds = new HashSet<>();
         int notImported = 0;
+        int matched = 0;
         int updated = 0;
         int upToDate = 0;
+        int initiallySynced = 0;
         int failed = 0;
         for (SteamOwnedGame recent : recentGames) {
             List<UserGame> copies = copiesByAppId.get(recent.appId());
@@ -53,8 +69,9 @@ public class SteamRecentProgressService {
                 continue;
             }
             for (UserGame copy : copies) {
-                SteamGameProgress stored = progressRepository.findByLibraryEntryId(copy.getId())
-                        .orElse(null);
+                matched++;
+                handledCopyIds.add(copy.getId());
+                SteamGameProgress stored = progressByCopyId.get(copy.getId());
                 if (isUpToDate(stored, recent.lastPlayedAt())) {
                     upToDate++;
                     results.add(new GameResult(copy.getId(), recent.appId(), recent.title(),
@@ -64,27 +81,58 @@ public class SteamRecentProgressService {
                 }
                 try {
                     SteamProgressResponse progress = progressService.sync(copy.getId());
-                    updated++;
+                    Status status;
+                    if (stored == null) {
+                        initiallySynced++;
+                        status = Status.INITIALIZED;
+                    } else {
+                        updated++;
+                        status = Status.UPDATED;
+                    }
                     results.add(new GameResult(copy.getId(), recent.appId(), recent.title(),
-                            Status.UPDATED, progress.unlockedAchievements(),
+                            status, progress.unlockedAchievements(),
                             progress.totalAchievements(), null));
                 } catch (RuntimeException exception) {
                     failed++;
-                    String message = exception.getMessage();
                     results.add(new GameResult(copy.getId(), recent.appId(), recent.title(),
-                            Status.FAILED, null, null,
-                            message == null || message.isBlank()
-                                    ? "Не удалось обновить достижения" : message));
+                            Status.FAILED, null, null, errorMessage(exception)));
                 }
             }
         }
-        int matched = updated + upToDate + failed;
+
+        int initialAttempts = 0;
+        for (UserGame copy : steamCopies) {
+            if (initialAttempts >= INITIAL_SYNC_BATCH_SIZE) break;
+            if (handledCopyIds.contains(copy.getId()) || progressByCopyId.containsKey(copy.getId())) {
+                continue;
+            }
+            initialAttempts++;
+            String title = copy.getUserContent().getContent().getTitle();
+            try {
+                SteamProgressResponse progress = progressService.sync(copy.getId());
+                initiallySynced++;
+                results.add(new GameResult(copy.getId(), copy.getSteamAppId(), title,
+                        Status.INITIALIZED, progress.unlockedAchievements(),
+                        progress.totalAchievements(), null));
+            } catch (RuntimeException exception) {
+                failed++;
+                results.add(new GameResult(copy.getId(), copy.getSteamAppId(), title,
+                        Status.FAILED, null, null, errorMessage(exception)));
+            }
+        }
+        int remainingUnsynced = Math.max(0, missingBefore.size() - initiallySynced);
         return new SteamRecentSyncResponse(recentGames.size(), matched, updated, upToDate,
-                notImported, failed, List.copyOf(results));
+                initiallySynced, remainingUnsynced, notImported, failed, List.copyOf(results));
     }
 
     private boolean isUpToDate(SteamGameProgress progress, Instant lastPlayedAt) {
         return progress != null && lastPlayedAt != null
                 && !progress.getLastSyncedAt().isBefore(lastPlayedAt);
+    }
+
+    private String errorMessage(RuntimeException exception) {
+        String message = exception.getMessage();
+        return message == null || message.isBlank()
+                ? "Не удалось обновить достижения" : message;
     }
 }

@@ -250,8 +250,10 @@ export function GamesPage() {
     try {
       const result = await syncRecentSteamProgress();
       setSteamRecentResult(result);
-      if (result.updated > 0) await load();
-      const message = `Steam: обновлено ${result.updated}, уже актуально ${result.upToDate}`;
+      if (result.updated + result.initiallySynced > 0) await load();
+      const message =
+        `Steam: недавних обновлено ${result.updated}, впервые загружено ` +
+        `${result.initiallySynced}, осталось ${result.remainingUnsynced}`;
       showToast(
         result.failed > 0 ? `${message}, ошибок ${result.failed}` : message,
         result.failed > 0 ? "error" : "success",
@@ -341,7 +343,7 @@ export function GamesPage() {
           className="secondary-button icon-button steam-import-button"
           disabled={syncingSteamRecent || steamGames === 0}
           onClick={() => void updateRecentSteamProgress()}
-          title="Обновить достижения недавно запущенных игр"
+          title="Обновить недавние игры и загрузить достижения для 10 новых"
         >
           <RefreshCw className={syncingSteamRecent ? "spinning" : undefined} />
           {syncingSteamRecent ? "Обновляем Steam…" : "Обновить Steam"}
@@ -376,6 +378,14 @@ export function GamesPage() {
                 {steamRecentResult.notImported > 0 &&
                   ` · не импортировано: ${steamRecentResult.notImported}`}
               </span>
+              {(steamRecentResult.initiallySynced > 0 ||
+                steamRecentResult.remainingUnsynced > 0) && (
+                <span>
+                  Впервые синхронизировано:{" "}
+                  {steamRecentResult.initiallySynced} · осталось без
+                  синхронизации: {steamRecentResult.remainingUnsynced}
+                </span>
+              )}
               {steamRecentResult.games
                 .filter((item) => item.status === "FAILED")
                 .map((item) => (

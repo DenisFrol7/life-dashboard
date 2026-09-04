@@ -183,7 +183,7 @@ export type SteamRecentSyncGame = {
   libraryEntryId: number;
   steamAppId: number;
   title: string;
-  status: "UPDATED" | "UP_TO_DATE" | "FAILED";
+  status: "UPDATED" | "INITIALIZED" | "UP_TO_DATE" | "FAILED";
   unlockedAchievements: number | null;
   totalAchievements: number | null;
   message: string | null;
@@ -193,6 +193,8 @@ export type SteamRecentSyncResult = {
   matchedLibraryCopies: number;
   updated: number;
   upToDate: number;
+  initiallySynced: number;
+  remainingUnsynced: number;
   notImported: number;
   failed: number;
   games: SteamRecentSyncGame[];

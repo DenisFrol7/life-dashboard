@@ -1,6 +1,8 @@
 package com.lifedashboard.game;
 
 import com.lifedashboard.common.error.InvalidRequestException;
+import com.lifedashboard.content.ContentItem;
+import com.lifedashboard.content.UserContent;
 import com.lifedashboard.game.dto.SteamProgressResponse;
 import com.lifedashboard.game.dto.SteamRecentSyncResponse;
 import com.lifedashboard.game.steam.SteamClient;
@@ -11,8 +13,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -37,23 +39,26 @@ class SteamRecentProgressServiceTests {
         UserGame portal = libraryCopy(11L, 620L);
         UserGame euroTruck = libraryCopy(12L, 227300L);
         when(gameRepository.findSteamCopies(1L)).thenReturn(List.of(portal, euroTruck));
-        when(progressRepository.findByLibraryEntryId(11L)).thenReturn(Optional.empty());
         SteamGameProgress current = mock(SteamGameProgress.class);
+        when(current.getLibraryEntry()).thenReturn(euroTruck);
         when(current.getLastSyncedAt()).thenReturn(lastPlayed);
         when(current.getUnlockedAchievements()).thenReturn(43);
         when(current.getTotalAchievements()).thenReturn(106);
-        when(progressRepository.findByLibraryEntryId(12L)).thenReturn(Optional.of(current));
+        when(progressRepository.findAllByLibraryEntryIdIn(List.of(11L, 12L)))
+                .thenReturn(List.of(current));
         when(progressService.sync(11L)).thenReturn(progress(11L, 620L, 51, 51));
 
         SteamRecentSyncResponse result = service().syncRecent();
 
         assertEquals(3, result.recentlyPlayed());
         assertEquals(2, result.matchedLibraryCopies());
-        assertEquals(1, result.updated());
+        assertEquals(0, result.updated());
         assertEquals(1, result.upToDate());
+        assertEquals(1, result.initiallySynced());
+        assertEquals(0, result.remainingUnsynced());
         assertEquals(1, result.notImported());
         assertEquals(0, result.failed());
-        assertEquals(SteamRecentSyncResponse.Status.UPDATED, result.games().get(0).status());
+        assertEquals(SteamRecentSyncResponse.Status.INITIALIZED, result.games().get(0).status());
         assertEquals(SteamRecentSyncResponse.Status.UP_TO_DATE, result.games().get(1).status());
         verify(progressService).sync(11L);
         verify(progressService, never()).sync(12L);
@@ -67,18 +72,46 @@ class SteamRecentProgressServiceTests {
         UserGame first = libraryCopy(1L, 10L);
         UserGame second = libraryCopy(2L, 20L);
         when(gameRepository.findSteamCopies(1L)).thenReturn(List.of(first, second));
-        when(progressRepository.findByLibraryEntryId(1L)).thenReturn(Optional.empty());
-        when(progressRepository.findByLibraryEntryId(2L)).thenReturn(Optional.empty());
+        when(progressRepository.findAllByLibraryEntryIdIn(List.of(1L, 2L)))
+                .thenReturn(List.of());
         when(progressService.sync(1L)).thenThrow(new InvalidRequestException("Steam timeout"));
         when(progressService.sync(2L)).thenReturn(progress(2L, 20L, 5, 10));
 
         SteamRecentSyncResponse result = service().syncRecent();
 
-        assertEquals(1, result.updated());
+        assertEquals(0, result.updated());
+        assertEquals(1, result.initiallySynced());
+        assertEquals(1, result.remainingUnsynced());
         assertEquals(1, result.failed());
         assertEquals("Steam timeout", result.games().get(0).message());
-        assertEquals(SteamRecentSyncResponse.Status.UPDATED, result.games().get(1).status());
+        assertEquals(SteamRecentSyncResponse.Status.INITIALIZED, result.games().get(1).status());
         verify(progressService).sync(2L);
+    }
+
+    @Test
+    void initializesAtMostTenOlderGamesPerRun() {
+        when(steam.recentlyPlayedGames()).thenReturn(List.of());
+        List<UserGame> copies = new ArrayList<>();
+        for (long id = 1; id <= 12; id++) {
+            UserGame copy = libraryCopy(id, 1000L + id);
+            if (id <= 10) {
+                withTitle(copy, "Game " + id);
+                when(progressService.sync(id)).thenReturn(progress(id, 1000L + id, 0, 10));
+            }
+            copies.add(copy);
+        }
+        when(gameRepository.findSteamCopies(1L)).thenReturn(copies);
+        when(progressRepository.findAllByLibraryEntryIdIn(
+                List.of(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L, 11L, 12L)))
+                .thenReturn(List.of());
+
+        SteamRecentSyncResponse result = service().syncRecent();
+
+        assertEquals(10, result.initiallySynced());
+        assertEquals(2, result.remainingUnsynced());
+        assertEquals(10, result.games().size());
+        verify(progressService, never()).sync(11L);
+        verify(progressService, never()).sync(12L);
     }
 
     private SteamRecentProgressService service() {
@@ -95,6 +128,14 @@ class SteamRecentProgressServiceTests {
         when(copy.getId()).thenReturn(id);
         when(copy.getSteamAppId()).thenReturn(appId);
         return copy;
+    }
+
+    private void withTitle(UserGame copy, String title) {
+        UserContent userContent = mock(UserContent.class);
+        ContentItem content = mock(ContentItem.class);
+        when(copy.getUserContent()).thenReturn(userContent);
+        when(userContent.getContent()).thenReturn(content);
+        when(content.getTitle()).thenReturn(title);
     }
 
     private SteamProgressResponse progress(long libraryEntryId, long appId, int unlocked, int total) {
