@@ -66,7 +66,7 @@ class XboxProgressSyncServiceTests {
     @Test
     void keepsManualDlcGroupsForXbox360Game() {
         UserGame game = game("Deus Ex: Human Revolution", "XBOX_360");
-        OpenXblTitle title = new OpenXblTitle(1397819386L, "DEUS EX: HUMAN REVOLUTION",
+        OpenXblTitle title = new OpenXblTitle(1397819386L, "DEUS EX®: HUMAN REVOLUTION™",
                 List.of("Xbox360", "XboxOne"), 59, 59, 1250, 1250, 1, null);
         XboxAchievementGroup dlc = mock(XboxAchievementGroup.class);
         when(dlc.getGroupType()).thenReturn(XboxAchievementGroupType.DLC);

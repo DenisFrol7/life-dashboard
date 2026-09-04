@@ -133,10 +133,10 @@ public class XboxProgressSyncService {
     }
 
     private String normalizeTitle(String value) {
-        String normalized = Normalizer.normalize(value, Normalizer.Form.NFKD)
+        String normalized = Normalizer.normalize(value.replace("™", "").replace("®", ""),
+                        Normalizer.Form.NFKD)
                 .replaceAll("\\p{M}+", "")
-                .toLowerCase(Locale.ROOT)
-                .replace("™", "").replace("®", "");
+                .toLowerCase(Locale.ROOT);
         return normalized.replaceAll("[^\\p{L}\\p{N}]+", " ").trim();
     }
 
