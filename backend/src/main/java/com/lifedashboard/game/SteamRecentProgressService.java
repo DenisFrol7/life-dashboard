@@ -58,6 +58,7 @@ public class SteamRecentProgressService {
         Set<Long> handledCopyIds = new HashSet<>();
         int notImported = 0;
         int matched = 0;
+        int playtimeUpdated = 0;
         int updated = 0;
         int upToDate = 0;
         int initiallySynced = 0;
@@ -71,6 +72,10 @@ public class SteamRecentProgressService {
             for (UserGame copy : copies) {
                 matched++;
                 handledCopyIds.add(copy.getId());
+                if (copy.getLegacyPlaytimeMinutes() != recent.playtimeMinutes()) {
+                    playtimeUpdated += gameRepository.updateSteamPlaytime(copy.getId(), userId,
+                            recent.playtimeMinutes());
+                }
                 SteamGameProgress stored = progressByCopyId.get(copy.getId());
                 if (isUpToDate(stored, recent.lastPlayedAt())) {
                     upToDate++;
@@ -121,7 +126,7 @@ public class SteamRecentProgressService {
             }
         }
         int remainingUnsynced = Math.max(0, missingBefore.size() - initiallySynced);
-        return new SteamRecentSyncResponse(recentGames.size(), matched, updated, upToDate,
+        return new SteamRecentSyncResponse(recentGames.size(), matched, playtimeUpdated, updated, upToDate,
                 initiallySynced, remainingUnsynced, notImported, failed, List.copyOf(results));
     }
 

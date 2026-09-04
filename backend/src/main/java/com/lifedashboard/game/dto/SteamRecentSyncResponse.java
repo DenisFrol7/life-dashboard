@@ -2,7 +2,7 @@ package com.lifedashboard.game.dto;
 
 import java.util.List;
 
-public record SteamRecentSyncResponse(int recentlyPlayed, int matchedLibraryCopies,
+public record SteamRecentSyncResponse(int recentlyPlayed, int matchedLibraryCopies, int playtimeUpdated,
         int updated, int upToDate, int initiallySynced, int remainingUnsynced,
         int notImported, int failed,
         List<GameResult> games) {

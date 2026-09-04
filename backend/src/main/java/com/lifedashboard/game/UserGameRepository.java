@@ -2,6 +2,7 @@ package com.lifedashboard.game;
 import com.lifedashboard.content.UserContentStatus;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 public interface UserGameRepository extends JpaRepository<UserGame, Long> {
     @Query("select g from UserGame g where g.userContent.user.id=:userId " +
@@ -16,4 +17,10 @@ public interface UserGameRepository extends JpaRepository<UserGame, Long> {
            "join g.source s where uc.user.id=:userId and s.code='STEAM' " +
            "and g.steamAppId is not null order by g.id")
     List<UserGame> findSteamCopies(@Param("userId") Long userId);
+    @Modifying
+    @Transactional
+    @Query("update UserGame g set g.legacyPlaytimeMinutes=:playtimeMinutes " +
+           "where g.id=:id and g.userContent.user.id=:userId and g.source.code='STEAM'")
+    int updateSteamPlaytime(@Param("id") Long id, @Param("userId") Long userId,
+                            @Param("playtimeMinutes") long playtimeMinutes);
 }

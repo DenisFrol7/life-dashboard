@@ -192,6 +192,7 @@ export type SteamRecentSyncGame = {
 export type SteamRecentSyncResult = {
   recentlyPlayed: number;
   matchedLibraryCopies: number;
+  playtimeUpdated: number;
   updated: number;
   upToDate: number;
   initiallySynced: number;

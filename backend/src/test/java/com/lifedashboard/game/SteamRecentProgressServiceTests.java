@@ -114,6 +114,29 @@ class SteamRecentProgressServiceTests {
         verify(progressService, never()).sync(12L);
     }
 
+    @Test
+    void updatesPlaytimeForAnImportedRecentlyPlayedGame() {
+        Instant lastPlayed = Instant.parse("2026-09-04T12:00:00Z");
+        when(steam.recentlyPlayedGames()).thenReturn(List.of(
+                new SteamOwnedGame(620L, "Portal 2", 480, lastPlayed, null)));
+        UserGame copy = libraryCopy(15L, 620L);
+        when(copy.getLegacyPlaytimeMinutes()).thenReturn(120L);
+        when(gameRepository.findSteamCopies(1L)).thenReturn(List.of(copy));
+        SteamGameProgress current = mock(SteamGameProgress.class);
+        when(current.getLibraryEntry()).thenReturn(copy);
+        when(current.getLastSyncedAt()).thenReturn(lastPlayed);
+        when(progressRepository.findAllByLibraryEntryIdIn(List.of(15L)))
+                .thenReturn(List.of(current));
+        when(gameRepository.updateSteamPlaytime(15L, 1L, 480L)).thenReturn(1);
+
+        SteamRecentSyncResponse result = service().syncRecent();
+
+        assertEquals(1, result.playtimeUpdated());
+        assertEquals(1, result.upToDate());
+        verify(gameRepository).updateSteamPlaytime(15L, 1L, 480L);
+        verify(progressService, never()).sync(15L);
+    }
+
     private SteamRecentProgressService service() {
         return new SteamRecentProgressService(steam, gameRepository, progressRepository,
                 progressService, 1L);

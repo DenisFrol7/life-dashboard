@@ -280,10 +280,12 @@ export function GamesPage() {
     try {
       const result = await syncRecentSteamProgress();
       setSteamRecentResult(result);
-      if (result.updated + result.initiallySynced > 0) await load();
+      if (result.updated + result.initiallySynced + result.playtimeUpdated > 0)
+        await load();
       const message =
         `Steam: недавних обновлено ${result.updated}, впервые загружено ` +
-        `${result.initiallySynced}, осталось ${result.remainingUnsynced}`;
+        `${result.initiallySynced}, время обновлено у ${result.playtimeUpdated}, ` +
+        `осталось ${result.remainingUnsynced}`;
       showToast(
         result.failed > 0 ? `${message}, ошибок ${result.failed}` : message,
         result.failed > 0 ? "error" : "success",
@@ -405,6 +407,8 @@ export function GamesPage() {
                 {steamRecentResult.matchedLibraryCopies} · обновлено:{" "}
                 {steamRecentResult.updated} · уже актуально:{" "}
                 {steamRecentResult.upToDate}
+                {steamRecentResult.playtimeUpdated > 0 &&
+                  ` · время обновлено: ${steamRecentResult.playtimeUpdated}`}
                 {steamRecentResult.notImported > 0 &&
                   ` · не импортировано: ${steamRecentResult.notImported}`}
               </span>
