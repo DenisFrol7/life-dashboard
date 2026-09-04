@@ -9,6 +9,8 @@ public interface GamePlaythroughRepository extends JpaRepository<GamePlaythrough
             Long libraryId, Long userId);
     Optional<GamePlaythrough> findByIdAndLibraryEntryUserContentUserId(Long id, Long userId);
     Optional<GamePlaythrough> findByLibraryEntryIdAndPlaythroughNumber(Long libraryId, Integer playthroughNumber);
+    Optional<GamePlaythrough> findFirstByLibraryEntryIdAndCompletionSourceOrderByPlaythroughNumberDesc(
+            Long libraryId, GamePlaythroughSource completionSource);
     boolean existsByLibraryEntryId(Long libraryId);
     @Query("select coalesce(max(p.playthroughNumber), 0) from GamePlaythrough p where p.libraryEntry.id=:libraryId")
     int maxNumber(@Param("libraryId") Long libraryId);

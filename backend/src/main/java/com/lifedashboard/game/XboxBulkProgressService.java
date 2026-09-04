@@ -8,6 +8,8 @@ import com.lifedashboard.game.openxbl.OpenXblClient;
 import com.lifedashboard.game.openxbl.OpenXblTitle;
 import com.lifedashboard.game.openxbl.OpenXblTitleHistory;
 import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -15,22 +17,27 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashSet;
 
 @Service
 public class XboxBulkProgressService {
+    private static final Logger log = LoggerFactory.getLogger(XboxBulkProgressService.class);
     private final OpenXblClient openXbl;
     private final UserGameRepository games;
     private final XboxGameProgressRepository progress;
     private final XboxProgressSyncService progressSync;
+    private final GamePlaythroughService playthroughs;
     private final long userId;
 
     public XboxBulkProgressService(OpenXblClient openXbl, UserGameRepository games,
             XboxGameProgressRepository progress, XboxProgressSyncService progressSync,
+            GamePlaythroughService playthroughs,
             @Value("${app.default-user-id}") long userId) {
         this.openXbl = openXbl;
         this.games = games;
         this.progress = progress;
         this.progressSync = progressSync;
+        this.playthroughs = playthroughs;
         this.userId = userId;
     }
 
@@ -40,6 +47,31 @@ public class XboxBulkProgressService {
         List<UserGame> linkedCopies = xboxCopies.stream()
                 .filter(copy -> copy.getXboxTitleId() != null)
                 .toList();
+        List<Long> linkedTitleIds = new ArrayList<>(new LinkedHashSet<>(linkedCopies.stream()
+                .map(UserGame::getXboxTitleId).toList()));
+        Map<Long, Long> playtimeByTitle = Map.of();
+        boolean playtimeSyncFailed = false;
+        try {
+            playtimeByTitle = openXbl.playtimeMinutes(history.xuid(), linkedTitleIds);
+        } catch (RuntimeException exception) {
+            playtimeSyncFailed = true;
+            log.warn("Xbox playtime sync skipped: {}", exception.getClass().getSimpleName());
+        }
+        int playtimeUpdated = 0;
+        int playtimeUnavailable = 0;
+        int playthroughPlaytimeUpdated = 0;
+        for (UserGame copy : linkedCopies) {
+            Long remoteMinutes = playtimeByTitle.get(copy.getXboxTitleId());
+            if (remoteMinutes == null) {
+                playtimeUnavailable++;
+            } else if (remoteMinutes > copy.getLegacyPlaytimeMinutes()) {
+                playtimeUpdated += games.updateXboxPlaytime(copy.getId(), userId, remoteMinutes);
+            }
+            if (remoteMinutes != null
+                    && playthroughs.fillXboxAchievementPlaytime(copy.getId(), remoteMinutes)) {
+                playthroughPlaytimeUpdated++;
+            }
+        }
         Map<Long, OpenXblTitle> titlesById = new HashMap<>();
         for (OpenXblTitle title : history.titles()) titlesById.put(title.titleId(), title);
         Map<Long, XboxGameProgress> progressByCopyId = new HashMap<>();
@@ -91,7 +123,8 @@ public class XboxBulkProgressService {
         }
         return new XboxBulkSyncResponse(xboxCopies.size(), linkedCopies.size(),
                 updated, initialized, upToDate, xboxCopies.size() - linkedCopies.size(),
-                failed, completionsRecorded, List.copyOf(results));
+                failed, completionsRecorded, playtimeUpdated, playtimeUnavailable,
+                playthroughPlaytimeUpdated, playtimeSyncFailed, List.copyOf(results));
     }
 
     private boolean isUpToDate(XboxGameProgress stored, Instant lastPlayedAt) {

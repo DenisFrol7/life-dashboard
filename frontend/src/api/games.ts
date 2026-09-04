@@ -103,6 +103,53 @@ export type SteamImportPreparation = {
   backupToken: string;
   backupFile: string;
 };
+export type XboxImportMatch =
+  | "ALREADY_IMPORTED"
+  | "MATCHED"
+  | "REVIEW"
+  | "NEW";
+export type XboxImportPreviewItem = {
+  titleId: number;
+  title: string;
+  platformCode: "ORIGINAL_XBOX" | "XBOX_360" | "XBOX_ONE" | "XBOX_SERIES";
+  lastPlayedAt: string | null;
+  imageUrl: string | null;
+  unlockedAchievements: number;
+  totalAchievements: number;
+  earnedGamerscore: number;
+  totalGamerscore: number;
+  suggestedSourceCode: "XBOX_STORE" | "GAME_PASS";
+  match: XboxImportMatch;
+  matchedContentId: number | null;
+  matchedContentTitle: string | null;
+  matchedLibraryEntryId: number | null;
+};
+export type XboxImportPreview = {
+  totalGames: number;
+  alreadyImported: number;
+  matchedExisting: number;
+  reviewRequired: number;
+  newGames: number;
+  games: XboxImportPreviewItem[];
+};
+export type XboxImportPreparation = {
+  backupToken: string;
+  backupFile: string;
+};
+export type XboxImportSelection = {
+  titleId: number;
+  sourceCode: "XBOX_STORE" | "GAME_PASS";
+};
+export type XboxImportResult = {
+  requested: number;
+  imported: number;
+  catalogCreated: number;
+  linkedExistingCatalog: number;
+  skippedAlreadyImported: number;
+  rawgEnriched: number;
+  steamGridDbCovers: number;
+  backupFile: string;
+};
 export type Reference = {
   id: number;
   code: string;
@@ -187,6 +234,10 @@ export type XboxBulkSyncResult = {
   skippedUnlinked: number;
   failed: number;
   completionsRecorded: number;
+  playtimeUpdated: number;
+  playtimeUnavailable: number;
+  playthroughPlaytimeUpdated: number;
+  playtimeSyncFailed: boolean;
   games: XboxBulkSyncGame[];
 };
 export type SteamAchievement = {
@@ -346,6 +397,21 @@ export const importSteamGames = (backupToken: string, appIds: number[]) =>
   apiRequest<SteamImportResult>("/api/games/import/steam", {
     method: "POST",
     body: JSON.stringify({ backupToken, appIds }),
+  });
+export const previewXboxImport = () =>
+  apiRequest<XboxImportPreview>("/api/games/import/xbox/preview");
+export const prepareXboxImport = (titleIds: number[]) =>
+  apiRequest<XboxImportPreparation>("/api/games/import/xbox/prepare", {
+    method: "POST",
+    body: JSON.stringify({ titleIds }),
+  });
+export const importXboxGames = (
+  backupToken: string,
+  games: XboxImportSelection[],
+) =>
+  apiRequest<XboxImportResult>("/api/games/import/xbox", {
+    method: "POST",
+    body: JSON.stringify({ backupToken, games }),
   });
 export const deleteGame = (id: number) =>
   apiRequest<void>(`/api/content/${id}`, { method: "DELETE" });

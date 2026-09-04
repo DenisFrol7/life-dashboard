@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -68,5 +69,20 @@ class OpenXblClientTests {
         assertEquals(1250, progress.earnedGamerscore());
         assertFalse(progress.exactAchievementDetails());
         assertEquals(null, progress.lastUnlockedAt());
+    }
+
+    @Test
+    void parsesMinutesPlayedAcrossTitlesAndIgnoresInvalidValues() throws Exception {
+        Map<Long, Long> playtime = client.parsePlaytimeMinutes(mapper.readTree("""
+                {"content":{"statlistscollection":[
+                  {"stats":[
+                    {"titleid":"2034535389","name":"MinutesPlayed","value":"866"},
+                    {"titleid":"2","name":"MinutesPlayed","value":"invalid"},
+                    {"titleid":"3","name":"OtherStat","value":"100"}
+                  ]}
+                ]}}
+                """));
+
+        assertEquals(Map.of(2034535389L, 866L), playtime);
     }
 }

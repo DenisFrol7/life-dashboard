@@ -23,10 +23,13 @@ import {
   getSteamGridDbCovers,
   getXboxAchievementGroups,
   getXboxLibrarySummary,
+  importXboxGames,
   importSteamGames,
+  prepareXboxImport,
   prepareSteamImport,
   previewRawgGame,
   previewSteamImport,
+  previewXboxImport,
   putGameProfile,
   putXboxProgress,
   searchRawgGames,
@@ -52,6 +55,9 @@ import {
   type SteamLibrarySummary,
   type SteamRecentSyncResult,
   type XboxBulkSyncResult,
+  type XboxImportMatch,
+  type XboxImportPreview,
+  type XboxImportSelection,
   type XboxAchievementGroup,
   type XboxProgress,
   type XboxProgressInput,
@@ -125,6 +131,7 @@ export function GamesPage() {
     GameSession | "new" | null
   >(null);
   const [steamImportOpen, setSteamImportOpen] = useState(false);
+  const [xboxImportOpen, setXboxImportOpen] = useState(false);
   const [syncingSteamRecent, setSyncingSteamRecent] = useState(false);
   const [steamRecentResult, setSteamRecentResult] =
     useState<SteamRecentSyncResult | null>(null);
@@ -311,14 +318,25 @@ export function GamesPage() {
     try {
       const result = await syncLinkedXboxProgress();
       setXboxSyncResult(result);
-      if (result.updated + result.initialized + result.completionsRecorded > 0)
+      if (
+        result.updated +
+          result.initialized +
+          result.completionsRecorded +
+          result.playtimeUpdated >
+        0
+      )
         await load();
       const message =
         `Xbox: обновлено ${result.updated}, впервые загружено ${result.initialized}, ` +
-        `уже актуально ${result.upToDate}, без связи ${result.skippedUnlinked}`;
+        `уже актуально ${result.upToDate}, время обновлено ${result.playtimeUpdated}, ` +
+        `в историю добавлено время ${result.playthroughPlaytimeUpdated}, ` +
+        `без связи ${result.skippedUnlinked}`;
+      const hasErrors = result.failed > 0 || result.playtimeSyncFailed;
       showToast(
-        result.failed > 0 ? `${message}, ошибок ${result.failed}` : message,
-        result.failed > 0 ? "error" : "success",
+        hasErrors
+          ? `${message}, ошибок достижений ${result.failed}${result.playtimeSyncFailed ? ", время не загружено" : ""}`
+          : message,
+        hasErrors ? "error" : "success",
       );
     } catch (reason) {
       showToast(
@@ -405,10 +423,17 @@ export function GamesPage() {
           className="secondary-button icon-button steam-import-button"
           disabled={syncingXbox || xboxGames === 0}
           onClick={() => void updateXboxProgress()}
-          title="Обновить достижения связанных Xbox-игр"
+          title="Обновить достижения и время связанных Xbox-игр"
         >
           <RefreshCw className={syncingXbox ? "spinning" : undefined} />
           {syncingXbox ? "Обновляем Xbox…" : "Обновить Xbox"}
+        </button>
+        <button
+          className="secondary-button icon-button steam-import-button"
+          onClick={() => setXboxImportOpen(true)}
+        >
+          <Download />
+          Импорт Xbox
         </button>
         <button
           className="secondary-button icon-button steam-import-button"
@@ -438,14 +463,27 @@ export function GamesPage() {
         <div className="series-catalog-main">
           {xboxSyncResult && (
             <div
-              className={`notice steam-recent-sync-summary${xboxSyncResult.failed ? " error" : ""}`}
+              className={`notice steam-recent-sync-summary${xboxSyncResult.failed || xboxSyncResult.playtimeSyncFailed ? " error" : ""}`}
             >
-              <strong>Достижения Xbox проверены</strong>
+              <strong>Данные Xbox проверены</strong>
               <span>
                 Связано: {xboxSyncResult.linkedCopies} из {xboxSyncResult.totalXboxCopies} ·
                 обновлено: {xboxSyncResult.updated} · впервые загружено:{" "}
-                {xboxSyncResult.initialized} · уже актуально: {xboxSyncResult.upToDate}
+                {xboxSyncResult.initialized} · уже актуально: {xboxSyncResult.upToDate} ·
+                время обновлено: {xboxSyncResult.playtimeUpdated}
               </span>
+              {xboxSyncResult.playtimeUnavailable > 0 && (
+                <span>
+                  Время недоступно: {xboxSyncResult.playtimeUnavailable}
+                  {xboxSyncResult.playtimeSyncFailed ? " — запрос OpenXBL не выполнен" : ""}
+                </span>
+              )}
+              {xboxSyncResult.playthroughPlaytimeUpdated > 0 && (
+                <span>
+                  Время добавлено в историю прохождений:{" "}
+                  {xboxSyncResult.playthroughPlaytimeUpdated}
+                </span>
+              )}
               {xboxSyncResult.skippedUnlinked > 0 && (
                 <span>Без связи с Xbox: {xboxSyncResult.skippedUnlinked}</span>
               )}
@@ -926,6 +964,15 @@ export function GamesPage() {
           }}
         />
       )}
+      {xboxImportOpen && (
+        <XboxImportPreviewDialog
+          onClose={() => setXboxImportOpen(false)}
+          onImported={() => {
+            setXboxImportOpen(false);
+            void load();
+          }}
+        />
+      )}
       {editingSession && (
         <GameSessionForm
           session={editingSession === "new" ? undefined : editingSession}
@@ -946,6 +993,20 @@ const steamMatchLabels: Record<SteamImportMatch, string> = {
   MATCHED: "Найдена карточка",
   REVIEW: "Нужно проверить",
   NEW: "Новая игра",
+};
+
+const xboxMatchLabels: Record<XboxImportMatch, string> = {
+  ALREADY_IMPORTED: "Уже в библиотеке",
+  MATCHED: "Найдена карточка",
+  REVIEW: "Нужно проверить",
+  NEW: "Новая игра",
+};
+
+const xboxPlatformLabels: Record<string, string> = {
+  ORIGINAL_XBOX: "Original Xbox",
+  XBOX_360: "Xbox 360",
+  XBOX_ONE: "Xbox One",
+  XBOX_SERIES: "Xbox Series X|S",
 };
 
 const formatSteamPlaytime = (minutes: number) => {
@@ -1251,6 +1312,375 @@ function SteamImportPreviewDialog({
                     disabled={importing}
                   >
                     Вернуть исключённые ({excludedAppIds.size})
+                  </button>
+                )}
+                {importError && <p className="steam-import-save-error">{importError}</p>}
+              </div>
+              <div className="steam-import-footer-actions">
+                <button
+                  className="secondary-button"
+                  onClick={onClose}
+                  disabled={importing}
+                >
+                  Закрыть
+                </button>
+                <button
+                  className="primary-button"
+                  onClick={() => void runImport()}
+                  disabled={importing || selectedForImport.length === 0}
+                >
+                  {importing
+                    ? creatingBackup
+                      ? "Создаём бэкап…"
+                      : `Импортируем ${importProgress?.completed ?? 0}/${importProgress?.total ?? selectedForImport.length}`
+                    : `Импортировать (${selectedForImport.length})`}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function XboxImportPreviewDialog({
+  onClose,
+  onImported,
+}: {
+  onClose: () => void;
+  onImported: () => void;
+}) {
+  const { showToast } = useToast();
+  const [preview, setPreview] = useState<XboxImportPreview | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [creatingBackup, setCreatingBackup] = useState(false);
+  const [importProgress, setImportProgress] = useState<{
+    completed: number;
+    total: number;
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<XboxImportMatch | "">("");
+  const [query, setQuery] = useState("");
+  const [excludedTitleIds, setExcludedTitleIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const [sourceByTitleId, setSourceByTitleId] = useState<
+    Record<number, XboxImportSelection["sourceCode"]>
+  >({});
+
+  const loadPreview = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const loaded = await previewXboxImport();
+      setPreview(loaded);
+      setExcludedTitleIds(new Set());
+      setSourceByTitleId(
+        Object.fromEntries(
+          loaded.games.map((game) => [game.titleId, game.suggestedSourceCode]),
+        ),
+      );
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось загрузить историю Xbox",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPreview();
+  }, [loadPreview]);
+
+  const includedGames = useMemo(
+    () =>
+      preview?.games.filter((game) => !excludedTitleIds.has(game.titleId)) ?? [],
+    [excludedTitleIds, preview],
+  );
+  const selectedForImport = useMemo(
+    () => includedGames.filter((game) => game.match !== "ALREADY_IMPORTED"),
+    [includedGames],
+  );
+  const includedSummary = useMemo(
+    () => ({
+      total: includedGames.length,
+      alreadyImported: includedGames.filter(
+        (game) => game.match === "ALREADY_IMPORTED",
+      ).length,
+      matchedExisting: includedGames.filter((game) => game.match === "MATCHED")
+        .length,
+      reviewRequired: includedGames.filter((game) => game.match === "REVIEW")
+        .length,
+      newGames: includedGames.filter((game) => game.match === "NEW").length,
+    }),
+    [includedGames],
+  );
+  const visibleGames = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("ru-RU");
+    return includedGames.filter(
+      (game) =>
+        (!filter || game.match === filter) &&
+        (!normalized ||
+          game.title.toLocaleLowerCase("ru-RU").includes(normalized) ||
+          game.matchedContentTitle
+            ?.toLocaleLowerCase("ru-RU")
+            .includes(normalized)),
+    );
+  }, [filter, includedGames, query]);
+
+  const excludeGame = (titleId: number) => {
+    setExcludedTitleIds((current) => {
+      const next = new Set(current);
+      next.add(titleId);
+      return next;
+    });
+  };
+
+  const setAllSources = (sourceCode: XboxImportSelection["sourceCode"]) => {
+    setSourceByTitleId((current) => ({
+      ...current,
+      ...Object.fromEntries(
+        selectedForImport.map((game) => [game.titleId, sourceCode]),
+      ),
+    }));
+  };
+
+  const runImport = async () => {
+    if (selectedForImport.length === 0) return;
+    const confirmed = window.confirm(
+      `Импортировать ${selectedForImport.length} игр из истории Xbox? Перед записью backend автоматически создаст резервную копию. Проверьте источник Xbox Store или Game Pass у выбранных игр.`,
+    );
+    if (!confirmed) return;
+    setImporting(true);
+    setCreatingBackup(true);
+    setImportError(null);
+    setImportProgress({ completed: 0, total: selectedForImport.length });
+    let processed = 0;
+    try {
+      const selections: XboxImportSelection[] = selectedForImport.map((game) => ({
+        titleId: game.titleId,
+        sourceCode: sourceByTitleId[game.titleId] ?? game.suggestedSourceCode,
+      }));
+      const preparation = await prepareXboxImport(
+        selections.map((game) => game.titleId),
+      );
+      setCreatingBackup(false);
+      const total = {
+        imported: 0,
+        catalogCreated: 0,
+        rawgEnriched: 0,
+        steamGridDbCovers: 0,
+      };
+      const batchSize = 5;
+      for (let offset = 0; offset < selections.length; offset += batchSize) {
+        const batch = selections.slice(offset, offset + batchSize);
+        const result = await importXboxGames(preparation.backupToken, batch);
+        total.imported += result.imported;
+        total.catalogCreated += result.catalogCreated;
+        total.rawgEnriched += result.rawgEnriched;
+        total.steamGridDbCovers += result.steamGridDbCovers;
+        processed = Math.min(offset + batch.length, selections.length);
+        setImportProgress({ completed: processed, total: selections.length });
+      }
+      showToast(
+        `Импортировано: ${total.imported}. RAWG: ${total.rawgEnriched}, SteamGridDB: ${total.steamGridDbCovers}. Бэкап создан.`,
+      );
+      onImported();
+    } catch (reason) {
+      setImportError(
+        reason instanceof Error
+          ? `${reason.message}${processed ? ` Обработано: ${processed} из ${selectedForImport.length}.` : ""}`
+          : "Не удалось импортировать историю Xbox",
+      );
+    } finally {
+      setCreatingBackup(false);
+      setImporting(false);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <section className="steam-import-dialog xbox-import-dialog">
+        <div className="form-heading">
+          <div>
+            <p className="eyebrow">OpenXBL</p>
+            <h2>Предпросмотр истории Xbox</h2>
+          </div>
+          <button type="button" onClick={onClose} disabled={importing}>
+            ×
+          </button>
+        </div>
+
+        {loading && !preview && (
+          <div className="steam-import-loading">
+            <span />
+            Загружаем историю Xbox…
+          </div>
+        )}
+        {error && (
+          <div className="notice error steam-import-error">
+            <strong>Не удалось получить историю Xbox</strong>
+            <span>{error}</span>
+            <button className="secondary-button" onClick={() => void loadPreview()}>
+              Повторить
+            </button>
+          </div>
+        )}
+
+        {preview && (
+          <>
+            <p className="steam-import-profile">
+              История профиля · {includedSummary.total} из {preview.totalGames} консольных игр
+            </p>
+            <div className="steam-import-summary">
+              <div>
+                <span>Всего</span>
+                <strong>{includedSummary.total}</strong>
+              </div>
+              <div>
+                <span>Уже добавлены</span>
+                <strong>{includedSummary.alreadyImported}</strong>
+              </div>
+              <div>
+                <span>Совпадения</span>
+                <strong>{includedSummary.matchedExisting}</strong>
+              </div>
+              <div>
+                <span>Проверить</span>
+                <strong>{includedSummary.reviewRequired}</strong>
+              </div>
+              <div>
+                <span>Новые</span>
+                <strong>{includedSummary.newGames}</strong>
+              </div>
+            </div>
+            <div className="xbox-import-source-defaults">
+              <span>Источник для добавляемых:</span>
+              <button type="button" onClick={() => setAllSources("XBOX_STORE")}>
+                Все — Xbox Store
+              </button>
+              <button type="button" onClick={() => setAllSources("GAME_PASS")}>
+                Все — Game Pass
+              </button>
+            </div>
+            <div className="steam-import-controls">
+              <div className="steam-import-tabs">
+                {(
+                  [
+                    ["", "Все"],
+                    ["ALREADY_IMPORTED", "Добавлены"],
+                    ["MATCHED", "Совпадения"],
+                    ["REVIEW", "Проверить"],
+                    ["NEW", "Новые"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    className={filter === value ? "active" : ""}
+                    key={value || "all"}
+                    onClick={() => setFilter(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Найти в предпросмотре"
+              />
+            </div>
+            <div className="steam-import-list xbox-import-list">
+              {visibleGames.map((game) => (
+                <article key={game.titleId}>
+                  <div className="steam-import-game-icon">
+                    <span>{game.title.slice(0, 1)}</span>
+                    {game.imageUrl && (
+                      <img
+                        src={game.imageUrl}
+                        alt=""
+                        onError={(event) => {
+                          event.currentTarget.style.display = "none";
+                        }}
+                      />
+                    )}
+                  </div>
+                  <div className="steam-import-game-info">
+                    <strong className="xbox-import-title">{game.title}</strong>
+                    <small>
+                      {xboxPlatformLabels[game.platformCode] ?? game.platformCode} · Title ID{" "}
+                      {game.titleId} ·{" "}
+                      {game.totalAchievements > 0
+                        ? `${game.unlockedAchievements}/${game.totalAchievements} достижений`
+                        : `получено достижений: ${game.unlockedAchievements}`}
+                      {game.totalGamerscore > 0
+                        ? ` · ${game.earnedGamerscore}/${game.totalGamerscore} G`
+                        : ""}
+                      {game.lastPlayedAt
+                        ? ` · запускалась ${new Intl.DateTimeFormat("ru-RU").format(new Date(game.lastPlayedAt))}`
+                        : ""}
+                    </small>
+                    {game.matchedContentTitle && (
+                      <em>В каталоге: {game.matchedContentTitle}</em>
+                    )}
+                  </div>
+                  <div className="steam-import-game-actions xbox-import-game-actions">
+                    {game.match !== "ALREADY_IMPORTED" && (
+                      <select
+                        value={
+                          sourceByTitleId[game.titleId] ?? game.suggestedSourceCode
+                        }
+                        onChange={(event) =>
+                          setSourceByTitleId((current) => ({
+                            ...current,
+                            [game.titleId]: event.target.value as XboxImportSelection["sourceCode"],
+                          }))
+                        }
+                        disabled={importing}
+                        aria-label={`Источник ${game.title}`}
+                      >
+                        <option value="XBOX_STORE">Xbox Store</option>
+                        <option value="GAME_PASS">Game Pass</option>
+                      </select>
+                    )}
+                    <span className={`steam-import-match ${game.match.toLowerCase()}`}>
+                      {xboxMatchLabels[game.match]}
+                    </span>
+                    <button
+                      type="button"
+                      className="steam-import-exclude"
+                      aria-label={`Исключить ${game.title} из импорта`}
+                      title="Исключить из импорта"
+                      onClick={() => excludeGame(game.titleId)}
+                      disabled={importing}
+                    >
+                      <X />
+                    </button>
+                  </div>
+                </article>
+              ))}
+              {visibleGames.length === 0 && (
+                <p className="muted steam-import-empty">Ничего не найдено.</p>
+              )}
+            </div>
+            <div className="steam-import-footer">
+              <div>
+                <p>
+                  Импортируется история запуска, а не полный список покупок. Перед первой записью создаётся бэкап. RAWG добавляет данные и горизонтальную обложку, SteamGridDB — вертикальную.
+                </p>
+                {excludedTitleIds.size > 0 && (
+                  <button
+                    type="button"
+                    className="steam-import-restore"
+                    onClick={() => setExcludedTitleIds(new Set())}
+                    disabled={importing}
+                  >
+                    Вернуть исключённые ({excludedTitleIds.size})
                   </button>
                 )}
                 {importError && <p className="steam-import-save-error">{importError}</p>}

@@ -65,6 +65,19 @@ public class GamePlaythroughService {
         game.markCompleted(completedAt);
         return true;
     }
+    @Transactional
+    public boolean fillXboxAchievementPlaytime(Long libraryId, long playtimeMinutes) {
+        if (playtimeMinutes <= 0) return false;
+        return playthroughs
+                .findFirstByLibraryEntryIdAndCompletionSourceOrderByPlaythroughNumberDesc(
+                        libraryId, GamePlaythroughSource.XBOX_ACHIEVEMENTS)
+                .filter(item -> item.getPlaytimeMinutes() == 0)
+                .map(item -> {
+                    item.updatePlaytimeMinutes(playtimeMinutes);
+                    return true;
+                })
+                .orElse(false);
+    }
     @Transactional public void delete(Long id) {
         playthroughs.delete(findPlaythrough(id));
     }

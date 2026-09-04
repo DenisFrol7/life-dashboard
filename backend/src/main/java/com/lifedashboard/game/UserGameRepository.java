@@ -12,6 +12,7 @@ public interface UserGameRepository extends JpaRepository<UserGame, Long> {
                                @Param("platformId") Long platformId);
     Optional<UserGame> findByIdAndUserContentUserId(Long id, Long userId);
     Optional<UserGame> findBySteamAppIdAndUserContentUserId(Long steamAppId, Long userId);
+    Optional<UserGame> findByXboxTitleIdAndUserContentUserId(Long xboxTitleId, Long userId);
     Optional<UserGame> findFirstByUserContentUserIdAndUserContentContentIdOrderByIdAsc(Long userId, Long contentId);
     @Query("select g from UserGame g join fetch g.userContent uc join fetch uc.content " +
            "join g.source s where uc.user.id=:userId and s.code='STEAM' " +
@@ -27,4 +28,11 @@ public interface UserGameRepository extends JpaRepository<UserGame, Long> {
            "where g.id=:id and g.userContent.user.id=:userId and g.source.code='STEAM'")
     int updateSteamPlaytime(@Param("id") Long id, @Param("userId") Long userId,
                             @Param("playtimeMinutes") long playtimeMinutes);
+    @Modifying
+    @Transactional
+    @Query("update UserGame g set g.legacyPlaytimeMinutes=:playtimeMinutes " +
+           "where g.id=:id and g.userContent.user.id=:userId " +
+           "and (g.platform.code like 'XBOX_%' or g.platform.code='ORIGINAL_XBOX')")
+    int updateXboxPlaytime(@Param("id") Long id, @Param("userId") Long userId,
+                           @Param("playtimeMinutes") long playtimeMinutes);
 }

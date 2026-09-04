@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -57,6 +58,23 @@ class GamePlaythroughServiceTests {
         verify(playthroughs, never()).save(org.mockito.ArgumentMatchers.any());
         verify(game, never()).markCompleted(org.mockito.ArgumentMatchers.any());
         verifyNoInteractions(sessions);
+    }
+
+    @Test
+    void fillsMissingPlaytimeInExistingXboxAchievementCompletion() {
+        UserGame game = org.mockito.Mockito.mock(UserGame.class);
+        GamePlaythrough playthrough = new GamePlaythrough(game, 1,
+                Instant.parse("2026-05-01T10:15:30Z"), 0L,
+                GamePlaythroughSource.XBOX_ACHIEVEMENTS, null);
+        when(playthroughs
+                .findFirstByLibraryEntryIdAndCompletionSourceOrderByPlaythroughNumberDesc(
+                        7L, GamePlaythroughSource.XBOX_ACHIEVEMENTS))
+                .thenReturn(Optional.of(playthrough));
+
+        boolean updated = service().fillXboxAchievementPlaytime(7L, 866L);
+
+        assertTrue(updated);
+        assertEquals(866L, playthrough.getPlaytimeMinutes());
     }
 
     private GamePlaythroughService service() {

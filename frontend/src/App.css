@@ -1040,8 +1040,13 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .game-session-list b { color: #536b7c; font-size: 12px; }
 .game-status-tabs { flex: 1 1 100%; min-width: 0; }
 .game-catalog-search { flex: 1 1 180px; width: auto; min-width: 160px; }
-.game-platform-filter { flex: 0 0 155px; min-height: 40px; padding: 9px 30px 9px 11px; border: 1px solid #d9ddda; border-radius: 9px; color: #52616a; background: #fff; font-size: 11px; }
+.game-platform-filter { flex: 0 0 135px; min-height: 40px; padding: 9px 22px 9px 11px; border: 1px solid #d9ddda; border-radius: 9px; color: #52616a; background: #fff; font-size: 11px; }
+.game-source-filter { flex-basis: 130px; }
 .steam-import-button { flex: 0 0 auto; min-height: 40px; }
+.games-page .series-media-toolbar { gap: 8px; }
+.games-page .steam-import-button,
+.games-page .media-add-button { width: auto; min-height: 38px; padding: 8px 11px; gap: 6px; border-radius: 9px; font-size: 11px; white-space: nowrap; }
+.games-page .series-media-toolbar > .icon-button svg { width: 15px; height: 15px; }
 .steam-recent-sync-summary { max-width: none; margin: 0 0 14px; }
 .notice.steam-recent-sync-summary.error { margin: 0 0 14px; }
 .steam-recent-sync-summary small { font-size: 10px; }
@@ -1093,6 +1098,10 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .steam-import-error { margin-top: 16px; }
 .steam-import-error button { align-self: flex-start; margin-top: 8px; }
 .steam-import-empty { padding: 30px; text-align: center; }
+.xbox-import-source-defaults { display: flex; align-items: center; gap: 7px; margin-top: 12px; color: var(--muted); font-size: 10px; }
+.xbox-import-source-defaults button { padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px; color: #52748a; background: var(--paper-soft); cursor: pointer; font-size: 10px; font-weight: 700; }
+.xbox-import-title { display: block; overflow: hidden; color: #426f91; font-family: Georgia, serif; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.xbox-import-game-actions select { min-width: 112px; padding: 6px 25px 6px 8px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: var(--paper); font-size: 9px; }
 .game-catalog-card { grid-template-columns: 144px minmax(0, 1fr) 150px; min-height: 97px; }
 .game-catalog-card .series-list-cover { width: 144px; height: 81px; background-size: cover; }
 .game-platform-badge { padding: 3px 6px; background: #557d62; font-family: Arial, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .1px; line-height: 1; }

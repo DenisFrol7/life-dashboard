@@ -15,7 +15,9 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class OpenXblClient {
@@ -73,6 +75,30 @@ public class OpenXblClient {
         }
     }
 
+    public Map<Long, Long> playtimeMinutes(String xuid, List<Long> titleIds) {
+        ensureConfigured();
+        if (xuid == null || xuid.isBlank() || titleIds.isEmpty()) return Map.of();
+        List<Map<String, String>> requestedStats = titleIds.stream().distinct()
+                .map(titleId -> Map.of("name", "MinutesPlayed",
+                        "titleId", String.valueOf(titleId)))
+                .toList();
+        Map<String, Object> body = Map.of(
+                "xuids", List.of(xuid),
+                "groups", List.of(),
+                "stats", requestedStats);
+        try {
+            JsonNode root = client.post().uri("/player/stats")
+                    .body(body).retrieve().body(JsonNode.class);
+            return parsePlaytimeMinutes(root);
+        } catch (RestClientResponseException exception) {
+            throw apiError(exception);
+        } catch (RuntimeException exception) {
+            if (exception instanceof InvalidRequestException invalid) throw invalid;
+            log.warn("OpenXBL playtime request failed: {}", exception.getClass().getSimpleName());
+            throw new InvalidRequestException("Не удалось загрузить игровое время из OpenXBL");
+        }
+    }
+
     OpenXblTitleHistory parseTitleHistory(JsonNode root) {
         JsonNode content = root == null ? null : root.path("content");
         String xuid = content == null ? null : text(content, "xuid");
@@ -94,7 +120,9 @@ public class OpenXblClient {
                     nonNegative(achievement.path("currentGamerscore").asInt()),
                     nonNegative(achievement.path("totalGamerscore").asInt()),
                     nonNegative(achievement.path("sourceVersion").asInt()),
-                    instant(node.path("titleHistory"), "lastTimePlayed")));
+                    instant(node.path("titleHistory"), "lastTimePlayed"),
+                    text(node, "mediaItemType"), secureImage(text(node, "displayImage")),
+                    node.path("gamePass").path("isGamePass").asBoolean()));
         }
         return new OpenXblTitleHistory(xuid, List.copyOf(titles));
     }
@@ -122,6 +150,28 @@ public class OpenXblClient {
         Instant lastUnlockedAt = unlockDates.stream().max(Comparator.naturalOrder()).orElse(null);
         return new OpenXblProgress(title.titleId(), total, unlocked, totalScore, earnedScore,
                 lastUnlockedAt, true);
+    }
+
+    Map<Long, Long> parsePlaytimeMinutes(JsonNode root) {
+        Map<Long, Long> result = new LinkedHashMap<>();
+        JsonNode collections = root == null ? null
+                : root.path("content").path("statlistscollection");
+        if (collections == null || !collections.isArray()) return Map.of();
+        for (JsonNode collection : collections) {
+            for (JsonNode stat : collection.path("stats")) {
+                if (!"MinutesPlayed".equalsIgnoreCase(text(stat, "name"))) continue;
+                long titleId = stat.path("titleid").asLong();
+                String value = text(stat, "value");
+                if (titleId <= 0 || value == null) continue;
+                try {
+                    long minutes = Long.parseLong(value);
+                    if (minutes >= 0) result.put(titleId, minutes);
+                } catch (NumberFormatException ignored) {
+                    // A title may expose MinutesPlayed using an unsupported value format.
+                }
+            }
+        }
+        return Map.copyOf(result);
     }
 
     private OpenXblProgress aggregateProgress(OpenXblTitle title) {
@@ -162,6 +212,11 @@ public class OpenXblClient {
 
     private int nonNegative(int value) {
         return Math.max(0, value);
+    }
+
+    private String secureImage(String value) {
+        return value != null && value.startsWith("http://")
+                ? "https://" + value.substring("http://".length()) : value;
     }
 
     private void ensureConfigured() {

@@ -15,8 +15,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,6 +29,7 @@ class XboxBulkProgressServiceTests {
     @Mock UserGameRepository games;
     @Mock XboxGameProgressRepository progress;
     @Mock XboxProgressSyncService progressSync;
+    @Mock GamePlaythroughService playthroughs;
 
     @Test
     void updatesOnlyChangedLinkedCopiesWithOneSharedHistory() {
@@ -38,6 +41,8 @@ class XboxBulkProgressServiceTests {
         UserGame changed = copy(1L, 101L, "Changed");
         UserGame current = copy(2L, 202L, "Current");
         UserGame missing = copy(3L, 303L, "Missing");
+        when(changed.getLegacyPlaytimeMinutes()).thenReturn(100L);
+        when(current.getLegacyPlaytimeMinutes()).thenReturn(200L);
         UserGame unlinked = org.mockito.Mockito.mock(UserGame.class);
         when(unlinked.getXboxTitleId()).thenReturn(null);
         XboxGameProgress oldProgress = stored(changed,
@@ -51,6 +56,10 @@ class XboxBulkProgressServiceTests {
                 Instant.parse("2026-09-04T13:00:00Z"));
 
         when(openXbl.titleHistory()).thenReturn(history);
+        when(openXbl.playtimeMinutes("xuid", List.of(101L, 202L, 303L)))
+                .thenReturn(Map.of(101L, 180L, 202L, 150L));
+        when(games.updateXboxPlaytime(1L, 1L, 180L)).thenReturn(1);
+        when(playthroughs.fillXboxAchievementPlaytime(1L, 180L)).thenReturn(true);
         when(games.findXboxCopies(1L)).thenReturn(
                 List.of(changed, current, missing, unlinked));
         when(progress.findAllByUserId(1L)).thenReturn(
@@ -66,15 +75,22 @@ class XboxBulkProgressServiceTests {
         assertEquals(1, result.upToDate());
         assertEquals(1, result.skippedUnlinked());
         assertEquals(1, result.failed());
+        assertEquals(1, result.playtimeUpdated());
+        assertEquals(1, result.playtimeUnavailable());
+        assertEquals(1, result.playthroughPlaytimeUpdated());
+        assertFalse(result.playtimeSyncFailed());
         assertEquals(3, result.games().size());
         verify(openXbl).titleHistory();
         verify(progressSync).sync(1L, history);
         verify(progressSync, never()).sync(2L, history);
         verify(progressSync, never()).sync(3L, history);
+        verify(games).updateXboxPlaytime(1L, 1L, 180L);
+        verify(games, never()).updateXboxPlaytime(2L, 1L, 150L);
     }
 
     private XboxBulkProgressService service() {
-        return new XboxBulkProgressService(openXbl, games, progress, progressSync, 1L);
+        return new XboxBulkProgressService(openXbl, games, progress, progressSync,
+                playthroughs, 1L);
     }
 
     private OpenXblTitle title(long id, String name, Instant playedAt) {
