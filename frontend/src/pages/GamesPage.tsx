@@ -101,6 +101,49 @@ const emptyProgress: XboxProgressInput = {
 const isXbox = (code: string) =>
   code.startsWith("XBOX_") || code === "ORIGINAL_XBOX";
 type AchievementProvider = "XBOX" | "STEAM";
+type GameFilters = {
+  query: string;
+  status: LibraryStatus | "GAME_PASS" | "";
+  platform: string;
+  source: string;
+};
+
+const GAME_FILTERS_STORAGE_KEY = "life-dashboard.games.filters";
+const gameFilterStatuses = new Set<LibraryStatus | "GAME_PASS" | "">([
+  "",
+  "NOT_STARTED",
+  "PLANNED",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "PAUSED",
+  "DROPPED",
+  "GAME_PASS",
+]);
+const emptyGameFilters: GameFilters = {
+  query: "",
+  status: "",
+  platform: "",
+  source: "",
+};
+
+function readGameFilters(): GameFilters {
+  try {
+    const saved = JSON.parse(
+      sessionStorage.getItem(GAME_FILTERS_STORAGE_KEY) ?? "{}",
+    ) as Partial<GameFilters>;
+    return {
+      query: typeof saved.query === "string" ? saved.query : "",
+      status:
+        typeof saved.status === "string" && gameFilterStatuses.has(saved.status)
+          ? saved.status
+          : "",
+      platform: typeof saved.platform === "string" ? saved.platform : "",
+      source: typeof saved.source === "string" ? saved.source : "",
+    };
+  } catch {
+    return emptyGameFilters;
+  }
+}
 
 function newestBy<T>(items: T[], timestamp: (item: T) => string) {
   return items.reduce<T | undefined>((latest, item) => {
@@ -115,6 +158,7 @@ export function GamesPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [savedFilters] = useState(readGameFilters);
   const [games, setGames] = useState<Game[]>([]);
   const [library, setLibrary] = useState<Record<number, GameLibrary>>({});
   const [libraryEntries, setLibraryEntries] = useState<GameLibrary[]>([]);
@@ -141,10 +185,12 @@ export function GamesPage() {
   const [achievementProviderByGame, setAchievementProviderByGame] = useState<
     Record<number, AchievementProvider>
   >({});
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<LibraryStatus | "GAME_PASS" | "">("");
-  const [platform, setPlatform] = useState("");
-  const [source, setSource] = useState("");
+  const [query, setQuery] = useState(savedFilters.query);
+  const [status, setStatus] = useState<LibraryStatus | "GAME_PASS" | "">(
+    savedFilters.status,
+  );
+  const [platform, setPlatform] = useState(savedFilters.platform);
+  const [source, setSource] = useState(savedFilters.source);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const load = useCallback(async () => {
@@ -221,6 +267,16 @@ export function GamesPage() {
   useEffect(() => {
     setAchievementProviderByGame({});
   }, [platform, source]);
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        GAME_FILTERS_STORAGE_KEY,
+        JSON.stringify({ query, status, platform, source } satisfies GameFilters),
+      );
+    } catch {
+      // Фильтры продолжат работать без сохранения, если хранилище недоступно.
+    }
+  }, [platform, query, source, status]);
   useEffect(() => {
     const editId = Number(searchParams.get("edit"));
     const game = games.find((item) => item.id === editId);
