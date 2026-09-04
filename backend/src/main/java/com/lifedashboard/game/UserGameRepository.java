@@ -12,4 +12,7 @@ public interface UserGameRepository extends JpaRepository<UserGame, Long> {
     Optional<UserGame> findByIdAndUserContentUserId(Long id, Long userId);
     Optional<UserGame> findBySteamAppIdAndUserContentUserId(Long steamAppId, Long userId);
     Optional<UserGame> findFirstByUserContentUserIdAndUserContentContentIdOrderByIdAsc(Long userId, Long contentId);
+    @Query("select g from UserGame g join g.source s " +
+           "where g.userContent.user.id=:userId and s.code='STEAM' and g.steamAppId is not null")
+    List<UserGame> findSteamCopies(@Param("userId") Long userId);
 }

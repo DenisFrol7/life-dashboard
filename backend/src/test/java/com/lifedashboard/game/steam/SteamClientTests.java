@@ -6,6 +6,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -70,5 +71,28 @@ class SteamClientTests {
         InvalidRequestException error = assertThrows(InvalidRequestException.class,
                 () -> client.parseAchievements(10L, schema, player));
         assertTrue(error.getMessage().contains("Доступ к игровой информации"));
+    }
+
+    @Test
+    void parsesRecentlyPlayedGames() {
+        JsonNode response = mapper.readTree("""
+                {"response":{"total_count":2,"games":[
+                  {"appid":620,"name":"Portal 2","playtime_forever":150,
+                   "rtime_last_played":1700000000},
+                  {"appid":227300,"name":"Euro Truck Simulator 2","playtime_forever":90,
+                   "rtime_last_played":0}
+                ]}}
+                """);
+
+        List<SteamOwnedGame> result = client.parseOwnedGames(response);
+
+        assertEquals(2, result.size());
+        assertEquals(620L, result.get(0).appId());
+        assertEquals("Portal 2", result.get(0).title());
+        assertEquals(150L, result.get(0).playtimeMinutes());
+        assertEquals(Instant.ofEpochSecond(1700000000), result.get(0).lastPlayedAt());
+        assertEquals("https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/620/capsule_sm_120.jpg",
+                result.get(0).iconUrl());
+        assertNull(result.get(1).lastPlayedAt());
     }
 }

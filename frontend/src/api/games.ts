@@ -179,6 +179,24 @@ export type SteamProgress = {
   lastSyncedAt: string;
   achievements: SteamAchievement[];
 };
+export type SteamRecentSyncGame = {
+  libraryEntryId: number;
+  steamAppId: number;
+  title: string;
+  status: "UPDATED" | "UP_TO_DATE" | "FAILED";
+  unlockedAchievements: number | null;
+  totalAchievements: number | null;
+  message: string | null;
+};
+export type SteamRecentSyncResult = {
+  recentlyPlayed: number;
+  matchedLibraryCopies: number;
+  updated: number;
+  upToDate: number;
+  notImported: number;
+  failed: number;
+  games: SteamRecentSyncGame[];
+};
 export type XboxLibrarySummary = {
   libraryEntryId: number;
   progress: XboxProgress;
@@ -352,6 +370,10 @@ export const syncSteamProgress = (libraryId: number) =>
     `/api/games/library/${libraryId}/steam-progress/sync`,
     { method: "POST" },
   );
+export const syncRecentSteamProgress = () =>
+  apiRequest<SteamRecentSyncResult>("/api/games/steam-progress/sync-recent", {
+    method: "POST",
+  });
 export const getGameSessions = (from?: string, to?: string) => {
   const query = new URLSearchParams();
   if (from) query.set("from", from);

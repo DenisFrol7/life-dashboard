@@ -74,19 +74,7 @@ public class SteamClient {
             if (libraryRoot == null || libraryRoot.path("response").get("game_count") == null)
                 throw new InvalidRequestException(
                         "Steam не вернул библиотеку. Откройте доступ к игровой информации в настройках приватности");
-            List<SteamOwnedGame> games = new ArrayList<>();
-            for (JsonNode node : libraryRoot.path("response").path("games")) {
-                long appId = node.path("appid").asLong();
-                String title = text(node, "name");
-                if (appId <= 0 || title == null) continue;
-                long lastPlayed = node.path("rtime_last_played").asLong();
-                games.add(new SteamOwnedGame(appId, title,
-                        Math.max(0, node.path("playtime_forever").asLong()),
-                        lastPlayed > 0 ? Instant.ofEpochSecond(lastPlayed) : null,
-                        "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/"
-                                + appId + "/capsule_sm_120.jpg"));
-            }
-            return new SteamLibrary(profileName, List.copyOf(games));
+            return new SteamLibrary(profileName, parseOwnedGames(libraryRoot));
         } catch (RestClientResponseException exception) {
             throw apiError(exception);
         } catch (RuntimeException exception) {
@@ -94,6 +82,47 @@ public class SteamClient {
             log.warn("Steam library request failed: {}", exception.getClass().getSimpleName());
             throw new InvalidRequestException("Не удалось подключиться к Steam Web API");
         }
+    }
+
+    public List<SteamOwnedGame> recentlyPlayedGames() {
+        ensureConfigured();
+        try {
+            JsonNode root = client.get()
+                    .uri(uri -> uri.path("/IPlayerService/GetRecentlyPlayedGames/v1/")
+                            .queryParam("steamid", steamId64)
+                            .queryParam("count", 0)
+                            .queryParam("format", "json")
+                            .build())
+                    .retrieve().body(JsonNode.class);
+            if (root == null || root.get("response") == null) {
+                throw new InvalidRequestException("Steam не вернул список недавно запущенных игр");
+            }
+            return parseOwnedGames(root);
+        } catch (RestClientResponseException exception) {
+            throw apiError(exception);
+        } catch (RuntimeException exception) {
+            if (exception instanceof InvalidRequestException invalid) throw invalid;
+            log.warn("Steam recently played games request failed: {}",
+                    exception.getClass().getSimpleName());
+            throw new InvalidRequestException("Не удалось загрузить недавно запущенные игры из Steam");
+        }
+    }
+
+    List<SteamOwnedGame> parseOwnedGames(JsonNode root) {
+        if (root == null) return List.of();
+        List<SteamOwnedGame> games = new ArrayList<>();
+        for (JsonNode node : root.path("response").path("games")) {
+            long appId = node.path("appid").asLong();
+            String title = text(node, "name");
+            if (appId <= 0 || title == null) continue;
+            long lastPlayed = node.path("rtime_last_played").asLong();
+            games.add(new SteamOwnedGame(appId, title,
+                    Math.max(0, node.path("playtime_forever").asLong()),
+                    lastPlayed > 0 ? Instant.ofEpochSecond(lastPlayed) : null,
+                    "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/"
+                            + appId + "/capsule_sm_120.jpg"));
+        }
+        return List.copyOf(games);
     }
 
     public SteamAchievementSnapshot achievements(long appId) {

@@ -6,7 +6,7 @@ import {
   type FormEvent,
 } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Download, Plus, Search, X } from "lucide-react";
+import { Download, Plus, RefreshCw, Search, X } from "lucide-react";
 import {
   createGame,
   createGameLibrary,
@@ -30,6 +30,7 @@ import {
   putXboxProgress,
   searchRawgGames,
   searchSteamGridDbGames,
+  syncRecentSteamProgress,
   updateGame,
   updateGameLibrary,
   updateRawgGame,
@@ -46,6 +47,7 @@ import {
   type SteamGridDbGameCandidate,
   type SteamImportMatch,
   type SteamImportPreview,
+  type SteamRecentSyncResult,
   type XboxAchievementGroup,
   type XboxProgress,
   type XboxProgressInput,
@@ -91,6 +93,7 @@ const isXbox = (code: string) =>
 
 export function GamesPage() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [games, setGames] = useState<Game[]>([]);
   const [library, setLibrary] = useState<Record<number, GameLibrary>>({});
@@ -107,6 +110,9 @@ export function GamesPage() {
     GameSession | "new" | null
   >(null);
   const [steamImportOpen, setSteamImportOpen] = useState(false);
+  const [syncingSteamRecent, setSyncingSteamRecent] = useState(false);
+  const [steamRecentResult, setSteamRecentResult] =
+    useState<SteamRecentSyncResult | null>(null);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<LibraryStatus | "GAME_PASS" | "">("");
   const [platform, setPlatform] = useState("");
@@ -239,6 +245,28 @@ export function GamesPage() {
     (sum, item) => sum + (item?.earnedGamerscore ?? 0),
     0,
   );
+  const updateRecentSteamProgress = async () => {
+    setSyncingSteamRecent(true);
+    try {
+      const result = await syncRecentSteamProgress();
+      setSteamRecentResult(result);
+      if (result.updated > 0) await load();
+      const message = `Steam: обновлено ${result.updated}, уже актуально ${result.upToDate}`;
+      showToast(
+        result.failed > 0 ? `${message}, ошибок ${result.failed}` : message,
+        result.failed > 0 ? "error" : "success",
+      );
+    } catch (reason) {
+      showToast(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось обновить достижения Steam",
+        "error",
+      );
+    } finally {
+      setSyncingSteamRecent(false);
+    }
+  };
   if (loading) return <LoadingState message="Загружаем игры…" />;
   if (error)
     return (
@@ -311,6 +339,15 @@ export function GamesPage() {
         </select>
         <button
           className="secondary-button icon-button steam-import-button"
+          disabled={syncingSteamRecent || steamGames === 0}
+          onClick={() => void updateRecentSteamProgress()}
+          title="Обновить достижения недавно запущенных игр"
+        >
+          <RefreshCw className={syncingSteamRecent ? "spinning" : undefined} />
+          {syncingSteamRecent ? "Обновляем Steam…" : "Обновить Steam"}
+        </button>
+        <button
+          className="secondary-button icon-button steam-import-button"
           onClick={() => setSteamImportOpen(true)}
         >
           <Download />
@@ -326,6 +363,28 @@ export function GamesPage() {
       </section>
       <section className="series-catalog-layout">
         <div className="series-catalog-main">
+          {steamRecentResult && (
+            <div
+              className={`notice steam-recent-sync-summary${steamRecentResult.failed ? " error" : ""}`}
+            >
+              <strong>Достижения Steam проверены</strong>
+              <span>
+                Недавних игр: {steamRecentResult.recentlyPlayed} · в библиотеке:{" "}
+                {steamRecentResult.matchedLibraryCopies} · обновлено:{" "}
+                {steamRecentResult.updated} · уже актуально:{" "}
+                {steamRecentResult.upToDate}
+                {steamRecentResult.notImported > 0 &&
+                  ` · не импортировано: ${steamRecentResult.notImported}`}
+              </span>
+              {steamRecentResult.games
+                .filter((item) => item.status === "FAILED")
+                .map((item) => (
+                  <small key={item.libraryEntryId}>
+                    {item.title}: {item.message}
+                  </small>
+                ))}
+            </div>
+          )}
           {error && (
             <div className="notice error movies-error">
               <strong>Ошибка</strong>
