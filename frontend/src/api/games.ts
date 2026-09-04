@@ -179,6 +179,7 @@ export type SteamProgress = {
   lastSyncedAt: string;
   achievements: SteamAchievement[];
 };
+export type SteamLibrarySummary = Omit<SteamProgress, "id" | "achievements">;
 export type SteamRecentSyncGame = {
   libraryEntryId: number;
   steamAppId: number;
@@ -351,6 +352,8 @@ export const getXboxProgress = async (libraryId: number) => {
 };
 export const getXboxLibrarySummary = () =>
   apiRequest<XboxLibrarySummary[]>("/api/games/xbox-summary");
+export const getSteamLibrarySummary = () =>
+  apiRequest<SteamLibrarySummary[]>("/api/games/steam-summary");
 export const putXboxProgress = (libraryId: number, input: XboxProgressInput) =>
   apiRequest<XboxProgress>(`/api/games/library/${libraryId}/xbox-progress`, {
     method: "PUT",

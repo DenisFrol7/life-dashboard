@@ -233,7 +233,11 @@ html[data-theme="dark"] .detail-progress > div span,
 html[data-theme="dark"] .activity-progress span { background: linear-gradient(90deg, #20c957, var(--success)); box-shadow: 0 0 9px #2ddd6340; }
 html[data-theme="dark"] .media-status.completed { color: #75ee98; background: #123923; }
 html[data-theme="dark"] .game-catalog-progress > strong,
+html[data-theme="dark"] .game-catalog-progress-main > strong,
 html[data-theme="dark"] .series-list-progress-row > strong { color: #67e98e; }
+html[data-theme="dark"] .game-catalog-progress.steam .game-catalog-progress-main > strong { color: #8bc4ee; }
+html[data-theme="dark"] .game-achievement-provider-switch { border-color: #304252; background: #111e2a; }
+html[data-theme="dark"] .game-achievement-provider-switch button { color: #8f9baa; }
 html[data-theme="dark"] .violet { color: #a99dff; background: #28224b; }
 html[data-theme="dark"] .amber { color: #f0a45d; background: #3b2817; }
 html[data-theme="dark"] .blue { color: #62b7ff; background: #102d45; }
@@ -1093,8 +1097,14 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .game-catalog-card .series-list-cover { width: 144px; height: 81px; background-size: cover; }
 .game-platform-badge { padding: 3px 6px; background: #557d62; font-family: Arial, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .1px; line-height: 1; }
 .game-catalog-progress { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 6px 10px; margin-top: 6px; }
+.game-catalog-progress-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.game-achievement-provider-switch { display: inline-flex; flex: 0 0 auto; padding: 1px; border: 1px solid #d8e0dc; border-radius: 6px; background: #f2f5f3; }
+.game-achievement-provider-switch button { min-width: 34px; padding: 2px 5px; border: 0; border-radius: 4px; color: #75827b; background: transparent; cursor: pointer; font-size: 9px; font-weight: 700; line-height: 1.2; }
+.game-achievement-provider-switch button:first-child.active { color: #fff; background: #5d8766; }
+.game-achievement-provider-switch button:last-child.active { color: #fff; background: #58778b; }
 .game-catalog-achievements,
 .game-catalog-gamerscore { display: inline-flex; align-items: baseline; gap: 3px; color: #486753; font-size: 13px; font-weight: 700; line-height: 1; white-space: nowrap; }
+.game-catalog-progress.steam .game-catalog-achievements { color: #4f7188; }
 .game-catalog-achievements b,
 .game-catalog-gamerscore b,
 .game-catalog-achievements small,
@@ -1102,6 +1112,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .game-catalog-gamerscore { grid-column: 2; grid-row: 1; justify-self: end; text-align: right; }
 .game-catalog-progress .series-list-progress { grid-column: 1 / -1; }
 .game-catalog-progress .series-list-progress span { background: #65906b; }
+.game-catalog-progress.steam .series-list-progress span { background: #62859d; }
 @media (min-width: 901px) {
   .series-list-card .series-list-progress-row { position: absolute; right: 173px; bottom: 14px; left: 155px; margin: 0; }
 }

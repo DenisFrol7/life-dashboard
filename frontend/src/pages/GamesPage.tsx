@@ -19,6 +19,7 @@ import {
   getGameSessions,
   getPlatforms,
   getSources,
+  getSteamLibrarySummary,
   getSteamGridDbCovers,
   getXboxAchievementGroups,
   getXboxLibrarySummary,
@@ -47,6 +48,7 @@ import {
   type SteamGridDbGameCandidate,
   type SteamImportMatch,
   type SteamImportPreview,
+  type SteamLibrarySummary,
   type SteamRecentSyncResult,
   type XboxAchievementGroup,
   type XboxProgress,
@@ -90,6 +92,16 @@ const emptyProgress: XboxProgressInput = {
 };
 const isXbox = (code: string) =>
   code.startsWith("XBOX_") || code === "ORIGINAL_XBOX";
+type AchievementProvider = "XBOX" | "STEAM";
+
+function newestBy<T>(items: T[], timestamp: (item: T) => string) {
+  return items.reduce<T | undefined>((latest, item) => {
+    if (!latest) return item;
+    return Date.parse(timestamp(item)) > Date.parse(timestamp(latest))
+      ? item
+      : latest;
+  }, undefined);
+}
 
 export function GamesPage() {
   const navigate = useNavigate();
@@ -101,6 +113,7 @@ export function GamesPage() {
   const [platforms, setPlatforms] = useState<Reference[]>([]);
   const [sources, setSources] = useState<Reference[]>([]);
   const [xbox, setXbox] = useState<Record<number, XboxProgress | null>>({});
+  const [steam, setSteam] = useState<Record<number, SteamLibrarySummary>>({});
   const [xboxBase, setXboxBase] = useState<
     Record<number, XboxProgressInput | null>
   >({});
@@ -113,6 +126,9 @@ export function GamesPage() {
   const [syncingSteamRecent, setSyncingSteamRecent] = useState(false);
   const [steamRecentResult, setSteamRecentResult] =
     useState<SteamRecentSyncResult | null>(null);
+  const [achievementProviderByGame, setAchievementProviderByGame] = useState<
+    Record<number, AchievementProvider>
+  >({});
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<LibraryStatus | "GAME_PASS" | "">("");
   const [platform, setPlatform] = useState("");
@@ -130,6 +146,7 @@ export function GamesPage() {
         sourceList,
         sessionList,
         xboxSummary,
+        steamSummary,
       ] = await Promise.all([
         getGameCatalog(),
         getGameLibrary(),
@@ -137,6 +154,7 @@ export function GamesPage() {
         getSources(),
         getGameSessions(),
         getXboxLibrarySummary(),
+        getSteamLibrarySummary(),
       ]);
       setGames(catalog);
       setLibraryEntries(entries);
@@ -152,6 +170,11 @@ export function GamesPage() {
             summary.libraryEntryId,
             summary.progress,
           ]),
+        ),
+      );
+      setSteam(
+        Object.fromEntries(
+          steamSummary.map((summary) => [summary.libraryEntryId, summary]),
         ),
       );
       setXboxBase(
@@ -183,6 +206,9 @@ export function GamesPage() {
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    setAchievementProviderByGame({});
+  }, [platform, source]);
   useEffect(() => {
     const editId = Number(searchParams.get("edit"));
     const game = games.find((item) => item.id === editId);
@@ -237,8 +263,12 @@ export function GamesPage() {
   const ubisoftGames = countGamesBy(
     (item) => item.source.code === "UBISOFT_CONNECT",
   );
-  const totalAchievements = Object.values(xbox).reduce(
+  const xboxAchievements = Object.values(xbox).reduce(
     (sum, item) => sum + (item?.unlockedAchievements ?? 0),
+    0,
+  );
+  const steamAchievements = Object.values(steam).reduce(
+    (sum, item) => sum + item.unlockedAchievements,
     0,
   );
   const totalGamerscore = Object.values(xbox).reduce(
@@ -425,7 +455,80 @@ export function GamesPage() {
                 const sourceNames = [
                   ...new Set(copies.map((item) => item.source.name)),
                 ];
-                const progress = entry ? xbox[entry.id] : null;
+                const matchesActiveFilter = (copy: GameLibrary) =>
+                  Boolean(platform || source) &&
+                  (!platform || String(copy.platform.id) === platform) &&
+                  (!source || String(copy.source.id) === source);
+                const xboxCandidates = copies
+                  .map((copy) => ({ copy, progress: xbox[copy.id] }))
+                  .filter(
+                    (
+                      item,
+                    ): item is { copy: GameLibrary; progress: XboxProgress } =>
+                      Boolean(
+                        item.progress && item.progress.totalAchievements > 0,
+                      ),
+                  );
+                const steamCandidates = copies
+                  .map((copy) => ({ copy, progress: steam[copy.id] }))
+                  .filter(
+                    (
+                      item,
+                    ): item is {
+                      copy: GameLibrary;
+                      progress: SteamLibrarySummary;
+                    } =>
+                      Boolean(
+                        item.progress && item.progress.totalAchievements > 0,
+                      ),
+                  );
+                const xboxCandidate =
+                  xboxCandidates.find(({ copy }) =>
+                    matchesActiveFilter(copy),
+                  ) ??
+                  xboxCandidates.find(
+                    ({ copy }) => copy.status === "IN_PROGRESS",
+                  ) ??
+                  newestBy(xboxCandidates, ({ progress }) =>
+                    progress.lastUpdatedAt,
+                  );
+                const steamCandidate =
+                  steamCandidates.find(({ copy }) =>
+                    matchesActiveFilter(copy),
+                  ) ??
+                  steamCandidates.find(
+                    ({ copy }) => copy.status === "IN_PROGRESS",
+                  ) ??
+                  newestBy(steamCandidates, ({ progress }) =>
+                    progress.lastSyncedAt,
+                  );
+                const hasFilteredXbox = xboxCandidates.some(({ copy }) =>
+                  matchesActiveFilter(copy),
+                );
+                const hasFilteredSteam = steamCandidates.some(({ copy }) =>
+                  matchesActiveFilter(copy),
+                );
+                const preferredProvider: AchievementProvider =
+                  hasFilteredSteam !== hasFilteredXbox
+                    ? hasFilteredSteam
+                      ? "STEAM"
+                      : "XBOX"
+                    : xboxCandidate
+                      ? "XBOX"
+                      : "STEAM";
+                const manuallySelected = achievementProviderByGame[game.id];
+                const selectedProvider: AchievementProvider =
+                  (manuallySelected === "STEAM" && steamCandidate) ||
+                  (manuallySelected === "XBOX" && xboxCandidate)
+                    ? manuallySelected
+                    : preferredProvider;
+                const selectedProgress =
+                  selectedProvider === "STEAM"
+                    ? steamCandidate?.progress
+                    : xboxCandidate?.progress;
+                const hasBothProviders = Boolean(
+                  xboxCandidate && steamCandidate,
+                );
                 return (
                   <article
                     className="series-list-card game-catalog-card"
@@ -479,27 +582,66 @@ export function GamesPage() {
                           </span>
                         )}
                       </div>
-                      {progress && (
-                        <div className="game-catalog-progress">
-                          <strong className="game-catalog-achievements">
-                            <b>{progress.unlockedAchievements}</b>
-                            <small>из</small>
-                            <b>{progress.totalAchievements}</b>
-                            <small>достижений</small>
-                          </strong>
+                      {selectedProgress && (
+                        <div
+                          className={`game-catalog-progress ${selectedProvider.toLowerCase()}`}
+                        >
+                          <div className="game-catalog-progress-main">
+                            {hasBothProviders && (
+                              <div
+                                className="game-achievement-provider-switch"
+                                aria-label="Платформа достижений"
+                                role="group"
+                              >
+                                {(["XBOX", "STEAM"] as const).map(
+                                  (provider) => (
+                                    <button
+                                      className={
+                                        selectedProvider === provider
+                                          ? "active"
+                                          : ""
+                                      }
+                                      key={provider}
+                                      onClick={() =>
+                                        setAchievementProviderByGame(
+                                          (current) => ({
+                                            ...current,
+                                            [game.id]: provider,
+                                          }),
+                                        )
+                                      }
+                                      aria-pressed={
+                                        selectedProvider === provider
+                                      }
+                                    >
+                                      {provider === "XBOX" ? "Xbox" : "Steam"}
+                                    </button>
+                                  ),
+                                )}
+                              </div>
+                            )}
+                            <strong className="game-catalog-achievements">
+                              <b>{selectedProgress.unlockedAchievements}</b>
+                              <small>из</small>
+                              <b>{selectedProgress.totalAchievements}</b>
+                              <small>достижений</small>
+                            </strong>
+                          </div>
                           <div className="series-list-progress">
                             <span
                               style={{
-                                width: `${progress.achievementPercent}%`,
+                                width: `${selectedProgress.achievementPercent}%`,
                               }}
                             />
                           </div>
-                          <span className="game-catalog-gamerscore">
-                            <b>{progress.earnedGamerscore}</b>
-                            <small>из</small>
-                            <b>{progress.totalGamerscore}</b>
-                            <small>G</small>
-                          </span>
+                          {selectedProvider === "XBOX" && xboxCandidate && (
+                            <span className="game-catalog-gamerscore">
+                              <b>{xboxCandidate.progress.earnedGamerscore}</b>
+                              <small>из</small>
+                              <b>{xboxCandidate.progress.totalGamerscore}</b>
+                              <small>G</small>
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -616,8 +758,12 @@ export function GamesPage() {
               </dd>
             </div>
             <div>
-              <dt>Достижения</dt>
-              <dd>{totalAchievements}</dd>
+              <dt>Достижения Steam</dt>
+              <dd>{steamAchievements}</dd>
+            </div>
+            <div>
+              <dt>Достижения Xbox</dt>
+              <dd>{xboxAchievements}</dd>
             </div>
             <div>
               <dt>Gamerscore</dt>
