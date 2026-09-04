@@ -31,6 +31,8 @@ public class UserGame {
     private long legacyPlaytimeMinutes;
     @Column(name = "steam_app_id")
     private Long steamAppId;
+    @Column(name = "xbox_title_id")
+    private Long xboxTitleId;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20)
     private UserContentStatus status = UserContentStatus.NOT_STARTED;
     @Column(name = "started_at")
@@ -58,6 +60,8 @@ public class UserGame {
     public long getLegacyPlaytimeMinutes() { return legacyPlaytimeMinutes; }
     public Long getSteamAppId() { return steamAppId; }
     public void linkSteamApp(long steamAppId) { this.steamAppId = steamAppId; }
+    public Long getXboxTitleId() { return xboxTitleId; }
+    public void linkXboxTitle(long xboxTitleId) { this.xboxTitleId = xboxTitleId; }
     public UserContentStatus getStatus() { return status; }
     public Instant getStartedAt() { return startedAt; }
     public Instant getCompletedAt() { return completedAt; }

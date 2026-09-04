@@ -61,6 +61,7 @@ public class XboxProgressService {
         return new XboxProgressResponse(p.getId(), p.getLibraryEntry().getId(), p.getTotalAchievements(),
                 p.getUnlockedAchievements(), percent(p.getUnlockedAchievements(), p.getTotalAchievements()),
                 p.getTotalGamerscore(), p.getEarnedGamerscore(),
-                percent(p.getEarnedGamerscore(), p.getTotalGamerscore()), p.getLastUpdatedAt());
+                percent(p.getEarnedGamerscore(), p.getTotalGamerscore()),
+                p.getLastUnlockedAt(), p.getLastUpdatedAt());
     }
 }

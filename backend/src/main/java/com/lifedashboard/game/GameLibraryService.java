@@ -120,6 +120,6 @@ public class GameLibraryService {
                 new ReferenceResponse(g.getSource().getId(), g.getSource().getCode(), g.getSource().getName(), g.getSource().getSourceType().name()),
                 g.getAccessType(), g.getEdition(), g.getAcquiredAt(), g.getNote(), g.getStatus(), u.getRating(),
                 u.isFavorite(), g.getStartedAt(), g.getCompletedAt(), u.getPersonalNote(),
-                g.getLegacyPlaytimeMinutes(), g.getSteamAppId());
+                g.getLegacyPlaytimeMinutes(), g.getSteamAppId(), g.getXboxTitleId());
     }
 }

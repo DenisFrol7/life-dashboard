@@ -19,6 +19,8 @@ public class XboxGameProgress {
     private Integer totalGamerscore;
     @Column(name = "earned_gamerscore", nullable = false)
     private Integer earnedGamerscore;
+    @Column(name = "last_unlocked_at")
+    private Instant lastUnlockedAt;
     @Column(name = "last_updated_at", nullable = false)
     private Instant lastUpdatedAt;
 
@@ -26,8 +28,14 @@ public class XboxGameProgress {
     public XboxGameProgress(UserGame libraryEntry) { this.libraryEntry = libraryEntry; }
     public void update(int totalAchievements, int unlockedAchievements, int totalGamerscore,
                        int earnedGamerscore, Instant lastUpdatedAt) {
+        update(totalAchievements, unlockedAchievements, totalGamerscore, earnedGamerscore,
+                lastUnlockedAt, lastUpdatedAt);
+    }
+    public void update(int totalAchievements, int unlockedAchievements, int totalGamerscore,
+                       int earnedGamerscore, Instant lastUnlockedAt, Instant lastUpdatedAt) {
         this.totalAchievements = totalAchievements; this.unlockedAchievements = unlockedAchievements;
         this.totalGamerscore = totalGamerscore; this.earnedGamerscore = earnedGamerscore;
+        this.lastUnlockedAt = lastUnlockedAt;
         this.lastUpdatedAt = lastUpdatedAt;
     }
     public Long getId() { return id; }
@@ -36,5 +44,6 @@ public class XboxGameProgress {
     public Integer getUnlockedAchievements() { return unlockedAchievements; }
     public Integer getTotalGamerscore() { return totalGamerscore; }
     public Integer getEarnedGamerscore() { return earnedGamerscore; }
+    public Instant getLastUnlockedAt() { return lastUnlockedAt; }
     public Instant getLastUpdatedAt() { return lastUpdatedAt; }
 }

@@ -26,6 +26,7 @@ import {
   getXboxProgress,
   putXboxProgress,
   syncSteamProgress,
+  syncXboxProgress,
   updateGameLibrary,
   updateGamePlaythrough,
   updateXboxAchievementGroup,
@@ -76,6 +77,9 @@ export function GameDetailsPage() {
   );
   const [sessions, setSessions] = useState<GameSession[]>([]);
   const [progress, setProgress] = useState<XboxProgress | null>(null);
+  const [syncingXbox, setSyncingXbox] = useState(false);
+  const [xboxError, setXboxError] = useState<string | null>(null);
+  const [xboxSyncNote, setXboxSyncNote] = useState<string | null>(null);
   const [steamProgress, setSteamProgress] = useState<SteamProgress | null>(null);
   const [syncingSteam, setSyncingSteam] = useState(false);
   const [steamError, setSteamError] = useState<string | null>(null);
@@ -155,6 +159,8 @@ export function GameDetailsPage() {
     let cancelled = false;
     setProgress(null);
     setAchievementGroups([]);
+    setXboxError(null);
+    setXboxSyncNote(null);
     setSteamProgress(null);
     setSteamError(null);
     setShowAchievementDetails(false);
@@ -260,6 +266,7 @@ export function GameDetailsPage() {
     latestDlcCompletionDate ??
     library?.completedAt ??
     selectedPlaythroughCompletionDate ??
+    progress?.lastUnlockedAt ??
     progress?.lastUpdatedAt;
   const dlcSummary = dlcAchievements.reduce(
     (sum, item) => ({
@@ -306,6 +313,34 @@ export function GameDetailsPage() {
       );
     } finally {
       setSyncingSteam(false);
+    }
+  };
+
+  const synchronizeXbox = async () => {
+    if (!library || !isXbox(library)) return;
+    setSyncingXbox(true);
+    setXboxError(null);
+    setXboxSyncNote(null);
+    try {
+      const synchronized = await syncXboxProgress(library.id);
+      setProgress(synchronized.progress);
+      if (!synchronized.manualDlcGroupsPreserved) {
+        setAchievementGroups(await getXboxAchievementGroups(library.id));
+      }
+      setXboxSyncNote(
+        synchronized.exactAchievementDetails
+          ? `Связано с Xbox: ${synchronized.xboxTitle}`
+          : `Связано с Xbox: ${synchronized.xboxTitle}. Для Xbox 360 доступны только общие значения без дат достижений.`,
+      );
+      if (synchronized.completionRecorded) await load();
+    } catch (reason) {
+      setXboxError(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось синхронизировать достижения Xbox",
+      );
+    } finally {
+      setSyncingXbox(false);
     }
   };
 
@@ -404,7 +439,22 @@ export function GameDetailsPage() {
       {xbox && (
         <section className="xbox-detail-row">
           <article className="detail-card xbox-progress-card">
-            <h2>Прогресс Xbox</h2>
+            <div className="steam-progress-heading">
+              <h2>Прогресс Xbox</h2>
+              <button
+                className="secondary-button icon-button"
+                disabled={syncingXbox}
+                onClick={() => void synchronizeXbox()}
+              >
+                <RefreshCw className={syncingXbox ? "spinning" : ""} />
+                {syncingXbox
+                  ? "Синхронизируем…"
+                  : progress
+                    ? "Обновить"
+                    : "Загрузить из Xbox"}
+              </button>
+            </div>
+            {xboxError && <div className="form-error">{xboxError}</div>}
             {progress ? (
               <div className="xbox-progress-columns">
                 <Progress
@@ -420,9 +470,10 @@ export function GameDetailsPage() {
               </div>
             ) : (
               <p className="muted">
-                Сначала укажите Xbox-прогресс в настройках игры.
+                Нажмите «Загрузить из Xbox» или укажите прогресс вручную в настройках игры.
               </p>
             )}
+            {xboxSyncNote && <small className="steam-sync-date">{xboxSyncNote}</small>}
           </article>
           <article className="detail-card achievement-summary">
             <h2>Достижения</h2>
@@ -457,7 +508,9 @@ export function GameDetailsPage() {
                   <span>
                     {completed100
                       ? formatDate(achievementCompletionDate)
-                      : lastAchievement
+                      : progress.lastUnlockedAt
+                        ? formatDate(progress.lastUnlockedAt)
+                        : lastAchievement
                         ? formatDate(lastAchievement.startedAt)
                         : formatDate(progress.lastUpdatedAt)}
                   </span>
@@ -649,6 +702,9 @@ export function GameDetailsPage() {
                   <small>{formatDate(item.completedAt)}</small>
                   {item.completionSource === "STEAM_ACHIEVEMENTS" && (
                     <small>Автоматически · 100% достижений Steam</small>
+                  )}
+                  {item.completionSource === "XBOX_ACHIEVEMENTS" && (
+                    <small>Автоматически · 100% достижений Xbox</small>
                   )}
                   {item.note && <small>{item.note}</small>}
                 </span>

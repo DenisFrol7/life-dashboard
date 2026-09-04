@@ -128,6 +128,7 @@ export type GameLibrary = {
   personalNote: string | null;
   legacyPlaytimeMinutes: number;
   steamAppId: number | null;
+  xboxTitleId: number | null;
 };
 export type GameLibraryInput = Pick<
   GameLibrary,
@@ -149,6 +150,7 @@ export type XboxProgress = {
   totalGamerscore: number;
   earnedGamerscore: number;
   gamerscorePercent: number;
+  lastUnlockedAt: string | null;
   lastUpdatedAt: string;
 };
 export type XboxProgressInput = Pick<
@@ -158,6 +160,15 @@ export type XboxProgressInput = Pick<
   | "totalGamerscore"
   | "earnedGamerscore"
 >;
+export type XboxProgressSyncResult = {
+  xboxTitleId: number;
+  xboxTitle: string;
+  exactAchievementDetails: boolean;
+  manualDlcGroupsPreserved: boolean;
+  lastUnlockedAt: string | null;
+  completionRecorded: boolean;
+  progress: XboxProgress;
+};
 export type SteamAchievement = {
   apiName: string;
   displayName: string;
@@ -234,7 +245,7 @@ export type GamePlaythrough = {
   playthroughNumber: number;
   completedAt: string;
   playtimeMinutes: number;
-  completionSource: "MANUAL" | "STEAM_ACHIEVEMENTS";
+  completionSource: "MANUAL" | "STEAM_ACHIEVEMENTS" | "XBOX_ACHIEVEMENTS";
   note: string | null;
 };
 export type GamePlaythroughInput = Pick<
@@ -360,6 +371,11 @@ export const putXboxProgress = (libraryId: number, input: XboxProgressInput) =>
     method: "PUT",
     body: JSON.stringify(input),
   });
+export const syncXboxProgress = (libraryId: number) =>
+  apiRequest<XboxProgressSyncResult>(
+    `/api/games/library/${libraryId}/xbox-progress/sync`,
+    { method: "POST" },
+  );
 export const getSteamProgress = async (libraryId: number) => {
   try {
     return await apiRequest<SteamProgress>(

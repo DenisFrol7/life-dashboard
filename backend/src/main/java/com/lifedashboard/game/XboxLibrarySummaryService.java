@@ -45,7 +45,7 @@ public class XboxLibrarySummaryService {
                 percent(progress.getUnlockedAchievements(), progress.getTotalAchievements()),
                 progress.getTotalGamerscore(), progress.getEarnedGamerscore(),
                 percent(progress.getEarnedGamerscore(), progress.getTotalGamerscore()),
-                progress.getLastUpdatedAt());
+                progress.getLastUnlockedAt(), progress.getLastUpdatedAt());
     }
 
     private XboxAchievementGroupResponse response(XboxAchievementGroup group) {

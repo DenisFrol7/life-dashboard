@@ -55,6 +55,16 @@ public class GamePlaythroughService {
         game.markCompleted(completedAt);
         return true;
     }
+    @Transactional
+    public boolean recordXboxAchievementCompletion(UserGame game, Instant completedAt) {
+        if (completedAt == null || playthroughs.existsByLibraryEntryId(game.getId())) return false;
+        GamePlaythrough result = new GamePlaythrough(game, playthroughs.maxNumber(game.getId()) + 1,
+                completedAt, game.getLegacyPlaytimeMinutes() + sessions.totalMinutes(game.getId(), userId),
+                GamePlaythroughSource.XBOX_ACHIEVEMENTS, null);
+        playthroughs.save(result);
+        game.markCompleted(completedAt);
+        return true;
+    }
     @Transactional public void delete(Long id) {
         playthroughs.delete(findPlaythrough(id));
     }
