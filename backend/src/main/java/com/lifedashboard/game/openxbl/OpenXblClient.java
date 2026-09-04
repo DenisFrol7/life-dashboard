@@ -59,10 +59,25 @@ public class OpenXblClient {
             return aggregateProgress(title);
         }
         try {
-            JsonNode root = client.get()
-                    .uri("/achievements/player/{xuid}/{titleId}", xuid, title.titleId())
-                    .retrieve().body(JsonNode.class);
-            OpenXblProgress detailed = parseModernProgress(title, root);
+            Map<String, OpenXblAchievement> achievements = new LinkedHashMap<>();
+            String continuationToken = null;
+            int page = 0;
+            do {
+                String token = continuationToken;
+                JsonNode root = client.get()
+                        .uri(uri -> {
+                            var builder = uri.path("/achievements/player/{xuid}/{titleId}");
+                            if (token != null) builder.queryParam("continuationToken", token);
+                            return builder.build(xuid, title.titleId());
+                        })
+                        .retrieve().body(JsonNode.class);
+                for (OpenXblAchievement achievement : parseModernAchievements(root)) {
+                    achievements.put(achievement.achievementId(), achievement);
+                }
+                continuationToken = continuationToken(root);
+                page++;
+            } while (continuationToken != null && page < 20);
+            OpenXblProgress detailed = progress(title, List.copyOf(achievements.values()));
             return detailed.totalAchievements() == 0 && title.totalGamerscore() > 0
                     ? aggregateProgress(title) : detailed;
         } catch (RestClientResponseException exception) {
@@ -128,28 +143,63 @@ public class OpenXblClient {
     }
 
     OpenXblProgress parseModernProgress(OpenXblTitle title, JsonNode root) {
+        return progress(title, parseModernAchievements(root));
+    }
+
+    private List<OpenXblAchievement> parseModernAchievements(JsonNode root) {
         JsonNode achievements = root == null ? null : root.path("content").path("achievements");
-        if (achievements == null || !achievements.isArray()) return aggregateProgress(title);
+        if (achievements == null || !achievements.isArray()) return List.of();
+        List<OpenXblAchievement> result = new ArrayList<>();
+        for (JsonNode achievement : achievements) {
+            String achievementId = text(achievement, "id");
+            if (achievementId == null) continue;
+            boolean unlocked = "Achieved".equalsIgnoreCase(text(achievement, "progressState"));
+            boolean hidden = achievement.path("isSecret").asBoolean();
+            String displayName = text(achievement, "name");
+            if (displayName == null) {
+                displayName = hidden && !unlocked
+                        ? "Скрытое достижение" : "Достижение " + achievementId;
+            }
+            String iconUrl = null;
+            for (JsonNode asset : achievement.path("mediaAssets")) {
+                if (!"Icon".equalsIgnoreCase(text(asset, "type"))) continue;
+                iconUrl = secureImage(text(asset, "url"));
+                if (iconUrl != null) break;
+            }
+            Instant unlockedAt = unlocked
+                    ? instant(achievement.path("progression"), "timeUnlocked") : null;
+            result.add(new OpenXblAchievement(achievementId, displayName,
+                    text(achievement, "description"), text(achievement, "lockedDescription"),
+                    iconUrl, gamerscore(achievement), hidden, unlocked, unlockedAt));
+        }
+        return List.copyOf(result);
+    }
+
+    private OpenXblProgress progress(OpenXblTitle title, List<OpenXblAchievement> achievements) {
         int total = 0;
         int unlocked = 0;
         int totalScore = 0;
         int earnedScore = 0;
         List<Instant> unlockDates = new ArrayList<>();
-        for (JsonNode achievement : achievements) {
+        for (OpenXblAchievement achievement : achievements) {
             total++;
-            int score = gamerscore(achievement);
+            int score = achievement.gamerscore();
             totalScore += score;
-            boolean achieved = "Achieved".equalsIgnoreCase(text(achievement, "progressState"));
-            if (achieved) {
+            if (achievement.unlocked()) {
                 unlocked++;
                 earnedScore += score;
-                Instant unlockedAt = instant(achievement.path("progression"), "timeUnlocked");
+                Instant unlockedAt = achievement.unlockedAt();
                 if (unlockedAt != null) unlockDates.add(unlockedAt);
             }
         }
         Instant lastUnlockedAt = unlockDates.stream().max(Comparator.naturalOrder()).orElse(null);
         return new OpenXblProgress(title.titleId(), total, unlocked, totalScore, earnedScore,
-                lastUnlockedAt, true);
+                lastUnlockedAt, true, achievements);
+    }
+
+    private String continuationToken(JsonNode root) {
+        JsonNode pagingInfo = root == null ? null : root.path("content").path("pagingInfo");
+        return pagingInfo == null ? null : text(pagingInfo, "continuationToken");
     }
 
     Map<Long, Long> parsePlaytimeMinutes(JsonNode root) {

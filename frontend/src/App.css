@@ -1273,6 +1273,8 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .steam-achievement.compact .steam-achievement-placeholder { width: 32px; height: 32px; border-radius: 5px; }
 .steam-achievement.compact strong { font-size: 10px; }
 .steam-achievement.compact time { font-size: 9px; }
+.xbox-achievement-meta { justify-items: end; }
+.xbox-achievement-meta b { color: #578066; font-size: 11px; white-space: nowrap; }
 .game-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr) minmax(300px, 34%); gap: 14px; }
 .library-detail-list { display: grid; gap: 0; margin: 0; }
 .library-detail-list > div { display: grid; grid-template-columns: 115px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid #edf0f2; }

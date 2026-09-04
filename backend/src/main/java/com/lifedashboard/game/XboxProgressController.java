@@ -5,6 +5,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @io.swagger.v3.oas.annotations.tags.Tag(name = "Games")
 @RequestMapping("/api/games/library/{libraryEntryId}/xbox-progress")
@@ -19,6 +21,10 @@ public class XboxProgressController {
             @Valid @RequestBody XboxProgressRequest request) { return service.put(libraryEntryId, request); }
     @GetMapping public XboxProgressResponse get(@PathVariable Long libraryEntryId) {
         return service.get(libraryEntryId);
+    }
+    @GetMapping("/achievements")
+    public List<XboxAchievementResponse> achievements(@PathVariable Long libraryEntryId) {
+        return service.getAchievements(libraryEntryId);
     }
     @PostMapping("/sync") public XboxProgressSyncResponse sync(@PathVariable Long libraryEntryId) {
         return syncService.sync(libraryEntryId);

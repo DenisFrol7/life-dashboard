@@ -22,6 +22,7 @@ import {
   getPlatforms,
   getSources,
   getSteamProgress,
+  getXboxAchievements,
   getXboxAchievementGroups,
   getXboxProgress,
   putXboxProgress,
@@ -39,6 +40,7 @@ import {
   type Reference,
   type SteamAchievement,
   type SteamProgress,
+  type XboxAchievement,
   type XboxAchievementGroup,
   type XboxAchievementGroupInput,
   type XboxProgress,
@@ -77,6 +79,7 @@ export function GameDetailsPage() {
   );
   const [sessions, setSessions] = useState<GameSession[]>([]);
   const [progress, setProgress] = useState<XboxProgress | null>(null);
+  const [xboxAchievements, setXboxAchievements] = useState<XboxAchievement[]>([]);
   const [syncingXbox, setSyncingXbox] = useState(false);
   const [xboxError, setXboxError] = useState<string | null>(null);
   const [xboxSyncNote, setXboxSyncNote] = useState<string | null>(null);
@@ -84,6 +87,7 @@ export function GameDetailsPage() {
   const [syncingSteam, setSyncingSteam] = useState(false);
   const [steamError, setSteamError] = useState<string | null>(null);
   const [showSteamAchievements, setShowSteamAchievements] = useState(false);
+  const [showXboxAchievements, setShowXboxAchievements] = useState(false);
   const [playthroughs, setPlaythroughs] = useState<GamePlaythrough[]>([]);
   const [editingPlaythrough, setEditingPlaythrough] = useState<
     GamePlaythrough | "new" | null
@@ -158,6 +162,7 @@ export function GameDetailsPage() {
     );
     let cancelled = false;
     setProgress(null);
+    setXboxAchievements([]);
     setAchievementGroups([]);
     setXboxError(null);
     setXboxSyncNote(null);
@@ -165,15 +170,18 @@ export function GameDetailsPage() {
     setSteamError(null);
     setShowAchievementDetails(false);
     setShowSteamAchievements(false);
+    setShowXboxAchievements(false);
     if (selectedLibrary && isXbox(selectedLibrary)) {
       void Promise.all([
         getXboxProgress(selectedLibrary.id),
         getXboxAchievementGroups(selectedLibrary.id),
+        getXboxAchievements(selectedLibrary.id),
       ])
-        .then(([xbox, groups]) => {
+        .then(([xbox, groups, achievements]) => {
           if (cancelled) return;
           setProgress(xbox);
           setAchievementGroups(groups);
+          setXboxAchievements(achievements);
         })
         .catch((reason) => {
           if (!cancelled)
@@ -286,6 +294,9 @@ export function GameDetailsPage() {
   const recentSteamAchievements = (steamProgress?.achievements ?? [])
     .filter((item) => item.unlocked)
     .slice(0, 3);
+  const recentXboxAchievements = xboxAchievements
+    .filter((item) => item.unlocked)
+    .slice(0, 3);
   const steamCompleted100 = Boolean(
     steamProgress &&
       steamProgress.totalAchievements > 0 &&
@@ -324,6 +335,7 @@ export function GameDetailsPage() {
     try {
       const synchronized = await syncXboxProgress(library.id);
       setProgress(synchronized.progress);
+      setXboxAchievements(await getXboxAchievements(library.id));
       if (!synchronized.manualDlcGroupsPreserved) {
         setAchievementGroups(await getXboxAchievementGroups(library.id));
       }
@@ -476,8 +488,40 @@ export function GameDetailsPage() {
             {xboxSyncNote && <small className="steam-sync-date">{xboxSyncNote}</small>}
           </article>
           <article className="detail-card achievement-summary">
-            <h2>Достижения</h2>
-            {progress ? (
+            <h2>{xboxAchievements.length ? "Достижения Xbox" : "Достижения"}</h2>
+            {progress && xboxAchievements.length ? (
+              <>
+                {recentXboxAchievements.length > 0 ? (
+                  <div className="steam-recent-achievements">
+                    {recentXboxAchievements.map((achievement) => (
+                      <XboxAchievementRow
+                        achievement={achievement}
+                        compact
+                        key={achievement.achievementId}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p>Полученных достижений пока нет.</p>
+                )}
+                <strong>
+                  {completed100
+                    ? "✓ Получено 100%"
+                    : `${progress.unlockedAchievements} из ${progress.totalAchievements} получено`}
+                </strong>
+                {progress.lastUnlockedAt && (
+                  <span>
+                    Последнее достижение: {formatDate(progress.lastUnlockedAt)}
+                  </span>
+                )}
+                <button
+                  className="achievement-details-button"
+                  onClick={() => setShowXboxAchievements(true)}
+                >
+                  Все достижения
+                </button>
+              </>
+            ) : progress ? (
               <>
                 <div className="achievement-compact-list">
                   {baseAchievements && (
@@ -779,6 +823,13 @@ export function GameDetailsPage() {
         <SteamAchievementsModal
           progress={steamProgress}
           onClose={() => setShowSteamAchievements(false)}
+        />
+      )}
+      {showXboxAchievements && progress && xboxAchievements.length > 0 && (
+        <XboxAchievementsModal
+          achievements={xboxAchievements}
+          progress={progress}
+          onClose={() => setShowXboxAchievements(false)}
         />
       )}
       {editingPlaythrough && library && (
@@ -1254,6 +1305,98 @@ function SteamAchievementsModal({
         </div>
       </section>
     </div>
+  );
+}
+
+function XboxAchievementsModal({
+  achievements,
+  progress,
+  onClose,
+}: {
+  achievements: XboxAchievement[];
+  progress: XboxProgress;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section className="steam-achievements-modal">
+        <div className="form-heading">
+          <div>
+            <p className="eyebrow">Xbox</p>
+            <h2>Достижения</h2>
+          </div>
+          <button type="button" aria-label="Закрыть" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <div className="steam-achievements-modal-summary">
+          <strong>
+            {progress.unlockedAchievements} / {progress.totalAchievements}
+          </strong>
+          <span>
+            {Math.round(progress.achievementPercent)}% · {progress.earnedGamerscore} /{" "}
+            {progress.totalGamerscore} G
+          </span>
+        </div>
+        <div className="steam-achievement-list">
+          {achievements.map((achievement) => (
+            <XboxAchievementRow
+              achievement={achievement}
+              key={achievement.achievementId}
+            />
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function XboxAchievementRow({
+  achievement,
+  compact = false,
+}: {
+  achievement: XboxAchievement;
+  compact?: boolean;
+}) {
+  return (
+    <article
+      className={`steam-achievement xbox-achievement ${achievement.unlocked ? "unlocked" : "locked"}${compact ? " compact" : ""}`}
+    >
+      {achievement.iconUrl ? (
+        <img src={achievement.iconUrl} alt="" loading="lazy" />
+      ) : (
+        <span className="steam-achievement-placeholder" aria-hidden="true">
+          ◇
+        </span>
+      )}
+      <div>
+        <strong>
+          {achievement.hidden && !achievement.unlocked
+            ? "Скрытое достижение"
+            : achievement.displayName}
+        </strong>
+        {!compact && (
+          <p>
+            {achievement.hidden && !achievement.unlocked
+              ? achievement.lockedDescription || "Описание скрыто"
+              : achievement.description || achievement.lockedDescription || "Без описания"}
+          </p>
+        )}
+      </div>
+      <div className="xbox-achievement-meta">
+        {!compact && <b>{achievement.gamerscore} G</b>}
+        <time>
+          {achievement.unlocked
+            ? formatDate(achievement.unlockedAt)
+            : "Не получено"}
+        </time>
+      </div>
+    </article>
   );
 }
 

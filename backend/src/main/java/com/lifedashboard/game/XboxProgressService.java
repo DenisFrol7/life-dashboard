@@ -6,18 +6,24 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
+import java.util.List;
+
 @Service
 @Transactional(readOnly = true)
 public class XboxProgressService {
     private final XboxGameProgressRepository progressRepository;
+    private final XboxAchievementRepository achievementRepository;
     private final UserGameRepository gameRepository;
     private final XboxAchievementGroupService achievementGroups;
     private final long userId;
 
     public XboxProgressService(XboxGameProgressRepository progressRepository,
-            UserGameRepository gameRepository, XboxAchievementGroupService achievementGroups,
+            XboxAchievementRepository achievementRepository, UserGameRepository gameRepository,
+            XboxAchievementGroupService achievementGroups,
             @Value("${app.default-user-id}") long userId) {
-        this.progressRepository = progressRepository; this.gameRepository = gameRepository;
+        this.progressRepository = progressRepository; this.achievementRepository = achievementRepository;
+        this.gameRepository = gameRepository;
         this.achievementGroups = achievementGroups; this.userId = userId;
     }
 
@@ -32,6 +38,22 @@ public class XboxProgressService {
         findXboxGame(libraryEntryId);
         return response(progressRepository.findByLibraryEntryId(libraryEntryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Прогресс Xbox не найден")));
+    }
+    public List<XboxAchievementResponse> getAchievements(Long libraryEntryId) {
+        findXboxGame(libraryEntryId);
+        XboxGameProgress progress = progressRepository.findByLibraryEntryId(libraryEntryId)
+                .orElseThrow(() -> new ResourceNotFoundException("Прогресс Xbox не найден"));
+        return achievementRepository.findAllByProgressId(progress.getId()).stream()
+                .sorted(Comparator.comparing(XboxAchievement::isUnlocked).reversed()
+                        .thenComparing(XboxAchievement::getUnlockedAt,
+                                Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(XboxAchievement::getDisplayName,
+                                String.CASE_INSENSITIVE_ORDER))
+                .map(item -> new XboxAchievementResponse(item.getAchievementId(),
+                        item.getDisplayName(), item.getDescription(), item.getLockedDescription(),
+                        item.getIconUrl(), item.getGamerscore(), item.isHidden(),
+                        item.isUnlocked(), item.getUnlockedAt()))
+                .toList();
     }
     @Transactional
     public void delete(Long libraryEntryId) {

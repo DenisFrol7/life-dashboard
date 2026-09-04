@@ -200,6 +200,17 @@ export type XboxProgress = {
   lastUnlockedAt: string | null;
   lastUpdatedAt: string;
 };
+export type XboxAchievement = {
+  achievementId: string;
+  displayName: string;
+  description: string | null;
+  lockedDescription: string | null;
+  iconUrl: string | null;
+  gamerscore: number;
+  hidden: boolean;
+  unlocked: boolean;
+  unlockedAt: string | null;
+};
 export type XboxProgressInput = Pick<
   XboxProgress,
   | "totalAchievements"
@@ -445,6 +456,16 @@ export const getXboxProgress = async (libraryId: number) => {
   } catch (error) {
     if (error instanceof ApiClientError && error.payload.status === 404)
       return null;
+    throw error;
+  }
+};
+export const getXboxAchievements = async (libraryId: number) => {
+  try {
+    return await apiRequest<XboxAchievement[]>(
+      `/api/games/library/${libraryId}/xbox-progress/achievements`,
+    );
+  } catch (error) {
+    if (error instanceof ApiClientError && error.payload.status === 404) return [];
     throw error;
   }
 };

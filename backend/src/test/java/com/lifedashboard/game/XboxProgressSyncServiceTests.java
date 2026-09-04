@@ -4,6 +4,7 @@ import com.lifedashboard.content.ContentItem;
 import com.lifedashboard.content.UserContent;
 import com.lifedashboard.game.dto.XboxProgressSyncResponse;
 import com.lifedashboard.game.openxbl.OpenXblClient;
+import com.lifedashboard.game.openxbl.OpenXblAchievement;
 import com.lifedashboard.game.openxbl.OpenXblProgress;
 import com.lifedashboard.game.openxbl.OpenXblTitle;
 import com.lifedashboard.game.openxbl.OpenXblTitleHistory;
@@ -31,6 +32,7 @@ import static org.mockito.Mockito.when;
 class XboxProgressSyncServiceTests {
     @Mock UserGameRepository games;
     @Mock XboxGameProgressRepository progress;
+    @Mock XboxAchievementRepository achievements;
     @Mock XboxAchievementGroupRepository groups;
     @Mock XboxAchievementGroupService achievementGroups;
     @Mock GamePlaythroughService playthroughs;
@@ -46,7 +48,10 @@ class XboxProgressSyncServiceTests {
         when(games.findByIdAndUserContentUserId(7L, 1L)).thenReturn(Optional.of(game));
         when(openXbl.titleHistory()).thenReturn(new OpenXblTitleHistory("xuid", List.of(title)));
         when(openXbl.progress("xuid", title)).thenReturn(
-                new OpenXblProgress(title.titleId(), 25, 25, 1000, 1000, lastUnlocked, true));
+                new OpenXblProgress(title.titleId(), 25, 25, 1000, 1000, lastUnlocked, true,
+                        List.of(new OpenXblAchievement("1", "Story complete", "Finish the story",
+                                "Locked", "https://images.example/achievement.png", 100,
+                                false, true, lastUnlocked))));
         when(groups.findAllByLibraryEntryIdOrderByGroupTypeAscIdAsc(7L)).thenReturn(List.of());
         when(progress.findByLibraryEntryId(7L)).thenReturn(Optional.of(stored));
         when(progress.save(stored)).thenReturn(stored);
@@ -61,6 +66,7 @@ class XboxProgressSyncServiceTests {
         verify(game).linkXboxTitle(2117095676L);
         verify(achievementGroups).putBase(game, new com.lifedashboard.game.dto.XboxProgressRequest(
                 25, 25, 1000, 1000));
+        verify(achievements).saveAll(any());
     }
 
     @Test
@@ -122,7 +128,7 @@ class XboxProgressSyncServiceTests {
     }
 
     private XboxProgressSyncService service() {
-        return new XboxProgressSyncService(games, progress, groups, achievementGroups,
+        return new XboxProgressSyncService(games, progress, achievements, groups, achievementGroups,
                 playthroughs, openXbl, 1L);
     }
 }

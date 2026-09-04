@@ -6,6 +6,7 @@ import com.lifedashboard.content.ContentItem;
 import com.lifedashboard.game.dto.XboxProgressRequest;
 import com.lifedashboard.game.dto.XboxProgressResponse;
 import com.lifedashboard.game.dto.XboxProgressSyncResponse;
+import com.lifedashboard.game.openxbl.OpenXblAchievement;
 import com.lifedashboard.game.openxbl.OpenXblClient;
 import com.lifedashboard.game.openxbl.OpenXblProgress;
 import com.lifedashboard.game.openxbl.OpenXblTitle;
@@ -16,10 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -28,6 +32,7 @@ import java.util.Set;
 public class XboxProgressSyncService {
     private final UserGameRepository games;
     private final XboxGameProgressRepository progress;
+    private final XboxAchievementRepository achievements;
     private final XboxAchievementGroupRepository groups;
     private final XboxAchievementGroupService achievementGroups;
     private final GamePlaythroughService playthroughs;
@@ -35,11 +40,13 @@ public class XboxProgressSyncService {
     private final long userId;
 
     public XboxProgressSyncService(UserGameRepository games,
-            XboxGameProgressRepository progress, XboxAchievementGroupRepository groups,
+            XboxGameProgressRepository progress, XboxAchievementRepository achievements,
+            XboxAchievementGroupRepository groups,
             XboxAchievementGroupService achievementGroups, GamePlaythroughService playthroughs,
             OpenXblClient openXbl, @Value("${app.default-user-id}") long userId) {
         this.games = games;
         this.progress = progress;
+        this.achievements = achievements;
         this.groups = groups;
         this.achievementGroups = achievementGroups;
         this.playthroughs = playthroughs;
@@ -82,6 +89,9 @@ public class XboxProgressSyncService {
                     latest(saved.getLastUnlockedAt(), remote.lastUnlockedAt()), Instant.now());
         }
         saved = progress.save(saved);
+        if (remote.exactAchievementDetails()) {
+            synchronizeAchievements(saved, remote.achievements());
+        }
 
         boolean completionRecorded = remote.exactAchievementDetails()
                 && remote.totalAchievements() > 0
@@ -150,7 +160,7 @@ public class XboxProgressSyncService {
         int totalGamerscore = Math.max(source.totalGamerscore(), source.earnedGamerscore());
         return new OpenXblProgress(source.titleId(), totalAchievements,
                 source.unlockedAchievements(), totalGamerscore, source.earnedGamerscore(),
-                source.lastUnlockedAt(), source.exactAchievementDetails());
+                source.lastUnlockedAt(), source.exactAchievementDetails(), source.achievements());
     }
 
     private OpenXblProgress merge(OpenXblProgress remote, XboxGameProgress existing) {
@@ -164,7 +174,26 @@ public class XboxProgressSyncService {
         return new OpenXblProgress(remote.titleId(), totalAchievements, unlockedAchievements,
                 totalGamerscore, earnedGamerscore,
                 latest(existing.getLastUnlockedAt(), remote.lastUnlockedAt()),
-                remote.exactAchievementDetails());
+                remote.exactAchievementDetails(), remote.achievements());
+    }
+
+    private void synchronizeAchievements(XboxGameProgress saved,
+            List<OpenXblAchievement> source) {
+        Map<String, XboxAchievement> existing = new HashMap<>();
+        for (XboxAchievement achievement : achievements.findAllByProgressId(saved.getId())) {
+            existing.put(achievement.getAchievementId(), achievement);
+        }
+        List<XboxAchievement> synchronizedAchievements = new ArrayList<>();
+        for (OpenXblAchievement item : source) {
+            XboxAchievement achievement = existing.remove(item.achievementId());
+            if (achievement == null) {
+                achievement = new XboxAchievement(saved, item.achievementId());
+            }
+            achievement.update(item);
+            synchronizedAchievements.add(achievement);
+        }
+        achievements.deleteAll(existing.values());
+        achievements.saveAll(synchronizedAchievements);
     }
 
     private Instant latest(Instant first, Instant second) {

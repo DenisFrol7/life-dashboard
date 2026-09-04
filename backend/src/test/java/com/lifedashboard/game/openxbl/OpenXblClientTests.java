@@ -41,11 +41,15 @@ class OpenXblClientTests {
                 java.util.List.of("XboxSeries"), 2, 0, 300, 1000, 2, null);
         OpenXblProgress progress = client.parseModernProgress(title, mapper.readTree("""
                 {"content":{"achievements":[
-                  {"progressState":"Achieved","progression":{"timeUnlocked":"2026-05-15T19:47:12.377Z"},
+                  {"id":"1","name":"Первое достижение","description":"Описание",
+                   "isSecret":false,"mediaAssets":[{"type":"Icon","url":"http://images.example/one.png"}],
+                   "progressState":"Achieved","progression":{"timeUnlocked":"2026-05-15T19:47:12.377Z"},
                    "rewards":[{"type":"Gamerscore","value":"100"}]},
-                  {"progressState":"Achieved","progression":{"timeUnlocked":"2026-05-16T00:31:04.903Z"},
+                  {"id":"2","name":"Второе достижение","progressState":"Achieved",
+                   "progression":{"timeUnlocked":"2026-05-16T00:31:04.903Z"},
                    "rewards":[{"type":"Gamerscore","value":"200"}]},
-                  {"progressState":"NotStarted","progression":{},
+                  {"id":"3","name":"Секрет","lockedDescription":"Описание скрыто",
+                   "isSecret":true,"progressState":"NotStarted","progression":{},
                    "rewards":[{"type":"Gamerscore","value":"50"}]}
                 ]}}
                 """));
@@ -56,6 +60,12 @@ class OpenXblClientTests {
         assertEquals(300, progress.earnedGamerscore());
         assertEquals(Instant.parse("2026-05-16T00:31:04.903Z"), progress.lastUnlockedAt());
         assertTrue(progress.exactAchievementDetails());
+        assertEquals(3, progress.achievements().size());
+        assertEquals("Первое достижение", progress.achievements().getFirst().displayName());
+        assertEquals("https://images.example/one.png", progress.achievements().getFirst().iconUrl());
+        assertEquals(100, progress.achievements().getFirst().gamerscore());
+        assertTrue(progress.achievements().get(2).hidden());
+        assertFalse(progress.achievements().get(2).unlocked());
     }
 
     @Test
