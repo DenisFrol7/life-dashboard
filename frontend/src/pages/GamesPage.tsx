@@ -32,6 +32,7 @@ import {
   searchRawgGames,
   searchSteamGridDbGames,
   syncRecentSteamProgress,
+  syncLinkedXboxProgress,
   updateGame,
   updateGameLibrary,
   updateRawgGame,
@@ -50,6 +51,7 @@ import {
   type SteamImportPreview,
   type SteamLibrarySummary,
   type SteamRecentSyncResult,
+  type XboxBulkSyncResult,
   type XboxAchievementGroup,
   type XboxProgress,
   type XboxProgressInput,
@@ -126,6 +128,9 @@ export function GamesPage() {
   const [syncingSteamRecent, setSyncingSteamRecent] = useState(false);
   const [steamRecentResult, setSteamRecentResult] =
     useState<SteamRecentSyncResult | null>(null);
+  const [syncingXbox, setSyncingXbox] = useState(false);
+  const [xboxSyncResult, setXboxSyncResult] =
+    useState<XboxBulkSyncResult | null>(null);
   const [achievementProviderByGame, setAchievementProviderByGame] = useState<
     Record<number, AchievementProvider>
   >({});
@@ -301,6 +306,31 @@ export function GamesPage() {
       setSyncingSteamRecent(false);
     }
   };
+  const updateXboxProgress = async () => {
+    setSyncingXbox(true);
+    try {
+      const result = await syncLinkedXboxProgress();
+      setXboxSyncResult(result);
+      if (result.updated + result.initialized + result.completionsRecorded > 0)
+        await load();
+      const message =
+        `Xbox: обновлено ${result.updated}, впервые загружено ${result.initialized}, ` +
+        `уже актуально ${result.upToDate}, без связи ${result.skippedUnlinked}`;
+      showToast(
+        result.failed > 0 ? `${message}, ошибок ${result.failed}` : message,
+        result.failed > 0 ? "error" : "success",
+      );
+    } catch (reason) {
+      showToast(
+        reason instanceof Error
+          ? reason.message
+          : "Не удалось обновить достижения Xbox",
+        "error",
+      );
+    } finally {
+      setSyncingXbox(false);
+    }
+  };
   if (loading) return <LoadingState message="Загружаем игры…" />;
   if (error)
     return (
@@ -373,6 +403,15 @@ export function GamesPage() {
         </select>
         <button
           className="secondary-button icon-button steam-import-button"
+          disabled={syncingXbox || xboxGames === 0}
+          onClick={() => void updateXboxProgress()}
+          title="Обновить достижения связанных Xbox-игр"
+        >
+          <RefreshCw className={syncingXbox ? "spinning" : undefined} />
+          {syncingXbox ? "Обновляем Xbox…" : "Обновить Xbox"}
+        </button>
+        <button
+          className="secondary-button icon-button steam-import-button"
           disabled={syncingSteamRecent || steamGames === 0}
           onClick={() => void updateRecentSteamProgress()}
           title="Обновить недавние игры и загрузить достижения для 10 новых"
@@ -397,6 +436,33 @@ export function GamesPage() {
       </section>
       <section className="series-catalog-layout">
         <div className="series-catalog-main">
+          {xboxSyncResult && (
+            <div
+              className={`notice steam-recent-sync-summary${xboxSyncResult.failed ? " error" : ""}`}
+            >
+              <strong>Достижения Xbox проверены</strong>
+              <span>
+                Связано: {xboxSyncResult.linkedCopies} из {xboxSyncResult.totalXboxCopies} ·
+                обновлено: {xboxSyncResult.updated} · впервые загружено:{" "}
+                {xboxSyncResult.initialized} · уже актуально: {xboxSyncResult.upToDate}
+              </span>
+              {xboxSyncResult.skippedUnlinked > 0 && (
+                <span>Без связи с Xbox: {xboxSyncResult.skippedUnlinked}</span>
+              )}
+              {xboxSyncResult.completionsRecorded > 0 && (
+                <span>
+                  Добавлено прохождений: {xboxSyncResult.completionsRecorded}
+                </span>
+              )}
+              {xboxSyncResult.games
+                .filter((item) => item.status === "FAILED")
+                .map((item) => (
+                  <small key={item.libraryEntryId}>
+                    {item.title}: {item.message}
+                  </small>
+                ))}
+            </div>
+          )}
           {steamRecentResult && (
             <div
               className={`notice steam-recent-sync-summary${steamRecentResult.failed ? " error" : ""}`}

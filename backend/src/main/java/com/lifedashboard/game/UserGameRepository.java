@@ -17,6 +17,10 @@ public interface UserGameRepository extends JpaRepository<UserGame, Long> {
            "join g.source s where uc.user.id=:userId and s.code='STEAM' " +
            "and g.steamAppId is not null order by g.id")
     List<UserGame> findSteamCopies(@Param("userId") Long userId);
+    @Query("select g from UserGame g join fetch g.userContent uc join fetch uc.content " +
+           "join fetch g.platform p where uc.user.id=:userId " +
+           "and (p.code like 'XBOX_%' or p.code='ORIGINAL_XBOX') order by g.id")
+    List<UserGame> findXboxCopies(@Param("userId") Long userId);
     @Modifying
     @Transactional
     @Query("update UserGame g set g.legacyPlaytimeMinutes=:playtimeMinutes " +

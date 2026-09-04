@@ -49,8 +49,13 @@ public class XboxProgressSyncService {
 
     @Transactional
     public XboxProgressSyncResponse sync(Long libraryEntryId) {
-        UserGame game = findXboxGame(libraryEntryId);
         OpenXblTitleHistory history = openXbl.titleHistory();
+        return sync(libraryEntryId, history);
+    }
+
+    @Transactional
+    public XboxProgressSyncResponse sync(Long libraryEntryId, OpenXblTitleHistory history) {
+        UserGame game = findXboxGame(libraryEntryId);
         OpenXblTitle title = findTitle(game, history.titles());
         if (game.getXboxTitleId() == null) game.linkXboxTitle(title.titleId());
 

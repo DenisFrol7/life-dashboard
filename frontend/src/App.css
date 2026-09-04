@@ -1236,6 +1236,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .achievement-group-form label { display: grid; gap: 5px; color: #5f675f; font-size: 10px; font-weight: 700; }
 .achievement-group-form input { width: 100%; padding: 9px; border: 1px solid #d9dfe2; border-radius: 8px; }
 .achievement-group-form > div:not(.form-buttons) { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.xbox-progress-card,
 .steam-progress-card { display: grid; align-content: start; gap: 12px; }
 .steam-progress-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .steam-progress-heading h2 { margin: 0; }

@@ -169,6 +169,26 @@ export type XboxProgressSyncResult = {
   completionRecorded: boolean;
   progress: XboxProgress;
 };
+export type XboxBulkSyncGame = {
+  libraryEntryId: number;
+  xboxTitleId: number;
+  title: string;
+  status: "UPDATED" | "INITIALIZED" | "UP_TO_DATE" | "FAILED";
+  unlockedAchievements: number | null;
+  totalAchievements: number | null;
+  message: string | null;
+};
+export type XboxBulkSyncResult = {
+  totalXboxCopies: number;
+  linkedCopies: number;
+  updated: number;
+  initialized: number;
+  upToDate: number;
+  skippedUnlinked: number;
+  failed: number;
+  completionsRecorded: number;
+  games: XboxBulkSyncGame[];
+};
 export type SteamAchievement = {
   apiName: string;
   displayName: string;
@@ -376,6 +396,10 @@ export const syncXboxProgress = (libraryId: number) =>
     `/api/games/library/${libraryId}/xbox-progress/sync`,
     { method: "POST" },
   );
+export const syncLinkedXboxProgress = () =>
+  apiRequest<XboxBulkSyncResult>("/api/games/xbox-progress/sync-linked", {
+    method: "POST",
+  });
 export const getSteamProgress = async (libraryId: number) => {
   try {
     return await apiRequest<SteamProgress>(
