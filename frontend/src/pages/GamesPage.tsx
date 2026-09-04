@@ -6,7 +6,7 @@ import {
   type FormEvent,
 } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Download, Plus, RefreshCw, Search, X } from "lucide-react";
+import { Download, ListChecks, Plus, RefreshCw, Search, X } from "lucide-react";
 import {
   createGame,
   createGameLibrary,
@@ -101,6 +101,17 @@ const emptyProgress: XboxProgressInput = {
 const isXbox = (code: string) =>
   code.startsWith("XBOX_") || code === "ORIGINAL_XBOX";
 type AchievementProvider = "XBOX" | "STEAM";
+type GameQualityIssueKind =
+  | "RAWG"
+  | "COVER"
+  | "STEAM_LINK"
+  | "XBOX_LINK"
+  | "STEAM_PROGRESS"
+  | "XBOX_PROGRESS";
+type GameQualityRow = {
+  game: Game;
+  issues: GameQualityIssueKind[];
+};
 type GameFilters = {
   query: string;
   status: LibraryStatus | "GAME_PASS" | "";
@@ -109,6 +120,16 @@ type GameFilters = {
 };
 
 const GAME_FILTERS_STORAGE_KEY = "life-dashboard.games.filters";
+const GAME_VISIBLE_COUNT_STORAGE_KEY = "life-dashboard.games.visible-count";
+const GAME_PAGE_SIZE = 50;
+const gameQualityIssueLabels: Record<GameQualityIssueKind, string> = {
+  RAWG: "Нет RAWG",
+  COVER: "Нет вертикальной обложки",
+  STEAM_LINK: "Steam не привязан",
+  XBOX_LINK: "Xbox не привязан",
+  STEAM_PROGRESS: "Steam-достижения не проверены",
+  XBOX_PROGRESS: "Xbox-достижения не проверены",
+};
 const gameFilterStatuses = new Set<LibraryStatus | "GAME_PASS" | "">([
   "",
   "NOT_STARTED",
@@ -145,6 +166,13 @@ function readGameFilters(): GameFilters {
   }
 }
 
+function readVisibleGameCount() {
+  const saved = Number(sessionStorage.getItem(GAME_VISIBLE_COUNT_STORAGE_KEY));
+  return Number.isInteger(saved) && saved >= GAME_PAGE_SIZE
+    ? saved
+    : GAME_PAGE_SIZE;
+}
+
 function newestBy<T>(items: T[], timestamp: (item: T) => string) {
   return items.reduce<T | undefined>((latest, item) => {
     if (!latest) return item;
@@ -176,6 +204,7 @@ export function GamesPage() {
   >(null);
   const [steamImportOpen, setSteamImportOpen] = useState(false);
   const [xboxImportOpen, setXboxImportOpen] = useState(false);
+  const [qualityCheckOpen, setQualityCheckOpen] = useState(false);
   const [syncingSteamRecent, setSyncingSteamRecent] = useState(false);
   const [steamRecentResult, setSteamRecentResult] =
     useState<SteamRecentSyncResult | null>(null);
@@ -191,6 +220,7 @@ export function GamesPage() {
   );
   const [platform, setPlatform] = useState(savedFilters.platform);
   const [source, setSource] = useState(savedFilters.source);
+  const [visibleCount, setVisibleCount] = useState(readVisibleGameCount);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const load = useCallback(async () => {
@@ -278,6 +308,16 @@ export function GamesPage() {
     }
   }, [platform, query, source, status]);
   useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        GAME_VISIBLE_COUNT_STORAGE_KEY,
+        String(visibleCount),
+      );
+    } catch {
+      // Количество показанных игр сбросится после возврата, если хранилище недоступно.
+    }
+  }, [visibleCount]);
+  useEffect(() => {
     const editId = Number(searchParams.get("edit"));
     const game = games.find((item) => item.id === editId);
     if (game) {
@@ -311,6 +351,57 @@ export function GamesPage() {
       );
     });
   }, [games, library, libraryEntries, platform, query, source, status]);
+  const visibleGames = visible.slice(0, visibleCount);
+  const qualityRows = useMemo<GameQualityRow[]>(() => {
+    const libraryContentIds = new Set(
+      libraryEntries.map((entry) => entry.contentId),
+    );
+    return games
+      .filter((game) => libraryContentIds.has(game.id))
+      .map((game) => {
+        const copies = libraryEntries.filter(
+          (entry) => entry.contentId === game.id,
+        );
+        const issues: GameQualityIssueKind[] = [];
+        if (game.rawgId == null && !game.rawgSlug) issues.push("RAWG");
+        if (!game.coverUrl) issues.push("COVER");
+        if (
+          copies.some(
+            (entry) => entry.source.code === "STEAM" && entry.steamAppId == null,
+          )
+        )
+          issues.push("STEAM_LINK");
+        if (
+          copies.some((entry) => isXbox(entry.platform.code) && entry.xboxTitleId == null)
+        )
+          issues.push("XBOX_LINK");
+        if (
+          copies.some(
+            (entry) =>
+              entry.source.code === "STEAM" &&
+              entry.steamAppId != null &&
+              steam[entry.id] == null,
+          )
+        )
+          issues.push("STEAM_PROGRESS");
+        if (
+          copies.some(
+            (entry) =>
+              isXbox(entry.platform.code) &&
+              entry.xboxTitleId != null &&
+              xbox[entry.id] == null,
+          )
+        )
+          issues.push("XBOX_PROGRESS");
+        return { game, issues };
+      })
+      .filter((row) => row.issues.length > 0)
+      .sort(
+        (left, right) =>
+          right.issues.length - left.issues.length ||
+          left.game.title.localeCompare(right.game.title, "ru"),
+      );
+  }, [games, libraryEntries, steam, xbox]);
   const sessionPlaytime = sessions.reduce(
     (sum, item) => sum + item.durationMinutes,
     0,
@@ -435,7 +526,10 @@ export function GamesPage() {
             <button
               key={value || "all"}
               className={status === value ? "active" : ""}
-              onClick={() => setStatus(value)}
+              onClick={() => {
+                setStatus(value);
+                setVisibleCount(GAME_PAGE_SIZE);
+              }}
             >
               {label}
             </button>
@@ -447,14 +541,20 @@ export function GamesPage() {
           </span>
           <input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setVisibleCount(GAME_PAGE_SIZE);
+            }}
             placeholder="Найти игру"
           />
         </div>
         <select
           className="game-platform-filter"
           value={platform}
-          onChange={(event) => setPlatform(event.target.value)}
+          onChange={(event) => {
+            setPlatform(event.target.value);
+            setVisibleCount(GAME_PAGE_SIZE);
+          }}
         >
           <option value="">Все платформы</option>
           {platforms.map((item) => (
@@ -466,7 +566,10 @@ export function GamesPage() {
         <select
           className="game-platform-filter game-source-filter"
           value={source}
-          onChange={(event) => setSource(event.target.value)}
+          onChange={(event) => {
+            setSource(event.target.value);
+            setVisibleCount(GAME_PAGE_SIZE);
+          }}
         >
           <option value="">Все источники</option>
           {sources.map((item) => (
@@ -607,8 +710,9 @@ export function GamesPage() {
               <p>Добавьте первую игру в каталог.</p>
             </div>
           ) : (
-            <section className="movie-grid series-catalog-grid">
-              {visible.map((game) => {
+            <>
+              <section className="movie-grid series-catalog-grid">
+              {visibleGames.map((game) => {
                 const entry = library[game.id];
                 const copies = libraryEntries.filter(
                   (item) => item.contentId === game.id,
@@ -826,7 +930,18 @@ export function GamesPage() {
                   </article>
                 );
               })}
-            </section>
+              </section>
+              {visibleCount < visible.length && (
+                <button
+                  className="secondary-button movie-load-more"
+                  onClick={() =>
+                    setVisibleCount((current) => current + GAME_PAGE_SIZE)
+                  }
+                >
+                  Показать ещё 50
+                </button>
+              )}
+            </>
           )}
         </div>
         <aside className="series-statistics">
@@ -934,9 +1049,17 @@ export function GamesPage() {
               <dd>{totalGamerscore} G</dd>
             </div>
           </dl>
+          <button
+            className="secondary-button icon-button series-catalog-update"
+            onClick={() => setQualityCheckOpen(true)}
+          >
+            <ListChecks />
+            Проверить библиотеку
+            {qualityRows.length > 0 && <b>{qualityRows.length}</b>}
+          </button>
         </aside>
       </section>
-      {visible.some((game) => game.rawgSlug) && (
+      {visibleGames.some((game) => game.rawgSlug) && (
         <a
           className="rawg-attribution rawg-catalog-attribution"
           href="https://rawg.io"
@@ -1040,6 +1163,179 @@ export function GamesPage() {
           }}
         />
       )}
+      {qualityCheckOpen && (
+        <GameQualityDialog
+          rows={qualityRows}
+          totalGames={new Set(libraryEntries.map((entry) => entry.contentId)).size}
+          onClose={() => setQualityCheckOpen(false)}
+          onOpenGame={(gameId) => {
+            setQualityCheckOpen(false);
+            navigate(`/games/${gameId}`);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function GameQualityDialog({
+  rows,
+  totalGames,
+  onClose,
+  onOpenGame,
+}: {
+  rows: GameQualityRow[];
+  totalGames: number;
+  onClose: () => void;
+  onOpenGame: (gameId: number) => void;
+}) {
+  const [filter, setFilter] = useState<GameQualityIssueKind | "ALL">("ALL");
+  const [query, setQuery] = useState("");
+  const [visibleCount, setVisibleCount] = useState(GAME_PAGE_SIZE);
+  const issueCount = (kind: GameQualityIssueKind) =>
+    rows.filter((row) => row.issues.includes(kind)).length;
+  const linkedIssues = rows.filter((row) =>
+    row.issues.some((issue) => issue === "STEAM_LINK" || issue === "XBOX_LINK"),
+  ).length;
+  const progressIssues = rows.filter((row) =>
+    row.issues.some(
+      (issue) => issue === "STEAM_PROGRESS" || issue === "XBOX_PROGRESS",
+    ),
+  ).length;
+  const normalizedQuery = query.trim().toLocaleLowerCase("ru-RU");
+  const filtered = rows.filter(
+    (row) =>
+      (filter === "ALL" || row.issues.includes(filter)) &&
+      (!normalizedQuery ||
+        row.game.title.toLocaleLowerCase("ru-RU").includes(normalizedQuery)),
+  );
+  const visibleRows = filtered.slice(0, visibleCount);
+  const setQualityFilter = (value: GameQualityIssueKind | "ALL") => {
+    setFilter(value);
+    setVisibleCount(GAME_PAGE_SIZE);
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <section className="game-quality-dialog">
+        <div className="form-heading">
+          <div>
+            <p className="eyebrow">Контроль данных</p>
+            <h2>Проверка игровой библиотеки</h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Закрыть">
+            ×
+          </button>
+        </div>
+        <p className="game-quality-description">
+          Проверено {totalGames} игр. Откройте игру из списка, чтобы дополнить
+          данные или выполнить синхронизацию.
+        </p>
+        <div className="game-quality-summary">
+          <div>
+            <span>Требуют внимания</span>
+            <strong>{rows.length}</strong>
+          </div>
+          <div>
+            <span>Без RAWG</span>
+            <strong>{issueCount("RAWG")}</strong>
+          </div>
+          <div>
+            <span>Без обложки</span>
+            <strong>{issueCount("COVER")}</strong>
+          </div>
+          <div>
+            <span>Нет привязки</span>
+            <strong>{linkedIssues}</strong>
+          </div>
+          <div>
+            <span>Нет синхронизации</span>
+            <strong>{progressIssues}</strong>
+          </div>
+        </div>
+        <div className="game-quality-controls">
+          <div className="steam-import-tabs">
+            <button
+              className={filter === "ALL" ? "active" : ""}
+              onClick={() => setQualityFilter("ALL")}
+            >
+              Все · {rows.length}
+            </button>
+            {(
+              [
+                ["RAWG", "RAWG"],
+                ["COVER", "Обложки"],
+                ["STEAM_LINK", "Steam-связь"],
+                ["XBOX_LINK", "Xbox-связь"],
+                ["STEAM_PROGRESS", "Steam-достижения"],
+                ["XBOX_PROGRESS", "Xbox-достижения"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                className={filter === value ? "active" : ""}
+                key={value}
+                onClick={() => setQualityFilter(value)}
+              >
+                {label} · {issueCount(value)}
+              </button>
+            ))}
+          </div>
+          <input
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setVisibleCount(GAME_PAGE_SIZE);
+            }}
+            placeholder="Найти игру"
+          />
+        </div>
+        {visibleRows.length > 0 ? (
+          <div className="game-quality-list">
+            {visibleRows.map(({ game, issues }) => (
+              <button key={game.id} onClick={() => onOpenGame(game.id)}>
+                <span
+                  className="game-quality-cover"
+                  style={
+                    game.coverUrl
+                      ? { backgroundImage: `url(${game.coverUrl})` }
+                      : undefined
+                  }
+                >
+                  {game.title.slice(0, 1)}
+                </span>
+                <span className="game-quality-info">
+                  <strong>{game.title}</strong>
+                  <small>{game.releaseYear ?? "Год не указан"}</small>
+                  <span>
+                    {issues.map((issue) => (
+                      <em className={issue.toLowerCase()} key={issue}>
+                        {gameQualityIssueLabels[issue]}
+                      </em>
+                    ))}
+                  </span>
+                </span>
+                <b>Открыть →</b>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="game-quality-empty">
+            {rows.length === 0
+              ? "Все игры заполнены и синхронизированы."
+              : "По выбранному фильтру игр не найдено."}
+          </div>
+        )}
+        {visibleCount < filtered.length && (
+          <button
+            className="secondary-button movie-load-more"
+            onClick={() =>
+              setVisibleCount((current) => current + GAME_PAGE_SIZE)
+            }
+          >
+            Показать ещё 50
+          </button>
+        )}
+      </section>
     </div>
   );
 }

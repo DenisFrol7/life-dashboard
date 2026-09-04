@@ -1129,6 +1129,31 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .game-session-list > button { display: grid; grid-template-columns: minmax(0, 1fr) auto 100px; gap: 18px; }
 .game-session-achievements { display: flex !important; flex-wrap: wrap; justify-content: flex-end; gap: 3px 10px; color: #4e8756; font-size: 10px; font-weight: 800; }
 .session-form { width: min(560px, 100%); }
+.series-catalog-update b { display: inline-grid; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; color: #fff; background: #a86457; font-size: 10px; place-items: center; }
+.game-quality-dialog { display: flex; width: min(980px, 100%); max-height: calc(100vh - 40px); padding: 26px; overflow: hidden; border-radius: 20px; background: var(--paper); box-shadow: 0 30px 90px #07111a70; flex-direction: column; }
+.game-quality-description { margin: 8px 0 14px; color: var(--muted); font-size: 12px; }
+.game-quality-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.game-quality-summary > div { padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper-soft); }
+.game-quality-summary span, .game-quality-summary strong { display: block; }
+.game-quality-summary span { color: var(--muted); font-size: 10px; }
+.game-quality-summary strong { margin-top: 3px; color: var(--ink); font-family: Georgia, serif; font-size: 20px; }
+.game-quality-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 240px); gap: 12px; margin: 14px 0 10px; }
+.game-quality-controls > input { min-width: 0; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; outline: none; color: var(--ink); background: var(--paper); font-size: 11px; }
+.game-quality-list { min-height: 120px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; }
+.game-quality-list > button { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; padding: 9px 11px; border: 0; border-top: 1px solid var(--line); color: var(--ink); background: transparent; cursor: pointer; text-align: left; }
+.game-quality-list > button:first-child { border-top: 0; }
+.game-quality-list > button:hover { background: var(--paper-soft); }
+.game-quality-cover { display: grid; width: 48px; height: 64px; border-radius: 6px; color: #ffffff70; background: linear-gradient(145deg, #526d7d, #263d4c) center/cover; font-family: Georgia, serif; font-size: 20px; font-weight: 800; place-items: center; }
+.game-quality-info { min-width: 0; }
+.game-quality-info > strong, .game-quality-info > small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-quality-info > strong { color: var(--ink); font-family: Georgia, serif; font-size: 13px; }
+.game-quality-info > small { margin-top: 3px; color: var(--muted); font-size: 10px; }
+.game-quality-info > span { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.game-quality-info em { padding: 4px 7px; border-radius: 6px; color: #8c6141; background: #f5e9dc; font-size: 9px; font-style: normal; font-weight: 800; }
+.game-quality-info em.rawg, .game-quality-info em.cover { color: #536f83; background: #e8f0f5; }
+.game-quality-info em.steam_progress, .game-quality-info em.xbox_progress { color: #68714b; background: #eef0df; }
+.game-quality-list > button > b { color: var(--accent-strong); font-size: 11px; white-space: nowrap; }
+.game-quality-empty { display: grid; min-height: 180px; color: var(--muted); font-size: 13px; text-align: center; place-items: center; }
 .game-form > label:nth-of-type(2) { display: none; }
 .game-form > label:nth-of-type(5) { display: none; }
 .game-library-flags { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 12px; }
@@ -1627,6 +1652,12 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
   .movie-watch-summary { grid-template-columns: 1fr; }
   .movie-watch-summary > div { grid-template-columns: 1fr; }
   .movie-watch-summary > button { justify-self: start; }
+  .game-quality-dialog { padding: 18px; }
+  .game-quality-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .game-quality-controls { grid-template-columns: 1fr; }
+  .game-quality-list > button { grid-template-columns: 42px minmax(0, 1fr); }
+  .game-quality-cover { width: 42px; height: 56px; }
+  .game-quality-list > button > b { grid-column: 2; }
   .season-detail-list summary { align-items: flex-start; flex-direction: column; gap: 10px; }
   .season-detail-list summary > span:first-child { align-items: flex-start; flex-direction: column; gap: 4px; }
   .season-summary-actions { justify-content: space-between; width: 100%; }
@@ -1651,6 +1682,11 @@ html[data-theme="dark"] .series-page .series-statistics dl > div { border-color:
 html[data-theme="dark"] .series-page .series-statistics dt { color: #8f9baa; }
 html[data-theme="dark"] .series-page .series-statistics dd { color: #83b9df; white-space: nowrap; }
 html[data-theme="dark"] .series-page .series-statistics .series-stat-total { border-top: 0; }
+html[data-theme="dark"] .game-quality-info em { color: #e0b48d; background: #3a2b22; }
+html[data-theme="dark"] .game-quality-info em.rawg,
+html[data-theme="dark"] .game-quality-info em.cover { color: #a9cbe1; background: #1a3040; }
+html[data-theme="dark"] .game-quality-info em.steam_progress,
+html[data-theme="dark"] .game-quality-info em.xbox_progress { color: #c8d19a; background: #2b321f; }
 
 /* Complete dark treatment for media detail pages. */
 html[data-theme="dark"] .series-hero-card,
