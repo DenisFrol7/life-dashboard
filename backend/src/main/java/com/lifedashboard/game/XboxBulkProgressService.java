@@ -24,18 +24,24 @@ public class XboxBulkProgressService {
     private static final Logger log = LoggerFactory.getLogger(XboxBulkProgressService.class);
     private final OpenXblClient openXbl;
     private final UserGameRepository games;
+    private final GameSessionRepository sessions;
     private final XboxGameProgressRepository progress;
+    private final XboxAchievementRepository achievements;
     private final XboxProgressSyncService progressSync;
     private final GamePlaythroughService playthroughs;
     private final long userId;
 
     public XboxBulkProgressService(OpenXblClient openXbl, UserGameRepository games,
-            XboxGameProgressRepository progress, XboxProgressSyncService progressSync,
+            GameSessionRepository sessions, XboxGameProgressRepository progress,
+            XboxAchievementRepository achievements,
+            XboxProgressSyncService progressSync,
             GamePlaythroughService playthroughs,
             @Value("${app.default-user-id}") long userId) {
         this.openXbl = openXbl;
         this.games = games;
+        this.sessions = sessions;
         this.progress = progress;
+        this.achievements = achievements;
         this.progressSync = progressSync;
         this.playthroughs = playthroughs;
         this.userId = userId;
@@ -64,8 +70,12 @@ public class XboxBulkProgressService {
             Long remoteMinutes = playtimeByTitle.get(copy.getXboxTitleId());
             if (remoteMinutes == null) {
                 playtimeUnavailable++;
-            } else if (remoteMinutes > copy.getLegacyPlaytimeMinutes()) {
-                playtimeUpdated += games.updateXboxPlaytime(copy.getId(), userId, remoteMinutes);
+            } else {
+                long trackedMinutes = sessions.totalMinutes(copy.getId(), userId);
+                long legacyMinutes = Math.max(0, remoteMinutes - trackedMinutes);
+                if (legacyMinutes != copy.getLegacyPlaytimeMinutes()) {
+                    playtimeUpdated += games.updateXboxPlaytime(copy.getId(), userId, legacyMinutes);
+                }
             }
             if (remoteMinutes != null
                     && playthroughs.fillXboxAchievementPlaytime(copy.getId(), remoteMinutes)) {
@@ -96,7 +106,7 @@ public class XboxBulkProgressService {
                         "Связанная игра не найдена в истории Xbox-профиля"));
                 continue;
             }
-            if (isUpToDate(stored, xboxTitle.lastPlayedAt())) {
+            if (isUpToDate(stored, xboxTitle)) {
                 upToDate++;
                 results.add(new GameResult(copy.getId(), copy.getXboxTitleId(), title,
                         Status.UP_TO_DATE, stored.getUnlockedAchievements(),
@@ -127,9 +137,12 @@ public class XboxBulkProgressService {
                 playthroughPlaytimeUpdated, playtimeSyncFailed, List.copyOf(results));
     }
 
-    private boolean isUpToDate(XboxGameProgress stored, Instant lastPlayedAt) {
-        return stored != null && lastPlayedAt != null
-                && !stored.getLastUpdatedAt().isBefore(lastPlayedAt);
+    private boolean isUpToDate(XboxGameProgress stored, OpenXblTitle title) {
+        if (stored == null || title.lastPlayedAt() == null
+                || stored.getLastUpdatedAt().isBefore(title.lastPlayedAt())) {
+            return false;
+        }
+        return title.sourceVersion() <= 1 || achievements.existsByProgressId(stored.getId());
     }
 
     private String errorMessage(RuntimeException exception) {

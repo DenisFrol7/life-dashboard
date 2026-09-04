@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface XboxAchievementRepository extends JpaRepository<XboxAchievement, Long> {
     List<XboxAchievement> findAllByProgressId(Long progressId);
+    boolean existsByProgressId(Long progressId);
 }

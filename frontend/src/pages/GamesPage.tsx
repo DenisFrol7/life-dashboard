@@ -2558,7 +2558,7 @@ function GameForm({
   );
 }
 
-function GameSessionForm({
+export function GameSessionForm({
   session,
   library,
   onClose,
@@ -2679,7 +2679,7 @@ function GameSessionForm({
         <label>
           Игра и платформа
           <select
-            disabled={Boolean(session)}
+            disabled={Boolean(session) || library.length === 1}
             value={libraryId}
             onChange={(event) => setLibraryId(Number(event.target.value))}
           >

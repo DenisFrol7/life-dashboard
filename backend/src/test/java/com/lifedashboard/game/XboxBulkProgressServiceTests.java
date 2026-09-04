@@ -27,7 +27,9 @@ import static org.mockito.Mockito.when;
 class XboxBulkProgressServiceTests {
     @Mock OpenXblClient openXbl;
     @Mock UserGameRepository games;
+    @Mock GameSessionRepository sessions;
     @Mock XboxGameProgressRepository progress;
+    @Mock XboxAchievementRepository achievements;
     @Mock XboxProgressSyncService progressSync;
     @Mock GamePlaythroughService playthroughs;
 
@@ -49,6 +51,7 @@ class XboxBulkProgressServiceTests {
                 Instant.parse("2026-09-02T12:00:00Z"));
         XboxGameProgress currentProgress = stored(current,
                 Instant.parse("2026-09-04T12:00:00Z"));
+        when(currentProgress.getId()).thenReturn(12L);
         when(currentProgress.getUnlockedAchievements()).thenReturn(8);
         when(currentProgress.getTotalAchievements()).thenReturn(10);
         XboxProgressResponse synchronizedProgress = new XboxProgressResponse(
@@ -58,12 +61,15 @@ class XboxBulkProgressServiceTests {
         when(openXbl.titleHistory()).thenReturn(history);
         when(openXbl.playtimeMinutes("xuid", List.of(101L, 202L, 303L)))
                 .thenReturn(Map.of(101L, 180L, 202L, 150L));
-        when(games.updateXboxPlaytime(1L, 1L, 180L)).thenReturn(1);
+        when(sessions.totalMinutes(1L, 1L)).thenReturn(30L);
+        when(games.updateXboxPlaytime(1L, 1L, 150L)).thenReturn(1);
+        when(games.updateXboxPlaytime(2L, 1L, 150L)).thenReturn(1);
         when(playthroughs.fillXboxAchievementPlaytime(1L, 180L)).thenReturn(true);
         when(games.findXboxCopies(1L)).thenReturn(
                 List.of(changed, current, missing, unlinked));
         when(progress.findAllByUserId(1L)).thenReturn(
                 List.of(oldProgress, currentProgress));
+        when(achievements.existsByProgressId(12L)).thenReturn(true);
         when(progressSync.sync(1L, history)).thenReturn(new XboxProgressSyncResponse(
                 101L, "Changed", true, false, null, false, synchronizedProgress));
 
@@ -75,7 +81,7 @@ class XboxBulkProgressServiceTests {
         assertEquals(1, result.upToDate());
         assertEquals(1, result.skippedUnlinked());
         assertEquals(1, result.failed());
-        assertEquals(1, result.playtimeUpdated());
+        assertEquals(2, result.playtimeUpdated());
         assertEquals(1, result.playtimeUnavailable());
         assertEquals(1, result.playthroughPlaytimeUpdated());
         assertFalse(result.playtimeSyncFailed());
@@ -84,13 +90,40 @@ class XboxBulkProgressServiceTests {
         verify(progressSync).sync(1L, history);
         verify(progressSync, never()).sync(2L, history);
         verify(progressSync, never()).sync(3L, history);
-        verify(games).updateXboxPlaytime(1L, 1L, 180L);
-        verify(games, never()).updateXboxPlaytime(2L, 1L, 150L);
+        verify(games).updateXboxPlaytime(1L, 1L, 150L);
+        verify(games).updateXboxPlaytime(2L, 1L, 150L);
+    }
+
+    @Test
+    void refreshesCurrentModernCopyWhenDetailedAchievementsAreMissing() {
+        Instant playedAt = Instant.parse("2026-09-03T12:00:00Z");
+        OpenXblTitle title = title(202L, "Current", playedAt);
+        OpenXblTitleHistory history = new OpenXblTitleHistory("xuid", List.of(title));
+        UserGame current = copy(2L, 202L, "Current");
+        XboxGameProgress currentProgress = stored(current,
+                Instant.parse("2026-09-04T12:00:00Z"));
+        when(currentProgress.getId()).thenReturn(12L);
+        XboxProgressResponse synchronizedProgress = new XboxProgressResponse(
+                12L, 2L, 10, 8, 80.0, 1000, 800, 80.0, null,
+                Instant.parse("2026-09-04T13:00:00Z"));
+
+        when(openXbl.titleHistory()).thenReturn(history);
+        when(openXbl.playtimeMinutes("xuid", List.of(202L))).thenReturn(Map.of());
+        when(games.findXboxCopies(1L)).thenReturn(List.of(current));
+        when(progress.findAllByUserId(1L)).thenReturn(List.of(currentProgress));
+        when(progressSync.sync(2L, history)).thenReturn(new XboxProgressSyncResponse(
+                202L, "Current", true, false, null, false, synchronizedProgress));
+
+        XboxBulkSyncResponse result = service().syncLinked();
+
+        assertEquals(1, result.updated());
+        assertEquals(0, result.upToDate());
+        verify(progressSync).sync(2L, history);
     }
 
     private XboxBulkProgressService service() {
-        return new XboxBulkProgressService(openXbl, games, progress, progressSync,
-                playthroughs, 1L);
+        return new XboxBulkProgressService(openXbl, games, sessions, progress, achievements,
+                progressSync, playthroughs, 1L);
     }
 
     private OpenXblTitle title(long id, String name, Instant playedAt) {

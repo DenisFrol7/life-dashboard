@@ -8,6 +8,7 @@ import {
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft, Pencil, RefreshCw } from "lucide-react";
 import { PlatformBadge } from "../components/PlatformBadge";
+import { GameSessionForm } from "./GamesPage";
 import {
   createGameLibrary,
   createGamePlaythrough,
@@ -78,6 +79,7 @@ export function GameDetailsPage() {
     null,
   );
   const [sessions, setSessions] = useState<GameSession[]>([]);
+  const [addingSession, setAddingSession] = useState(false);
   const [progress, setProgress] = useState<XboxProgress | null>(null);
   const [xboxAchievements, setXboxAchievements] = useState<XboxAchievement[]>([]);
   const [syncingXbox, setSyncingXbox] = useState(false);
@@ -721,6 +723,13 @@ export function GameDetailsPage() {
               ? formatDate(latestSession.startedAt)
               : "Сессий пока нет"}
           </span>
+          <button
+            className="primary-button"
+            disabled={!library}
+            onClick={() => setAddingSession(true)}
+          >
+            + Добавить сессию
+          </button>
         </article>
         <article className="detail-card">
           <h2>История прохождений</h2>
@@ -860,6 +869,16 @@ export function GameDetailsPage() {
             setEditingLibrary(null);
             if (libraries.some((entry) => entry.id === id)) void load();
             else setSelectedLibraryId(id);
+          }}
+        />
+      )}
+      {addingSession && library && (
+        <GameSessionForm
+          library={[library]}
+          onClose={() => setAddingSession(false)}
+          onSaved={() => {
+            setAddingSession(false);
+            void load();
           }}
         />
       )}
