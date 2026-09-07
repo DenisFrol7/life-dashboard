@@ -139,6 +139,7 @@ export type XboxImportPreparation = {
 export type XboxImportSelection = {
   titleId: number;
   sourceCode: "XBOX_STORE" | "GAME_PASS";
+  resolution?: "SUGGESTED_MATCH" | "NEW_GAME";
 };
 export type XboxImportResult = {
   requested: number;

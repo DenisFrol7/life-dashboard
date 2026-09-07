@@ -1722,6 +1722,9 @@ function XboxImportPreviewDialog({
   const [sourceByTitleId, setSourceByTitleId] = useState<
     Record<number, XboxImportSelection["sourceCode"]>
   >({});
+  const [resolutionByTitleId, setResolutionByTitleId] = useState<
+    Record<number, NonNullable<XboxImportSelection["resolution"]>>
+  >({});
 
   const loadPreview = useCallback(async () => {
     setLoading(true);
@@ -1730,6 +1733,7 @@ function XboxImportPreviewDialog({
       const loaded = await previewXboxImport();
       setPreview(loaded);
       setExcludedTitleIds(new Set());
+      setResolutionByTitleId({});
       setSourceByTitleId(
         Object.fromEntries(
           loaded.games.map((game) => [game.titleId, game.suggestedSourceCode]),
@@ -1758,6 +1762,10 @@ function XboxImportPreviewDialog({
   const selectedForImport = useMemo(
     () => includedGames.filter((game) => game.match !== "ALREADY_IMPORTED"),
     [includedGames],
+  );
+  const unresolvedReviews = selectedForImport.filter(
+    (game) =>
+      game.match === "REVIEW" && resolutionByTitleId[game.titleId] == null,
   );
   const includedSummary = useMemo(
     () => ({
@@ -1804,7 +1812,7 @@ function XboxImportPreviewDialog({
   };
 
   const runImport = async () => {
-    if (selectedForImport.length === 0) return;
+    if (selectedForImport.length === 0 || unresolvedReviews.length > 0) return;
     const confirmed = window.confirm(
       `Импортировать ${selectedForImport.length} игр из истории Xbox? Перед записью backend автоматически создаст резервную копию. Проверьте источник Xbox Store или Game Pass у выбранных игр.`,
     );
@@ -1818,6 +1826,9 @@ function XboxImportPreviewDialog({
       const selections: XboxImportSelection[] = selectedForImport.map((game) => ({
         titleId: game.titleId,
         sourceCode: sourceByTitleId[game.titleId] ?? game.suggestedSourceCode,
+        ...(game.match === "REVIEW"
+          ? { resolution: resolutionByTitleId[game.titleId] }
+          : {}),
       }));
       const preparation = await prepareXboxImport(
         selections.map((game) => game.titleId),
@@ -1982,6 +1993,31 @@ function XboxImportPreviewDialog({
                     )}
                   </div>
                   <div className="steam-import-game-actions xbox-import-game-actions">
+                    {game.match === "REVIEW" && (
+                      <select
+                        className="xbox-import-resolution"
+                        value={resolutionByTitleId[game.titleId] ?? ""}
+                        onChange={(event) => {
+                          const value = event.target.value as
+                            | NonNullable<XboxImportSelection["resolution"]>
+                            | "";
+                          setResolutionByTitleId((current) => {
+                            const next = { ...current };
+                            if (value) next[game.titleId] = value;
+                            else delete next[game.titleId];
+                            return next;
+                          });
+                        }}
+                        disabled={importing}
+                        aria-label={`Способ добавления ${game.title}`}
+                      >
+                        <option value="">Выберите действие</option>
+                        <option value="SUGGESTED_MATCH">
+                          Связать: {game.matchedContentTitle}
+                        </option>
+                        <option value="NEW_GAME">Создать отдельную игру</option>
+                      </select>
+                    )}
                     {game.match !== "ALREADY_IMPORTED" && (
                       <select
                         value={
@@ -2025,6 +2061,11 @@ function XboxImportPreviewDialog({
                 <p>
                   Импортируется история запуска, а не полный список покупок. Перед первой записью создаётся бэкап. RAWG добавляет данные и горизонтальную обложку, SteamGridDB — вертикальную.
                 </p>
+                {unresolvedReviews.length > 0 && (
+                  <p className="xbox-import-review-warning">
+                    Выберите действие для игр со статусом «Нужно проверить»: {unresolvedReviews.length}.
+                  </p>
+                )}
                 {excludedTitleIds.size > 0 && (
                   <button
                     type="button"
@@ -2048,13 +2089,19 @@ function XboxImportPreviewDialog({
                 <button
                   className="primary-button"
                   onClick={() => void runImport()}
-                  disabled={importing || selectedForImport.length === 0}
+                  disabled={
+                    importing ||
+                    selectedForImport.length === 0 ||
+                    unresolvedReviews.length > 0
+                  }
                 >
                   {importing
                     ? creatingBackup
                       ? "Создаём бэкап…"
                       : `Импортируем ${importProgress?.completed ?? 0}/${importProgress?.total ?? selectedForImport.length}`
-                    : `Импортировать (${selectedForImport.length})`}
+                    : unresolvedReviews.length > 0
+                      ? `Решить совпадения (${unresolvedReviews.length})`
+                      : `Импортировать (${selectedForImport.length})`}
                 </button>
               </div>
             </div>

@@ -5,4 +5,9 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 
 public record XboxImportGameRequest(@Positive long titleId,
-        @NotBlank @Pattern(regexp = "XBOX_STORE|GAME_PASS") String sourceCode) {}
+        @NotBlank @Pattern(regexp = "XBOX_STORE|GAME_PASS") String sourceCode,
+        XboxImportResolution resolution) {
+    public XboxImportGameRequest(long titleId, String sourceCode) {
+        this(titleId, sourceCode, null);
+    }
+}

@@ -4,6 +4,7 @@ import com.lifedashboard.content.ContentItem;
 import com.lifedashboard.content.ContentItemRepository;
 import com.lifedashboard.content.UserContent;
 import com.lifedashboard.content.UserContentRepository;
+import com.lifedashboard.common.error.InvalidRequestException;
 import com.lifedashboard.data.DataTransferService;
 import com.lifedashboard.game.GameAccessType;
 import com.lifedashboard.game.GameSource;
@@ -30,10 +31,12 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -62,10 +65,10 @@ class XboxImportServiceTests {
         User user = mock(User.class);
         List<XboxImportPreviewItem> rows = List.of(
                 row(1L, "Already", "XBOX_SERIES", XboxImportMatch.ALREADY_IMPORTED, 10L, 77L),
-                row(2L, "Matched", "XBOX_SERIES", XboxImportMatch.MATCHED, 10L, null),
+                row(2L, "Review", "XBOX_SERIES", XboxImportMatch.REVIEW, 10L, null),
                 row(3L, "New game", "XBOX_360", XboxImportMatch.NEW, null, null));
         when(previewService.preview()).thenReturn(new XboxImportPreview(
-                3, 1, 1, 0, 1, rows));
+                3, 1, 0, 1, 1, rows));
         when(dataTransfer.createAutomaticBackup()).thenReturn(Path.of("backup.json"));
         when(users.findById(1L)).thenReturn(Optional.of(user));
         when(library.findByIdAndUserContentUserId(77L, 1L)).thenReturn(Optional.of(existingCopy));
@@ -97,7 +100,8 @@ class XboxImportServiceTests {
         XboxImportResult result = service.importSelected(new XboxImportRequest(
                 preparation.backupToken(), List.of(
                         new XboxImportGameRequest(1L, "XBOX_STORE"),
-                        new XboxImportGameRequest(2L, "GAME_PASS"),
+                        new XboxImportGameRequest(2L, "GAME_PASS",
+                                XboxImportResolution.SUGGESTED_MATCH),
                         new XboxImportGameRequest(3L, "XBOX_STORE"))));
 
         assertEquals(3, result.requested());
@@ -117,6 +121,57 @@ class XboxImportServiceTests {
         InOrder backupBeforeWrites = inOrder(dataTransfer, library);
         backupBeforeWrites.verify(dataTransfer).createAutomaticBackup();
         backupBeforeWrites.verify(library, org.mockito.Mockito.times(2)).save(any(UserGame.class));
+    }
+
+    @Test
+    void createsSeparateCatalogGameWhenReviewIsRejected() {
+        XboxImportPreviewItem review = row(4L, "Mafia II", "XBOX_360",
+                XboxImportMatch.REVIEW, 10L, null);
+        when(previewService.preview()).thenReturn(new XboxImportPreview(
+                1, 0, 0, 1, 0, List.of(review)));
+        when(dataTransfer.createAutomaticBackup()).thenReturn(Path.of("backup.json"));
+        User user = mock(User.class);
+        GamingPlatform xbox360 = mock(GamingPlatform.class);
+        GameSource xboxStore = mock(GameSource.class);
+        when(users.findById(1L)).thenReturn(Optional.of(user));
+        when(library.findByXboxTitleIdAndUserContentUserId(4L, 1L)).thenReturn(Optional.empty());
+        when(platforms.findByCode("XBOX_360")).thenReturn(Optional.of(xbox360));
+        when(sources.findByCode("XBOX_STORE")).thenReturn(Optional.of(xboxStore));
+        when(metadataResolver.resolve(review)).thenReturn(new XboxGameMetadata(null, null, null));
+        when(contentItems.save(any(ContentItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userContent.findByUserIdAndContentId(1L, null)).thenReturn(Optional.empty());
+        when(userContent.save(any(UserContent.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        XboxImportService service = service();
+        XboxImportPreparation preparation = service.prepare(new XboxImportSelection(List.of(4L)));
+        XboxImportResult result = service.importSelected(new XboxImportRequest(
+                preparation.backupToken(), List.of(new XboxImportGameRequest(
+                        4L, "XBOX_STORE", XboxImportResolution.NEW_GAME))));
+
+        assertEquals(1, result.imported());
+        assertEquals(1, result.catalogCreated());
+        assertEquals(0, result.linkedExistingCatalog());
+        verify(contentItems, never()).findById(10L);
+        ArgumentCaptor<UserGame> copy = ArgumentCaptor.forClass(UserGame.class);
+        verify(library).save(copy.capture());
+        assertEquals(4L, copy.getValue().getXboxTitleId());
+    }
+
+    @Test
+    void requiresExplicitResolutionForReviewGames() {
+        XboxImportPreviewItem review = row(5L, "Mafia II", "XBOX_360",
+                XboxImportMatch.REVIEW, 10L, null);
+        when(previewService.preview()).thenReturn(new XboxImportPreview(
+                1, 0, 0, 1, 0, List.of(review)));
+        when(dataTransfer.createAutomaticBackup()).thenReturn(Path.of("backup.json"));
+
+        XboxImportService service = service();
+        XboxImportPreparation preparation = service.prepare(new XboxImportSelection(List.of(5L)));
+
+        assertThrows(InvalidRequestException.class,
+                () -> service.importSelected(new XboxImportRequest(
+                        preparation.backupToken(), List.of(
+                                new XboxImportGameRequest(5L, "XBOX_STORE")))));
     }
 
     private XboxImportService service() {

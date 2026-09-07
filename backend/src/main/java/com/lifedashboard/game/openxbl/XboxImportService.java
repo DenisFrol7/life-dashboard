@@ -99,6 +99,7 @@ public class XboxImportService {
         if (!backup.rows().keySet().containsAll(selected.keySet())) {
             throw new InvalidRequestException("Список импорта изменился после создания резервной копии");
         }
+        validateResolutions(selected, backup);
         User user = users.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден"));
 
@@ -120,11 +121,12 @@ public class XboxImportService {
                 continue;
             }
 
+            Long matchedContentId = resolvedContentId(row, selectedGame);
             ContentItem content;
-            if (row.matchedContentId() != null) {
-                content = contentItems.findById(row.matchedContentId())
+            if (matchedContentId != null) {
+                content = contentItems.findById(matchedContentId)
                         .orElseThrow(() -> new ResourceNotFoundException(
-                                "Связанная карточка игры не найдена: " + row.matchedContentId()));
+                                "Связанная карточка игры не найдена: " + matchedContentId));
                 linkedExisting++;
             } else {
                 XboxGameMetadata metadata = metadataResolver.resolve(row);
@@ -177,6 +179,32 @@ public class XboxImportService {
                     "Резервная копия для импорта не найдена или устарела — начните импорт заново");
         }
         return backup;
+    }
+
+    private void validateResolutions(Map<Long, XboxImportGameRequest> selected,
+            BackupSession backup) {
+        for (XboxImportGameRequest request : selected.values()) {
+            XboxImportPreviewItem row = backup.rows().get(request.titleId());
+            if (row.match() == XboxImportMatch.REVIEW && request.resolution() == null) {
+                throw new InvalidRequestException(
+                        "Выберите способ добавления для Xbox-игры «" + row.title() + "»");
+            }
+            if (row.match() != XboxImportMatch.REVIEW && request.resolution() != null) {
+                throw new InvalidRequestException(
+                        "Способ добавления можно выбирать только для игр со статусом «Нужно проверить»");
+            }
+        }
+    }
+
+    private Long resolvedContentId(XboxImportPreviewItem row,
+            XboxImportGameRequest request) {
+        if (row.match() != XboxImportMatch.REVIEW) return row.matchedContentId();
+        if (request.resolution() == XboxImportResolution.NEW_GAME) return null;
+        if (row.matchedContentId() == null) {
+            throw new InvalidRequestException(
+                    "Для Xbox-игры «" + row.title() + "» не найдена карточка для связи");
+        }
+        return row.matchedContentId();
     }
 
     private void linkExistingCopy(XboxImportPreviewItem row) {

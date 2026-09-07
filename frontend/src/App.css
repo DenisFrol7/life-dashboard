@@ -231,6 +231,8 @@ html[data-theme="dark"] .game-catalog-progress .series-list-progress span,
 html[data-theme="dark"] .xbox-progress span,
 html[data-theme="dark"] .detail-progress > div span,
 html[data-theme="dark"] .activity-progress span { background: linear-gradient(90deg, #20c957, var(--success)); box-shadow: 0 0 9px #2ddd6340; }
+html[data-theme="dark"] .game-catalog-progress.steam .series-list-progress span,
+html[data-theme="dark"] .steam-progress-card .detail-progress > div span { background: linear-gradient(90deg, #378fc4, #62b7ff); box-shadow: 0 0 9px #45a9ed40; }
 html[data-theme="dark"] .media-status.completed { color: #75ee98; background: #123923; }
 html[data-theme="dark"] .game-catalog-progress > strong,
 html[data-theme="dark"] .game-catalog-progress-main > strong,
@@ -1102,6 +1104,9 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .xbox-import-source-defaults button { padding: 6px 9px; border: 1px solid var(--line); border-radius: 7px; color: #52748a; background: var(--paper-soft); cursor: pointer; font-size: 10px; font-weight: 700; }
 .xbox-import-title { display: block; overflow: hidden; color: #426f91; font-family: Georgia, serif; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .xbox-import-game-actions select { min-width: 112px; padding: 6px 25px 6px 8px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: var(--paper); font-size: 9px; }
+.xbox-import-game-actions { max-width: 410px; flex-wrap: wrap; justify-content: flex-end; }
+.xbox-import-game-actions .xbox-import-resolution { width: min(220px, 100%); }
+.xbox-import-review-warning { margin-top: 5px !important; color: #9a653c !important; font-weight: 700; }
 .game-catalog-card { grid-template-columns: 144px minmax(0, 1fr) 150px; min-height: 97px; }
 .game-catalog-card .series-list-cover { width: 144px; height: 81px; background-size: cover; }
 .game-platform-badge { padding: 3px 6px; background: #557d62; font-family: Arial, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .1px; line-height: 1; }
