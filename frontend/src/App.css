@@ -1079,7 +1079,9 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .steam-import-game-info a:hover { text-decoration: underline; }
 .steam-import-game-info small { margin-top: 3px; color: var(--muted); font-size: 10px; }
 .steam-import-game-info em { margin-top: 3px; color: #5e7b67; font-size: 10px; font-style: normal; }
-.steam-import-game-actions { display: flex; align-items: center; gap: 7px; }
+.steam-import-game-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; max-width: 410px; flex-wrap: wrap; }
+.steam-import-game-actions select { min-width: 112px; padding: 6px 25px 6px 8px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: var(--paper); font-size: 9px; }
+.steam-import-game-actions .steam-import-resolution { width: min(220px, 100%); }
 .steam-import-match { padding: 5px 8px; border-radius: 7px; font-size: 9px; font-weight: 800; white-space: nowrap; }
 .steam-import-match.already_imported { color: #5b6b63; background: #e9eeeb; }
 .steam-import-match.matched { color: #527a5c; background: #e7f2e9; }

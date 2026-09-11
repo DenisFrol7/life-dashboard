@@ -27,7 +27,7 @@ public class SteamImportPreviewService {
     private static final Pattern NON_ALPHANUMERIC = Pattern.compile("[^\\p{L}\\p{N}]+");
     private static final Pattern DIACRITICS = Pattern.compile("\\p{M}+");
     private static final Pattern EDITION_SUFFIX = Pattern.compile(
-            "\\b(game of the year|goty|definitive|ultimate|complete|deluxe|enhanced|remastered|directors cut|director s cut) edition\\b|\\b(remastered|definitive edition|directors cut|director s cut)\\b");
+            "\\b(game of the year|goty|definitive|ultimate|complete|deluxe|enhanced|remastered|directors cut|director s cut) edition\\b|\\b(remastered|definitive edition|directors cut|director s cut|classic)\\b");
 
     private final SteamClient steam;
     private final ContentItemRepository contentItems;
@@ -81,8 +81,8 @@ public class SteamImportPreviewService {
             UserGame steamCopy = copiesByContent.getOrDefault(item.getId(), List.of()).stream()
                     .filter(copy -> "STEAM".equals(copy.getSource().getCode()))
                     .findFirst().orElse(null);
-            return row(game, steamCopy == null ? SteamImportMatch.MATCHED : SteamImportMatch.ALREADY_IMPORTED,
-                    item, steamCopy == null ? null : steamCopy.getId());
+            return row(game, SteamImportMatch.MATCHED, item,
+                    steamCopy == null ? null : steamCopy.getId());
         }
         if (exact.size() > 1) return row(game, SteamImportMatch.REVIEW, exact.getFirst(), null);
 

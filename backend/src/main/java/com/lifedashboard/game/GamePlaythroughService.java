@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
@@ -66,17 +67,27 @@ public class GamePlaythroughService {
         return true;
     }
     @Transactional
-    public boolean fillXboxAchievementPlaytime(Long libraryId, long playtimeMinutes) {
+    public boolean fillXboxAchievementPlaytime(Long libraryId, long playtimeMinutes,
+            boolean allowManualCompletion) {
         if (playtimeMinutes <= 0) return false;
-        return playthroughs
+        Optional<GamePlaythrough> automatic = playthroughs
                 .findFirstByLibraryEntryIdAndCompletionSourceOrderByPlaythroughNumberDesc(
                         libraryId, GamePlaythroughSource.XBOX_ACHIEVEMENTS)
-                .filter(item -> item.getPlaytimeMinutes() == 0)
-                .map(item -> {
-                    item.updatePlaytimeMinutes(playtimeMinutes);
-                    return true;
-                })
-                .orElse(false);
+                .filter(item -> item.getPlaytimeMinutes() == 0);
+        if (automatic.isPresent()) {
+            automatic.get().updatePlaytimeMinutes(playtimeMinutes);
+            return true;
+        }
+        if (!allowManualCompletion) return false;
+        List<GamePlaythrough> history = playthroughs
+                .findAllByLibraryEntryIdAndLibraryEntryUserContentUserIdOrderByPlaythroughNumberDesc(
+                        libraryId, userId);
+        if (history.size() != 1) return false;
+        GamePlaythrough manual = history.getFirst();
+        if (manual.getCompletionSource() != GamePlaythroughSource.MANUAL
+                || manual.getPlaytimeMinutes() != 0) return false;
+        manual.updatePlaytimeMinutes(playtimeMinutes);
+        return true;
     }
     @Transactional public void delete(Long id) {
         playthroughs.delete(findPlaythrough(id));

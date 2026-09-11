@@ -103,6 +103,10 @@ export type SteamImportPreparation = {
   backupToken: string;
   backupFile: string;
 };
+export type SteamImportSelection = {
+  appId: number;
+  resolution?: "SUGGESTED_MATCH" | "NEW_GAME";
+};
 export type XboxImportMatch =
   | "ALREADY_IMPORTED"
   | "MATCHED"
@@ -405,10 +409,13 @@ export const prepareSteamImport = (appIds: number[]) =>
     method: "POST",
     body: JSON.stringify({ appIds }),
   });
-export const importSteamGames = (backupToken: string, appIds: number[]) =>
+export const importSteamGames = (
+  backupToken: string,
+  games: SteamImportSelection[],
+) =>
   apiRequest<SteamImportResult>("/api/games/import/steam", {
     method: "POST",
-    body: JSON.stringify({ backupToken, appIds }),
+    body: JSON.stringify({ backupToken, games }),
   });
 export const previewXboxImport = () =>
   apiRequest<XboxImportPreview>("/api/games/import/xbox/preview");

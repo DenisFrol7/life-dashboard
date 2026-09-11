@@ -57,7 +57,6 @@ class SteamImportServiceTests {
         ContentItem existingContent = mock(ContentItem.class);
         when(existingContent.getId()).thenReturn(10L);
         UserContent existingEntry = mock(UserContent.class);
-        UserGame existingCopy = mock(UserGame.class);
         GamingPlatform pc = mock(GamingPlatform.class);
         GameSource steam = mock(GameSource.class);
         User user = mock(User.class);
@@ -69,8 +68,6 @@ class SteamImportServiceTests {
         when(platforms.findByCode("PC")).thenReturn(Optional.of(pc));
         when(sources.findByCode("STEAM")).thenReturn(Optional.of(steam));
         when(users.findById(1L)).thenReturn(Optional.of(user));
-        when(library.findByIdAndUserContentUserId(77L, 1L)).thenReturn(Optional.of(existingCopy));
-        when(existingCopy.getSteamAppId()).thenReturn(null);
         when(library.findBySteamAppIdAndUserContentUserId(anyLong(), eq(1L)))
                 .thenReturn(Optional.empty());
         when(contentItems.findById(10L)).thenReturn(Optional.of(existingContent));
@@ -84,6 +81,7 @@ class SteamImportServiceTests {
         when(metadataResolver.resolve(any(SteamImportPreviewItem.class)))
                 .thenReturn(new SteamGameMetadata(rawg, artwork, cover));
         when(contentItems.save(any(ContentItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(contentItems.findByRawgId(300L)).thenReturn(Optional.empty());
         when(userContent.findByUserIdAndContentId(1L, 10L)).thenReturn(Optional.of(existingEntry));
         when(userContent.findByUserIdAndContentId(1L, null)).thenReturn(Optional.empty());
         when(userContent.save(any(UserContent.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -93,7 +91,10 @@ class SteamImportServiceTests {
         SteamImportPreparation preparation = service.prepare(
                 new SteamImportSelection(List.of(1L, 2L, 3L)));
         SteamImportResult result = service.importSelected(
-                new SteamImportRequest(preparation.backupToken(), List.of(1L, 2L, 3L)));
+                new SteamImportRequest(preparation.backupToken(), List.of(
+                        new SteamImportGameRequest(1L),
+                        new SteamImportGameRequest(2L, SteamImportResolution.SUGGESTED_MATCH),
+                        new SteamImportGameRequest(3L))));
 
         assertEquals(3, result.requested());
         assertEquals(2, result.imported());
@@ -103,7 +104,6 @@ class SteamImportServiceTests {
         assertEquals(1, result.rawgEnriched());
         assertEquals(1, result.steamGridDbCovers());
         assertEquals("backup.json", result.backupFile());
-        verify(existingCopy).linkSteamApp(1L);
         ArgumentCaptor<UserGame> copies = ArgumentCaptor.forClass(UserGame.class);
         verify(library, org.mockito.Mockito.times(2)).save(copies.capture());
         assertEquals(List.of(2L, 3L), copies.getAllValues().stream()
@@ -126,18 +126,15 @@ class SteamImportServiceTests {
     void refusesAnAppThatIsNotInTheCurrentSteamLibrary() {
         when(previewService.preview()).thenReturn(preview(List.of(row(
                 1L, "Owned", 0, SteamImportMatch.NEW, null, null))));
-        when(dataTransfer.createAutomaticBackup()).thenReturn(Path.of("backup.json"));
-        SteamImportService service = service();
-        SteamImportPreparation preparation = service.prepare(
-                new SteamImportSelection(List.of(999L)));
 
         assertThrows(InvalidRequestException.class,
-                () -> service.importSelected(new SteamImportRequest(
-                        preparation.backupToken(), List.of(999L))));
+                () -> service().prepare(new SteamImportSelection(List.of(999L))));
     }
 
     @Test
     void doesNotStartImportWhenAutomaticBackupFails() {
+        when(previewService.preview()).thenReturn(preview(List.of(row(
+                1L, "Owned", 0, SteamImportMatch.NEW, null, null))));
         when(dataTransfer.createAutomaticBackup()).thenThrow(
                 new IllegalStateException("Backup failed"));
 
@@ -145,6 +142,117 @@ class SteamImportServiceTests {
                 () -> service().prepare(new SteamImportSelection(List.of(1L))));
 
         verifyNoInteractions(contentItems, userContent, library, metadataResolver);
+    }
+
+    @Test
+    void createsSeparateCatalogGameWhenReviewIsRejected() {
+        SteamImportPreviewItem review = row(4L, "Mafia II", 90,
+                SteamImportMatch.REVIEW, 10L, null);
+        when(previewService.preview()).thenReturn(preview(List.of(review)));
+        when(dataTransfer.createAutomaticBackup()).thenReturn(Path.of("backup.json"));
+        User user = mock(User.class);
+        GamingPlatform pc = mock(GamingPlatform.class);
+        GameSource steam = mock(GameSource.class);
+        when(platforms.findByCode("PC")).thenReturn(Optional.of(pc));
+        when(sources.findByCode("STEAM")).thenReturn(Optional.of(steam));
+        when(users.findById(1L)).thenReturn(Optional.of(user));
+        when(library.findBySteamAppIdAndUserContentUserId(4L, 1L)).thenReturn(Optional.empty());
+        when(metadataResolver.resolve(review)).thenReturn(new SteamGameMetadata(null, null, null));
+        when(contentItems.save(any(ContentItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userContent.findByUserIdAndContentId(1L, null)).thenReturn(Optional.empty());
+        when(userContent.save(any(UserContent.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        SteamImportService service = service();
+        SteamImportPreparation preparation = service.prepare(new SteamImportSelection(List.of(4L)));
+        SteamImportResult result = service.importSelected(new SteamImportRequest(
+                preparation.backupToken(), List.of(new SteamImportGameRequest(
+                        4L, SteamImportResolution.NEW_GAME))));
+
+        assertEquals(1, result.imported());
+        assertEquals(1, result.catalogCreated());
+        assertEquals(0, result.linkedExistingCatalog());
+        verify(contentItems, org.mockito.Mockito.never()).findById(10L);
+        ArgumentCaptor<UserGame> copy = ArgumentCaptor.forClass(UserGame.class);
+        verify(library).save(copy.capture());
+        assertEquals(4L, copy.getValue().getSteamAppId());
+    }
+
+    @Test
+    void createsSeparateCatalogGameWhenExactMatchIsRejected() {
+        SteamImportPreviewItem matched = row(6L, "Sleeping Dogs", 180,
+                SteamImportMatch.MATCHED, 10L, null);
+        when(previewService.preview()).thenReturn(preview(List.of(matched)));
+        when(dataTransfer.createAutomaticBackup()).thenReturn(Path.of("backup.json"));
+        User user = mock(User.class);
+        GamingPlatform pc = mock(GamingPlatform.class);
+        GameSource steam = mock(GameSource.class);
+        when(platforms.findByCode("PC")).thenReturn(Optional.of(pc));
+        when(sources.findByCode("STEAM")).thenReturn(Optional.of(steam));
+        when(users.findById(1L)).thenReturn(Optional.of(user));
+        when(library.findBySteamAppIdAndUserContentUserId(6L, 1L)).thenReturn(Optional.empty());
+        when(metadataResolver.resolve(matched)).thenReturn(new SteamGameMetadata(null, null, null));
+        when(contentItems.save(any(ContentItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userContent.findByUserIdAndContentId(1L, null)).thenReturn(Optional.empty());
+        when(userContent.save(any(UserContent.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        SteamImportService service = service();
+        SteamImportPreparation preparation = service.prepare(new SteamImportSelection(List.of(6L)));
+        SteamImportResult result = service.importSelected(new SteamImportRequest(
+                preparation.backupToken(), List.of(new SteamImportGameRequest(
+                        6L, SteamImportResolution.NEW_GAME))));
+
+        assertEquals(1, result.imported());
+        assertEquals(1, result.catalogCreated());
+        assertEquals(0, result.linkedExistingCatalog());
+        verify(contentItems, org.mockito.Mockito.never()).findById(10L);
+    }
+
+    @Test
+    void linksAnExistingSteamCopyThatDoesNotHaveAnAppId() {
+        SteamImportPreviewItem matched = row(7L, "Mafia II: Definitive Edition", 240,
+                SteamImportMatch.MATCHED, 10L, 77L);
+        when(previewService.preview()).thenReturn(preview(List.of(matched)));
+        when(dataTransfer.createAutomaticBackup()).thenReturn(Path.of("backup.json"));
+        GamingPlatform pc = mock(GamingPlatform.class);
+        GameSource steam = mock(GameSource.class);
+        User user = mock(User.class);
+        UserGame existingCopy = mock(UserGame.class);
+        when(platforms.findByCode("PC")).thenReturn(Optional.of(pc));
+        when(sources.findByCode("STEAM")).thenReturn(Optional.of(steam));
+        when(users.findById(1L)).thenReturn(Optional.of(user));
+        when(library.findBySteamAppIdAndUserContentUserId(7L, 1L)).thenReturn(Optional.empty());
+        when(library.findByIdAndUserContentUserId(77L, 1L)).thenReturn(Optional.of(existingCopy));
+        when(existingCopy.getSteamAppId()).thenReturn(null);
+        when(existingCopy.getSource()).thenReturn(steam);
+        when(steam.getCode()).thenReturn("STEAM");
+
+        SteamImportService service = service();
+        SteamImportPreparation preparation = service.prepare(new SteamImportSelection(List.of(7L)));
+        SteamImportResult result = service.importSelected(new SteamImportRequest(
+                preparation.backupToken(), List.of(new SteamImportGameRequest(
+                        7L, SteamImportResolution.SUGGESTED_MATCH))));
+
+        assertEquals(1, result.imported());
+        assertEquals(1, result.linkedExistingCatalog());
+        assertEquals(0, result.catalogCreated());
+        verify(existingCopy).linkSteamApp(7L, 240L);
+        verify(library, org.mockito.Mockito.never()).save(any(UserGame.class));
+        verifyNoInteractions(contentItems, userContent, metadataResolver);
+    }
+
+    @Test
+    void requiresExplicitResolutionForReviewGames() {
+        SteamImportPreviewItem review = row(5L, "Mafia II", 90,
+                SteamImportMatch.REVIEW, 10L, null);
+        when(previewService.preview()).thenReturn(preview(List.of(review)));
+        when(dataTransfer.createAutomaticBackup()).thenReturn(Path.of("backup.json"));
+
+        SteamImportService service = service();
+        SteamImportPreparation preparation = service.prepare(new SteamImportSelection(List.of(5L)));
+
+        assertThrows(InvalidRequestException.class,
+                () -> service.importSelected(new SteamImportRequest(
+                        preparation.backupToken(), List.of(new SteamImportGameRequest(5L)))));
     }
 
     private SteamImportService service() {

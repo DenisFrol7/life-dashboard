@@ -71,10 +71,32 @@ class GamePlaythroughServiceTests {
                         7L, GamePlaythroughSource.XBOX_ACHIEVEMENTS))
                 .thenReturn(Optional.of(playthrough));
 
-        boolean updated = service().fillXboxAchievementPlaytime(7L, 866L);
+        boolean updated = service().fillXboxAchievementPlaytime(7L, 866L, false);
 
         assertTrue(updated);
         assertEquals(866L, playthrough.getPlaytimeMinutes());
+    }
+
+    @Test
+    void fillsMissingPlaytimeInSingleManualCompletionWhenXboxAchievementsAreComplete() {
+        UserGame game = org.mockito.Mockito.mock(UserGame.class);
+        GamePlaythrough playthrough = new GamePlaythrough(game, 1,
+                Instant.parse("2025-09-06T09:00:00Z"), 0L, null);
+        when(playthroughs
+                .findFirstByLibraryEntryIdAndCompletionSourceOrderByPlaythroughNumberDesc(
+                        7L, GamePlaythroughSource.XBOX_ACHIEVEMENTS))
+                .thenReturn(Optional.empty());
+        when(playthroughs
+                .findAllByLibraryEntryIdAndLibraryEntryUserContentUserIdOrderByPlaythroughNumberDesc(
+                        7L, 1L))
+                .thenReturn(java.util.List.of(playthrough));
+
+        boolean updated = service().fillXboxAchievementPlaytime(7L, 317L, true);
+
+        assertTrue(updated);
+        assertEquals(317L, playthrough.getPlaytimeMinutes());
+        assertEquals(GamePlaythroughSource.MANUAL, playthrough.getCompletionSource());
+        assertEquals(Instant.parse("2025-09-06T09:00:00Z"), playthrough.getCompletedAt());
     }
 
     private GamePlaythroughService service() {

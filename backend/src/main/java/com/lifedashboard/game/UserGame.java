@@ -60,6 +60,10 @@ public class UserGame {
     public long getLegacyPlaytimeMinutes() { return legacyPlaytimeMinutes; }
     public Long getSteamAppId() { return steamAppId; }
     public void linkSteamApp(long steamAppId) { this.steamAppId = steamAppId; }
+    public void linkSteamApp(long steamAppId, long playtimeMinutes) {
+        this.steamAppId = steamAppId;
+        this.legacyPlaytimeMinutes = playtimeMinutes;
+    }
     public Long getXboxTitleId() { return xboxTitleId; }
     public void linkXboxTitle(long xboxTitleId) { this.xboxTitleId = xboxTitleId; }
     public UserContentStatus getStatus() { return status; }

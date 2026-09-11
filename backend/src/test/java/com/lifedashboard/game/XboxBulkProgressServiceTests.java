@@ -64,7 +64,7 @@ class XboxBulkProgressServiceTests {
         when(sessions.totalMinutes(1L, 1L)).thenReturn(30L);
         when(games.updateXboxPlaytime(1L, 1L, 150L)).thenReturn(1);
         when(games.updateXboxPlaytime(2L, 1L, 150L)).thenReturn(1);
-        when(playthroughs.fillXboxAchievementPlaytime(1L, 180L)).thenReturn(true);
+        when(playthroughs.fillXboxAchievementPlaytime(1L, 180L, false)).thenReturn(true);
         when(games.findXboxCopies(1L)).thenReturn(
                 List.of(changed, current, missing, unlinked));
         when(progress.findAllByUserId(1L)).thenReturn(

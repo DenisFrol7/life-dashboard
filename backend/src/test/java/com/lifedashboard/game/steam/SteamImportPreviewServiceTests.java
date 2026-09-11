@@ -68,7 +68,26 @@ class SteamImportPreviewServiceTests {
         when(library.findLibrary(1L, null, null)).thenReturn(List.of(copy));
         when(steam.library()).thenReturn(new SteamLibrary("Player", List.of(game(620L, "Portal 2"))));
 
-        assertEquals(SteamImportMatch.ALREADY_IMPORTED, service().preview().games().getFirst().match());
+        SteamImportPreviewItem result = service().preview().games().getFirst();
+
+        assertEquals(SteamImportMatch.MATCHED, result.match());
+        assertEquals(77L, result.matchedLibraryEntryId());
+    }
+
+    @Test
+    void suggestsTheExistingGameForASteamClassicEdition() {
+        ContentItem mafiaTwo = content(10L, "Mafia II");
+        when(contentItems.findAllByItemTypeOrderByTitleAsc(ContentType.GAME))
+                .thenReturn(List.of(mafiaTwo));
+        when(library.findLibrary(1L, null, null)).thenReturn(List.of());
+        when(steam.library()).thenReturn(new SteamLibrary("Player", List.of(
+                game(50130L, "Mafia II (Classic)"))));
+
+        SteamImportPreviewItem result = service().preview().games().getFirst();
+
+        assertEquals(SteamImportMatch.REVIEW, result.match());
+        assertEquals(10L, result.matchedContentId());
+        assertEquals("Mafia II", result.matchedContentTitle());
     }
 
     @Test

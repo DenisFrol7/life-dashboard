@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -72,11 +73,16 @@ public class SteamImportService {
 
     public SteamImportPreparation prepare(SteamImportSelection request) {
         Set<Long> selectedIds = new LinkedHashSet<>(request.appIds());
+        if (selectedIds.size() != request.appIds().size()) {
+            throw new InvalidRequestException("Список импорта содержит повторяющиеся Steam App ID");
+        }
+        SteamImportPreview preview = previewService.preview();
+        Map<Long, SteamImportPreviewItem> available = validateAvailable(selectedIds, preview);
         String backupFile = dataTransfer.createAutomaticBackup().toString();
         Instant now = Instant.now();
         backupSessions.entrySet().removeIf(entry -> entry.getValue().expiresAt().isBefore(now));
         String token = UUID.randomUUID().toString();
-        backupSessions.put(token, new BackupSession(Set.copyOf(selectedIds), backupFile,
+        backupSessions.put(token, new BackupSession(Map.copyOf(available), backupFile,
                 now.plus(BACKUP_SESSION_TTL)));
         return new SteamImportPreparation(token, backupFile);
     }
@@ -84,11 +90,16 @@ public class SteamImportService {
     @Transactional
     public SteamImportResult importSelected(SteamImportRequest request) {
         BackupSession backup = requireBackup(request.backupToken());
-        Set<Long> selectedIds = new LinkedHashSet<>(request.appIds());
-        if (!backup.allowedAppIds().containsAll(selectedIds))
+        Map<Long, SteamImportGameRequest> selected = new LinkedHashMap<>();
+        for (SteamImportGameRequest game : request.games()) {
+            if (selected.putIfAbsent(game.appId(), game) != null) {
+                throw new InvalidRequestException(
+                        "Список импорта содержит повторяющийся Steam App ID " + game.appId());
+            }
+        }
+        if (!backup.rows().keySet().containsAll(selected.keySet()))
             throw new InvalidRequestException("Список импорта изменился после создания резервной копии");
-        SteamImportPreview preview = previewService.preview();
-        Map<Long, SteamImportPreviewItem> available = validateAvailable(selectedIds, preview);
+        validateResolutions(selected, backup);
 
         GamingPlatform pc = platforms.findByCode("PC")
                 .orElseThrow(() -> new ResourceNotFoundException("Игровая платформа PC не найдена"));
@@ -103,10 +114,10 @@ public class SteamImportService {
         int skipped = 0;
         int rawgEnriched = 0;
         int steamGridDbCovers = 0;
-        for (Long appId : selectedIds) {
-            SteamImportPreviewItem row = available.get(appId);
+        for (SteamImportGameRequest selectedGame : selected.values()) {
+            long appId = selectedGame.appId();
+            SteamImportPreviewItem row = backup.rows().get(appId);
             if (row.match() == SteamImportMatch.ALREADY_IMPORTED) {
-                linkExistingCopy(row);
                 skipped++;
                 continue;
             }
@@ -115,11 +126,19 @@ public class SteamImportService {
                 continue;
             }
 
+            if (selectedGame.resolution() != SteamImportResolution.NEW_GAME
+                    && linkExistingCopy(row)) {
+                imported++;
+                linkedExisting++;
+                continue;
+            }
+
+            Long matchedContentId = resolvedContentId(row, selectedGame);
             ContentItem content;
-            if (row.matchedContentId() != null) {
-                content = contentItems.findById(row.matchedContentId())
+            if (matchedContentId != null) {
+                content = contentItems.findById(matchedContentId)
                         .orElseThrow(() -> new ResourceNotFoundException(
-                                "Связанная карточка игры не найдена: " + row.matchedContentId()));
+                                "Связанная карточка игры не найдена: " + matchedContentId));
                 linkedExisting++;
             } else {
                 SteamGameMetadata metadata = metadataResolver.resolve(row);
@@ -138,7 +157,7 @@ public class SteamImportService {
             library.save(copy);
             imported++;
         }
-        return new SteamImportResult(selectedIds.size(), imported, catalogCreated,
+        return new SteamImportResult(selected.size(), imported, catalogCreated,
                 linkedExisting, skipped, rawgEnriched, steamGridDbCovers,
                 backup.backupFile());
     }
@@ -165,11 +184,45 @@ public class SteamImportService {
         return backup;
     }
 
-    private void linkExistingCopy(SteamImportPreviewItem row) {
-        if (row.matchedLibraryEntryId() == null) return;
-        library.findByIdAndUserContentUserId(row.matchedLibraryEntryId(), userId)
+    private void validateResolutions(Map<Long, SteamImportGameRequest> selected,
+            BackupSession backup) {
+        for (SteamImportGameRequest request : selected.values()) {
+            SteamImportPreviewItem row = backup.rows().get(request.appId());
+            if (row.match() == SteamImportMatch.REVIEW && request.resolution() == null) {
+                throw new InvalidRequestException(
+                        "Выберите способ добавления для Steam-игры «" + row.title() + "»");
+            }
+            if (row.match() != SteamImportMatch.MATCHED
+                    && row.match() != SteamImportMatch.REVIEW
+                    && request.resolution() != null) {
+                throw new InvalidRequestException(
+                        "Способ добавления можно выбирать только для найденных совпадений");
+            }
+        }
+    }
+
+    private Long resolvedContentId(SteamImportPreviewItem row,
+            SteamImportGameRequest request) {
+        if (row.match() != SteamImportMatch.MATCHED
+                && row.match() != SteamImportMatch.REVIEW) return row.matchedContentId();
+        if (request.resolution() == SteamImportResolution.NEW_GAME) return null;
+        if (row.matchedContentId() == null) {
+            throw new InvalidRequestException(
+                    "Для Steam-игры «" + row.title() + "» не найдена карточка для связи");
+        }
+        return row.matchedContentId();
+    }
+
+    private boolean linkExistingCopy(SteamImportPreviewItem row) {
+        if (row.matchedLibraryEntryId() == null) return false;
+        return library.findByIdAndUserContentUserId(row.matchedLibraryEntryId(), userId)
                 .filter(copy -> copy.getSteamAppId() == null)
-                .ifPresent(copy -> copy.linkSteamApp(row.appId()));
+                .filter(copy -> "STEAM".equals(copy.getSource().getCode()))
+                .map(copy -> {
+                    copy.linkSteamApp(row.appId(), row.playtimeMinutes());
+                    return true;
+                })
+                .orElse(false);
     }
 
     private ContentItem createCatalogItem(SteamImportPreviewItem row, SteamGameMetadata metadata) {
@@ -193,7 +246,9 @@ public class SteamImportService {
                 metadata.steamGridDbGame() == null
                         ? null : metadata.steamGridDbGame().steamGridDbId(),
                 metadata.verticalCover() == null ? null : metadata.verticalCover().gridId());
-        if (rawg != null) item.linkRawg(rawg.rawgId(), rawg.slug());
+        if (rawg != null && contentItems.findByRawgId(rawg.rawgId()).isEmpty()) {
+            item.linkRawg(rawg.rawgId(), rawg.slug());
+        }
         return contentItems.save(item);
     }
 
@@ -208,5 +263,6 @@ public class SteamImportService {
                 + appId + "/header.jpg";
     }
 
-    private record BackupSession(Set<Long> allowedAppIds, String backupFile, Instant expiresAt) {}
+    private record BackupSession(Map<Long, SteamImportPreviewItem> rows,
+            String backupFile, Instant expiresAt) {}
 }

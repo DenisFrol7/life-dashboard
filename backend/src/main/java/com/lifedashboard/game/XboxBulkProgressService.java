@@ -55,6 +55,11 @@ public class XboxBulkProgressService {
                 .toList();
         List<Long> linkedTitleIds = new ArrayList<>(new LinkedHashSet<>(linkedCopies.stream()
                 .map(UserGame::getXboxTitleId).toList()));
+        Map<Long, OpenXblTitle> titlesById = indexTitles(history);
+        Map<Long, XboxGameProgress> progressByCopyId = new HashMap<>();
+        for (XboxGameProgress stored : progress.findAllByUserId(userId)) {
+            progressByCopyId.put(stored.getLibraryEntry().getId(), stored);
+        }
         Map<Long, Long> playtimeByTitle = Map.of();
         boolean playtimeSyncFailed = false;
         try {
@@ -78,15 +83,11 @@ public class XboxBulkProgressService {
                 }
             }
             if (remoteMinutes != null
-                    && playthroughs.fillXboxAchievementPlaytime(copy.getId(), remoteMinutes)) {
+                    && playthroughs.fillXboxAchievementPlaytime(copy.getId(), remoteMinutes,
+                            isAchievementCompletionKnown(titlesById.get(copy.getXboxTitleId()),
+                                    progressByCopyId.get(copy.getId())))) {
                 playthroughPlaytimeUpdated++;
             }
-        }
-        Map<Long, OpenXblTitle> titlesById = new HashMap<>();
-        for (OpenXblTitle title : history.titles()) titlesById.put(title.titleId(), title);
-        Map<Long, XboxGameProgress> progressByCopyId = new HashMap<>();
-        for (XboxGameProgress stored : progress.findAllByUserId(userId)) {
-            progressByCopyId.put(stored.getLibraryEntry().getId(), stored);
         }
 
         int updated = 0;
@@ -135,6 +136,20 @@ public class XboxBulkProgressService {
                 updated, initialized, upToDate, xboxCopies.size() - linkedCopies.size(),
                 failed, completionsRecorded, playtimeUpdated, playtimeUnavailable,
                 playthroughPlaytimeUpdated, playtimeSyncFailed, List.copyOf(results));
+    }
+
+    private Map<Long, OpenXblTitle> indexTitles(OpenXblTitleHistory history) {
+        Map<Long, OpenXblTitle> result = new HashMap<>();
+        for (OpenXblTitle title : history.titles()) result.put(title.titleId(), title);
+        return result;
+    }
+
+    private boolean isAchievementCompletionKnown(OpenXblTitle title, XboxGameProgress stored) {
+        boolean completedInHistory = title != null && title.totalAchievements() > 0
+                && title.currentAchievements() >= title.totalAchievements();
+        boolean completedInDatabase = stored != null && stored.getTotalAchievements() > 0
+                && stored.getUnlockedAchievements() >= stored.getTotalAchievements();
+        return completedInHistory || completedInDatabase;
     }
 
     private boolean isUpToDate(XboxGameProgress stored, OpenXblTitle title) {

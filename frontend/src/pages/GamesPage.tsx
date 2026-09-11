@@ -52,6 +52,7 @@ import {
   type SteamGridDbGameCandidate,
   type SteamImportMatch,
   type SteamImportPreview,
+  type SteamImportSelection,
   type SteamLibrarySummary,
   type SteamRecentSyncResult,
   type XboxBulkSyncResult,
@@ -1389,13 +1390,24 @@ function SteamImportPreviewDialog({
   const [filter, setFilter] = useState<SteamImportMatch | "">("");
   const [query, setQuery] = useState("");
   const [excludedAppIds, setExcludedAppIds] = useState<Set<number>>(new Set());
+  const [resolutionByAppId, setResolutionByAppId] = useState<
+    Record<number, NonNullable<SteamImportSelection["resolution"]>>
+  >({});
 
   const loadPreview = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      setPreview(await previewSteamImport());
+      const loaded = await previewSteamImport();
+      setPreview(loaded);
       setExcludedAppIds(new Set());
+      setResolutionByAppId(
+        Object.fromEntries(
+          loaded.games
+            .filter((game) => game.match === "MATCHED")
+            .map((game) => [game.appId, "SUGGESTED_MATCH" as const]),
+        ),
+      );
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -1440,6 +1452,9 @@ function SteamImportPreviewDialog({
     () => includedGames.filter((game) => game.match !== "ALREADY_IMPORTED"),
     [includedGames],
   );
+  const unresolvedReviews = selectedForImport.filter(
+    (game) => game.match === "REVIEW" && resolutionByAppId[game.appId] == null,
+  );
 
   const visibleGames = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("ru-RU");
@@ -1463,7 +1478,7 @@ function SteamImportPreviewDialog({
   };
 
   const runImport = async () => {
-    if (selectedForImport.length === 0) return;
+    if (selectedForImport.length === 0 || unresolvedReviews.length > 0) return;
     const confirmed = window.confirm(
       `Импортировать ${selectedForImport.length} игр? Перед записью backend автоматически создаст резервную копию. Данные и горизонтальные обложки загрузятся из RAWG, вертикальные — из SteamGridDB.`,
     );
@@ -1474,7 +1489,13 @@ function SteamImportPreviewDialog({
     setImportProgress({ completed: 0, total: selectedForImport.length });
     let processed = 0;
     try {
-      const appIds = selectedForImport.map((game) => game.appId);
+      const selections: SteamImportSelection[] = selectedForImport.map((game) => ({
+        appId: game.appId,
+        ...(game.match === "MATCHED" || game.match === "REVIEW"
+          ? { resolution: resolutionByAppId[game.appId] }
+          : {}),
+      }));
+      const appIds = selections.map((game) => game.appId);
       const preparation = await prepareSteamImport(appIds);
       setCreatingBackup(false);
       const total = {
@@ -1484,17 +1505,17 @@ function SteamImportPreviewDialog({
         steamGridDbCovers: 0,
       };
       const batchSize = 5;
-      for (let offset = 0; offset < appIds.length; offset += batchSize) {
-        const batch = appIds.slice(offset, offset + batchSize);
+      for (let offset = 0; offset < selections.length; offset += batchSize) {
+        const batch = selections.slice(offset, offset + batchSize);
         const result = await importSteamGames(preparation.backupToken, batch);
         total.imported += result.imported;
         total.catalogCreated += result.catalogCreated;
         total.rawgEnriched += result.rawgEnriched;
         total.steamGridDbCovers += result.steamGridDbCovers;
-        processed = Math.min(offset + batch.length, appIds.length);
+        processed = Math.min(offset + batch.length, selections.length);
         setImportProgress({
           completed: processed,
-          total: appIds.length,
+          total: selections.length,
         });
       }
       showToast(
@@ -1631,6 +1652,31 @@ function SteamImportPreviewDialog({
                     )}
                   </div>
                   <div className="steam-import-game-actions">
+                    {(game.match === "MATCHED" || game.match === "REVIEW") && (
+                      <select
+                        className="steam-import-resolution"
+                        value={resolutionByAppId[game.appId] ?? ""}
+                        onChange={(event) => {
+                          const value = event.target.value as
+                            | NonNullable<SteamImportSelection["resolution"]>
+                            | "";
+                          setResolutionByAppId((current) => {
+                            const next = { ...current };
+                            if (value) next[game.appId] = value;
+                            else delete next[game.appId];
+                            return next;
+                          });
+                        }}
+                        disabled={importing}
+                        aria-label={`Способ добавления ${game.title}`}
+                      >
+                        <option value="">Выберите действие</option>
+                        <option value="SUGGESTED_MATCH">
+                          Связать: {game.matchedContentTitle}
+                        </option>
+                        <option value="NEW_GAME">Создать отдельную игру</option>
+                      </select>
+                    )}
                     <span className={`steam-import-match ${game.match.toLowerCase()}`}>
                       {steamMatchLabels[game.match]}
                     </span>
@@ -1656,6 +1702,11 @@ function SteamImportPreviewDialog({
                 <p>
                   Перед первой записью создаётся один автоматический бэкап. Steam передаёт библиотеку и время, RAWG — данные и горизонтальную обложку, SteamGridDB — вертикальную.
                 </p>
+                {unresolvedReviews.length > 0 && (
+                  <p className="xbox-import-review-warning">
+                    Выберите действие для игр со статусом «Нужно проверить»: {unresolvedReviews.length}.
+                  </p>
+                )}
                 {excludedAppIds.size > 0 && (
                   <button
                     type="button"
@@ -1679,13 +1730,19 @@ function SteamImportPreviewDialog({
                 <button
                   className="primary-button"
                   onClick={() => void runImport()}
-                  disabled={importing || selectedForImport.length === 0}
+                  disabled={
+                    importing ||
+                    selectedForImport.length === 0 ||
+                    unresolvedReviews.length > 0
+                  }
                 >
                   {importing
                     ? creatingBackup
                       ? "Создаём бэкап…"
                       : `Импортируем ${importProgress?.completed ?? 0}/${importProgress?.total ?? selectedForImport.length}`
-                    : `Импортировать (${selectedForImport.length})`}
+                    : unresolvedReviews.length > 0
+                      ? `Решить совпадения (${unresolvedReviews.length})`
+                      : `Импортировать (${selectedForImport.length})`}
                 </button>
               </div>
             </div>
@@ -2112,7 +2169,7 @@ function XboxImportPreviewDialog({
   );
 }
 
-function GameForm({
+export function GameForm({
   game,
   library,
   platforms,
@@ -2120,6 +2177,7 @@ function GameForm({
   progress,
   onClose,
   onSaved,
+  onDeleted,
 }: {
   game?: Game;
   library?: GameLibrary;
@@ -2128,6 +2186,7 @@ function GameForm({
   progress?: XboxProgressInput | null;
   onClose: () => void;
   onSaved: () => void;
+  onDeleted?: () => void;
 }) {
   const { showToast } = useToast();
   const [item, setItem] = useState<GameInput>(game ? { ...game } : emptyGame);
@@ -2361,7 +2420,8 @@ function GameForm({
     try {
       await deleteGame(game.id);
       showToast("Игра удалена");
-      onSaved();
+      if (onDeleted) onDeleted();
+      else onSaved();
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "Не удалось удалить игру",

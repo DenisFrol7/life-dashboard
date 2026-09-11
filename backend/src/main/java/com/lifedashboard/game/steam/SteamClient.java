@@ -33,7 +33,7 @@ public class SteamClient {
         this.steamId64 = steamId64 == null ? "" : steamId64.trim();
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(10));
-        requestFactory.setReadTimeout(Duration.ofSeconds(20));
+        requestFactory.setReadTimeout(Duration.ofSeconds(60));
         this.client = RestClient.builder()
                 .baseUrl("https://api.steampowered.com")
                 .requestFactory(requestFactory)

@@ -8,7 +8,7 @@ import {
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft, Pencil, RefreshCw } from "lucide-react";
 import { PlatformBadge } from "../components/PlatformBadge";
-import { GameSessionForm } from "./GamesPage";
+import { GameForm, GameSessionForm } from "./GamesPage";
 import {
   createGameLibrary,
   createGamePlaythrough,
@@ -101,6 +101,7 @@ export function GameDetailsPage() {
   const [editingLibrary, setEditingLibrary] = useState<
     GameLibrary | "new" | null
   >(null);
+  const [editingGame, setEditingGame] = useState(false);
   const [platforms, setPlatforms] = useState<Reference[]>([]);
   const [sources, setSources] = useState<Reference[]>([]);
   const [loading, setLoading] = useState(true);
@@ -367,7 +368,7 @@ export function GameDetailsPage() {
         </Link>
         <button
           className="secondary-button icon-button"
-          onClick={() => navigate(`/games?edit=${game.id}`)}
+          onClick={() => setEditingGame(true)}
         >
           <Pencil />
           Редактировать
@@ -820,6 +821,21 @@ export function GameDetailsPage() {
           <p className="muted">Игровых сессий у этой копии пока нет.</p>
         )}
       </section>
+      {editingGame && (
+        <GameForm
+          game={game}
+          library={library ?? undefined}
+          platforms={platforms}
+          sources={sources}
+          progress={baseAchievements ?? progress}
+          onClose={() => setEditingGame(false)}
+          onSaved={() => {
+            setEditingGame(false);
+            void load();
+          }}
+          onDeleted={() => navigate("/games", { replace: true })}
+        />
+      )}
       {showAchievementDetails && library && (
         <AchievementGroupsModal
           libraryId={library.id}
