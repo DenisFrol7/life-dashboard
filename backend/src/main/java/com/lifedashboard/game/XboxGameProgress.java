@@ -23,6 +23,10 @@ public class XboxGameProgress {
     private Instant lastUnlockedAt;
     @Column(name = "last_updated_at", nullable = false)
     private Instant lastUpdatedAt;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "achievement_details_status", nullable = false, length = 40)
+    private XboxAchievementDetailsStatus achievementDetailsStatus =
+            XboxAchievementDetailsStatus.NOT_SYNCHRONIZED;
 
     protected XboxGameProgress() {}
     public XboxGameProgress(UserGame libraryEntry) { this.libraryEntry = libraryEntry; }
@@ -46,4 +50,10 @@ public class XboxGameProgress {
     public Integer getEarnedGamerscore() { return earnedGamerscore; }
     public Instant getLastUnlockedAt() { return lastUnlockedAt; }
     public Instant getLastUpdatedAt() { return lastUpdatedAt; }
+    public XboxAchievementDetailsStatus getAchievementDetailsStatus() {
+        return achievementDetailsStatus;
+    }
+    public void updateAchievementDetailsStatus(XboxAchievementDetailsStatus status) {
+        this.achievementDetailsStatus = status;
+    }
 }

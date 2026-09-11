@@ -45,6 +45,8 @@ class XboxProgressSyncServiceTests {
                 List.of("PC", "XboxSeries"), 25, 0, 1000, 1000, 2, null);
         Instant lastUnlocked = Instant.parse("2026-05-16T00:31:04.903Z");
         XboxGameProgress stored = storedProgress(game, 25, 25, 1000, 1000);
+        when(stored.getAchievementDetailsStatus()).thenReturn(
+                XboxAchievementDetailsStatus.AVAILABLE);
         when(games.findByIdAndUserContentUserId(7L, 1L)).thenReturn(Optional.of(game));
         when(openXbl.titleHistory()).thenReturn(new OpenXblTitleHistory("xuid", List.of(title)));
         when(openXbl.progress("xuid", title)).thenReturn(
@@ -63,9 +65,12 @@ class XboxProgressSyncServiceTests {
         assertTrue(result.exactAchievementDetails());
         assertTrue(result.completionRecorded());
         assertFalse(result.manualDlcGroupsPreserved());
+        assertEquals(XboxAchievementDetailsStatus.AVAILABLE,
+                result.progress().achievementDetailsStatus());
         verify(game).linkXboxTitle(2117095676L);
         verify(achievementGroups).putBase(game, new com.lifedashboard.game.dto.XboxProgressRequest(
                 25, 25, 1000, 1000));
+        verify(stored).updateAchievementDetailsStatus(XboxAchievementDetailsStatus.AVAILABLE);
         verify(achievements).saveAll(any());
     }
 
@@ -77,6 +82,8 @@ class XboxProgressSyncServiceTests {
         XboxAchievementGroup dlc = mock(XboxAchievementGroup.class);
         when(dlc.getGroupType()).thenReturn(XboxAchievementGroupType.DLC);
         XboxGameProgress stored = storedProgress(game, 59, 59, 1250, 1250);
+        when(stored.getAchievementDetailsStatus()).thenReturn(
+                XboxAchievementDetailsStatus.LEGACY_NOT_SUPPORTED);
         when(games.findByIdAndUserContentUserId(7L, 1L)).thenReturn(Optional.of(game));
         when(openXbl.titleHistory()).thenReturn(new OpenXblTitleHistory("xuid", List.of(title)));
         when(openXbl.progress("xuid", title)).thenReturn(
@@ -89,14 +96,70 @@ class XboxProgressSyncServiceTests {
 
         assertTrue(result.manualDlcGroupsPreserved());
         assertFalse(result.exactAchievementDetails());
+        assertEquals(XboxAchievementDetailsStatus.LEGACY_NOT_SUPPORTED,
+                result.progress().achievementDetailsStatus());
         assertEquals(59, result.progress().unlockedAchievements());
         assertEquals(1250, result.progress().earnedGamerscore());
         verify(achievementGroups).recalculate(game);
         verify(progress).save(stored);
+        verify(stored).updateAchievementDetailsStatus(
+                XboxAchievementDetailsStatus.LEGACY_NOT_SUPPORTED);
         verify(achievementGroups, never()).putBase(any(), any());
         verify(playthroughs, never()).recordXboxAchievementCompletion(any(), any());
         verify(stored).update(eq(59), eq(59), eq(1250), eq(1250),
                 isNull(), any(Instant.class));
+    }
+
+    @Test
+    void identifiesASeparatePcTitleLinkedToAnXboxCopy() {
+        UserGame game = linkedGame("XBOX_SERIES", 900L);
+        OpenXblTitle title = new OpenXblTitle(900L, "Separate PC version",
+                List.of("PC", "WindowsOneCore"), 5, 10, 500, 1000, 2, null);
+        XboxGameProgress stored = storedProgress(game, 10, 5, 1000, 500);
+        when(stored.getAchievementDetailsStatus()).thenReturn(
+                XboxAchievementDetailsStatus.POSSIBLE_PC_VERSION);
+        when(games.findByIdAndUserContentUserId(7L, 1L)).thenReturn(Optional.of(game));
+        when(openXbl.titleHistory()).thenReturn(new OpenXblTitleHistory("xuid", List.of(title)));
+        when(openXbl.progress("xuid", title)).thenReturn(
+                new OpenXblProgress(900L, 10, 5, 1000, 500, null, true,
+                        List.of(new OpenXblAchievement("1", "Achievement", null,
+                                null, null, 100, false, true, null))));
+        when(groups.findAllByLibraryEntryIdOrderByGroupTypeAscIdAsc(7L)).thenReturn(List.of());
+        when(progress.findByLibraryEntryId(7L)).thenReturn(Optional.of(stored));
+        when(progress.save(stored)).thenReturn(stored);
+
+        XboxProgressSyncResponse result = service().sync(7L);
+
+        assertEquals(XboxAchievementDetailsStatus.POSSIBLE_PC_VERSION,
+                result.progress().achievementDetailsStatus());
+        verify(stored).updateAchievementDetailsStatus(
+                XboxAchievementDetailsStatus.POSSIBLE_PC_VERSION);
+        verify(game, never()).linkXboxTitle(900L);
+    }
+
+    @Test
+    void reportsWhenModernTitleReturnsOnlyAggregateProgress() {
+        UserGame game = linkedGame("XBOX_SERIES", 901L);
+        OpenXblTitle title = new OpenXblTitle(901L, "Unavailable details",
+                List.of("XboxSeries"), 5, 10, 500, 1000, 2, null);
+        XboxGameProgress stored = storedProgress(game, 10, 5, 1000, 500);
+        when(stored.getAchievementDetailsStatus()).thenReturn(
+                XboxAchievementDetailsStatus.DETAILS_UNAVAILABLE);
+        when(games.findByIdAndUserContentUserId(7L, 1L)).thenReturn(Optional.of(game));
+        when(openXbl.titleHistory()).thenReturn(new OpenXblTitleHistory("xuid", List.of(title)));
+        when(openXbl.progress("xuid", title)).thenReturn(
+                new OpenXblProgress(901L, 10, 5, 1000, 500, null, false));
+        when(groups.findAllByLibraryEntryIdOrderByGroupTypeAscIdAsc(7L)).thenReturn(List.of());
+        when(progress.findByLibraryEntryId(7L)).thenReturn(Optional.of(stored));
+        when(progress.save(stored)).thenReturn(stored);
+
+        XboxProgressSyncResponse result = service().sync(7L);
+
+        assertEquals(XboxAchievementDetailsStatus.DETAILS_UNAVAILABLE,
+                result.progress().achievementDetailsStatus());
+        verify(stored).updateAchievementDetailsStatus(
+                XboxAchievementDetailsStatus.DETAILS_UNAVAILABLE);
+        verify(achievements, never()).saveAll(any());
     }
 
     private UserGame game(String title, String platformCode) {
@@ -111,6 +174,16 @@ class XboxProgressSyncServiceTests {
         when(game.getUserContent()).thenReturn(userContent);
         when(userContent.getContent()).thenReturn(content);
         when(content.getTitle()).thenReturn(title);
+        return game;
+    }
+
+    private UserGame linkedGame(String platformCode, long titleId) {
+        UserGame game = mock(UserGame.class);
+        GamingPlatform platform = mock(GamingPlatform.class);
+        when(game.getId()).thenReturn(7L);
+        when(game.getXboxTitleId()).thenReturn(titleId);
+        when(game.getPlatform()).thenReturn(platform);
+        when(platform.getCode()).thenReturn(platformCode);
         return game;
     }
 

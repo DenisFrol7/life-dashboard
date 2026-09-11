@@ -307,6 +307,8 @@ html[data-theme="dark"] .library-copy-list em,
 html[data-theme="dark"] .library-card-heading button,
 html[data-theme="dark"] .total-playtime span { color: #b9d7ec; }
 html[data-theme="dark"] .achievement-summary strong { color: #67e98e; }
+html[data-theme="dark"] .achievement-diagnostic { border-color: #31516a; color: #b9d7ec; background: #142737; }
+html[data-theme="dark"] .achievement-diagnostic.warning { border-color: #76553b; color: #efc49b; background: #302318; }
 html[data-theme="dark"] .platform-logo-badge { border-color: #294052; color: #dce5ee; background: #111e2a; }
 html[data-theme="dark"] .platform-logo-badge.xbox > svg { color: #42dc70; }
 html[data-theme="dark"] .platform-logo-badge.pc > svg { color: #76bfff; }
@@ -1254,6 +1256,8 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .achievement-summary h2 { margin-bottom: 8px; }
 .achievement-summary strong { color: #3b7c3b; font-size: 16px; }
 .achievement-summary span, .achievement-summary p { margin: 0; color: #74818a; font-size: 11px; }
+.achievement-summary .achievement-diagnostic { padding: 9px 10px; border: 1px solid #cfe0ea; border-radius: 8px; color: #536f83; background: #eef5f8; font-size: 10px; line-height: 1.45; }
+.achievement-summary .achievement-diagnostic.warning { border-color: #ead4bd; color: #8c6141; background: #fbf1e6; }
 .achievement-compact-list { display: grid; gap: 5px; margin-bottom: 3px; }
 .achievement-compact-list > div { display: grid; grid-template-columns: 1fr auto auto; gap: 9px; padding: 6px 8px; border-radius: 7px; background: #f6f8f9; }
 .achievement-compact-list span, .achievement-compact-list b, .achievement-compact-list em { font-size: 9px; font-style: normal; }

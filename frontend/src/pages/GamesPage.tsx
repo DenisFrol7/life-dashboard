@@ -108,7 +108,8 @@ type GameQualityIssueKind =
   | "STEAM_LINK"
   | "XBOX_LINK"
   | "STEAM_PROGRESS"
-  | "XBOX_PROGRESS";
+  | "XBOX_PROGRESS"
+  | "XBOX_DETAILS";
 type GameQualityRow = {
   game: Game;
   issues: GameQualityIssueKind[];
@@ -130,6 +131,7 @@ const gameQualityIssueLabels: Record<GameQualityIssueKind, string> = {
   XBOX_LINK: "Xbox не привязан",
   STEAM_PROGRESS: "Steam-достижения не проверены",
   XBOX_PROGRESS: "Xbox-достижения не проверены",
+  XBOX_DETAILS: "Нет списка Xbox",
 };
 const gameFilterStatuses = new Set<LibraryStatus | "GAME_PASS" | "">([
   "",
@@ -394,6 +396,20 @@ export function GamesPage() {
           )
         )
           issues.push("XBOX_PROGRESS");
+        if (
+          copies.some((entry) => {
+            if (!isXbox(entry.platform.code) || entry.xboxTitleId == null)
+              return false;
+            const status = xbox[entry.id]?.achievementDetailsStatus;
+            return (
+              status === "NOT_SYNCHRONIZED" ||
+              status === "DETAILS_UNAVAILABLE" ||
+              status === "POSSIBLE_PC_VERSION" ||
+              status === "TITLE_PLATFORM_MISMATCH"
+            );
+          })
+        )
+          issues.push("XBOX_DETAILS");
         return { game, issues };
       })
       .filter((row) => row.issues.length > 0)

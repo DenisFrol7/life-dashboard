@@ -193,6 +193,14 @@ export type GameLibraryInput = Pick<
   | "startedAt"
   | "completedAt"
 > & { platformId: number; sourceId: number };
+export type XboxAchievementDetailsStatus =
+  | "NOT_SYNCHRONIZED"
+  | "AVAILABLE"
+  | "NO_ACHIEVEMENTS"
+  | "LEGACY_NOT_SUPPORTED"
+  | "DETAILS_UNAVAILABLE"
+  | "POSSIBLE_PC_VERSION"
+  | "TITLE_PLATFORM_MISMATCH";
 export type XboxProgress = {
   id: number;
   libraryEntryId: number;
@@ -204,6 +212,7 @@ export type XboxProgress = {
   gamerscorePercent: number;
   lastUnlockedAt: string | null;
   lastUpdatedAt: string;
+  achievementDetailsStatus: XboxAchievementDetailsStatus;
 };
 export type XboxAchievement = {
   achievementId: string;

@@ -56,7 +56,8 @@ class XboxBulkProgressServiceTests {
         when(currentProgress.getTotalAchievements()).thenReturn(10);
         XboxProgressResponse synchronizedProgress = new XboxProgressResponse(
                 11L, 1L, 10, 5, 50.0, 1000, 500, 50.0, null,
-                Instant.parse("2026-09-04T13:00:00Z"));
+                Instant.parse("2026-09-04T13:00:00Z"),
+                XboxAchievementDetailsStatus.AVAILABLE);
 
         when(openXbl.titleHistory()).thenReturn(history);
         when(openXbl.playtimeMinutes("xuid", List.of(101L, 202L, 303L)))
@@ -105,7 +106,8 @@ class XboxBulkProgressServiceTests {
         when(currentProgress.getId()).thenReturn(12L);
         XboxProgressResponse synchronizedProgress = new XboxProgressResponse(
                 12L, 2L, 10, 8, 80.0, 1000, 800, 80.0, null,
-                Instant.parse("2026-09-04T13:00:00Z"));
+                Instant.parse("2026-09-04T13:00:00Z"),
+                XboxAchievementDetailsStatus.AVAILABLE);
 
         when(openXbl.titleHistory()).thenReturn(history);
         when(openXbl.playtimeMinutes("xuid", List.of(202L))).thenReturn(Map.of());

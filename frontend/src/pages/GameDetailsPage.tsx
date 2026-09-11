@@ -42,6 +42,7 @@ import {
   type SteamAchievement,
   type SteamProgress,
   type XboxAchievement,
+  type XboxAchievementDetailsStatus,
   type XboxAchievementGroup,
   type XboxAchievementGroupInput,
   type XboxProgress,
@@ -68,6 +69,44 @@ const isXbox = (entry: GameLibrary) =>
   entry.platform.code.startsWith("XBOX_") ||
   entry.platform.code === "ORIGINAL_XBOX";
 const isSteam = (entry: GameLibrary) => entry.source.code === "STEAM";
+const xboxAchievementDiagnostic = (
+  status: XboxAchievementDetailsStatus,
+): { text: string; warning: boolean } | null => {
+  switch (status) {
+    case "AVAILABLE":
+      return null;
+    case "NOT_SYNCHRONIZED":
+      return {
+        text: "Подробный список ещё не проверялся. Нажмите «Обновить» в блоке прогресса Xbox.",
+        warning: false,
+      };
+    case "NO_ACHIEVEMENTS":
+      return {
+        text: "OpenXBL сообщает, что у связанного Xbox Title ID нет списка достижений.",
+        warning: false,
+      };
+    case "LEGACY_NOT_SUPPORTED":
+      return {
+        text: "Для этой старой Xbox-игры OpenXBL предоставляет только общие значения без списка и дат достижений.",
+        warning: false,
+      };
+    case "DETAILS_UNAVAILABLE":
+      return {
+        text: "OpenXBL вернул общий прогресс, но не предоставил подробный список достижений для этого Title ID.",
+        warning: true,
+      };
+    case "POSSIBLE_PC_VERSION":
+      return {
+        text: "Связанный Title ID похож на отдельную PC-версию игры. Проверьте Xbox-привязку этой копии.",
+        warning: true,
+      };
+    case "TITLE_PLATFORM_MISMATCH":
+      return {
+        text: "Платформа связанного Title ID не совпадает с платформой этой копии игры. Возможно, выбрана другая Xbox-версия.",
+        warning: true,
+      };
+  }
+};
 
 export function GameDetailsPage() {
   const { id } = useParams();
@@ -300,6 +339,9 @@ export function GameDetailsPage() {
   const recentXboxAchievements = xboxAchievements
     .filter((item) => item.unlocked)
     .slice(0, 3);
+  const xboxDiagnostic = progress
+    ? xboxAchievementDiagnostic(progress.achievementDetailsStatus)
+    : null;
   const steamCompleted100 = Boolean(
     steamProgress &&
       steamProgress.totalAchievements > 0 &&
@@ -337,10 +379,11 @@ export function GameDetailsPage() {
       if (!synchronized.manualDlcGroupsPreserved) {
         setAchievementGroups(await getXboxAchievementGroups(library.id));
       }
+      const diagnostic = xboxAchievementDiagnostic(
+        synchronized.progress.achievementDetailsStatus,
+      );
       setXboxSyncNote(
-        synchronized.exactAchievementDetails
-          ? `Связано с Xbox: ${synchronized.xboxTitle}`
-          : `Связано с Xbox: ${synchronized.xboxTitle}. Для Xbox 360 доступны только общие значения без дат достижений.`,
+        `Связано с Xbox: ${synchronized.xboxTitle}${diagnostic ? `. ${diagnostic.text}` : ""}`,
       );
       if (synchronized.completionRecorded) await load();
     } catch (reason) {
@@ -487,6 +530,13 @@ export function GameDetailsPage() {
           </article>
           <article className="detail-card achievement-summary">
             <h2>{xboxAchievements.length ? "Достижения Xbox" : "Достижения"}</h2>
+            {xboxDiagnostic && (
+              <p
+                className={`achievement-diagnostic${xboxDiagnostic.warning ? " warning" : ""}`}
+              >
+                {xboxDiagnostic.text}
+              </p>
+            )}
             {progress && xboxAchievements.length ? (
               <>
                 {recentXboxAchievements.length > 0 ? (

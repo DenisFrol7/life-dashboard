@@ -67,6 +67,8 @@ public class XboxProgressSyncService {
         if (game.getXboxTitleId() == null) game.linkXboxTitle(title.titleId());
 
         OpenXblProgress remote = normalize(openXbl.progress(history.xuid(), title));
+        XboxAchievementDetailsStatus achievementDetailsStatus =
+                achievementDetailsStatus(game, title, remote);
         Optional<XboxGameProgress> existing = progress.findByLibraryEntryId(game.getId());
         OpenXblProgress snapshot = merge(remote, existing.orElse(null));
         XboxProgressRequest request = new XboxProgressRequest(snapshot.totalAchievements(),
@@ -88,6 +90,7 @@ public class XboxProgressSyncService {
                     request.totalGamerscore(), request.earnedGamerscore(),
                     latest(saved.getLastUnlockedAt(), remote.lastUnlockedAt()), Instant.now());
         }
+        saved.updateAchievementDetailsStatus(achievementDetailsStatus);
         saved = progress.save(saved);
         if (remote.exactAchievementDetails()) {
             synchronizeAchievements(saved, remote.achievements());
@@ -208,7 +211,59 @@ public class XboxProgressSyncService {
                 percent(value.getUnlockedAchievements(), value.getTotalAchievements()),
                 value.getTotalGamerscore(), value.getEarnedGamerscore(),
                 percent(value.getEarnedGamerscore(), value.getTotalGamerscore()),
-                value.getLastUnlockedAt(), value.getLastUpdatedAt());
+                value.getLastUnlockedAt(), value.getLastUpdatedAt(),
+                value.getAchievementDetailsStatus());
+    }
+
+    private XboxAchievementDetailsStatus achievementDetailsStatus(UserGame game,
+            OpenXblTitle title, OpenXblProgress remote) {
+        if (isPcOnly(title.devices())) {
+            return XboxAchievementDetailsStatus.POSSIBLE_PC_VERSION;
+        }
+        if (!supportsPlatform(game.getPlatform().getCode(), title.devices())) {
+            return XboxAchievementDetailsStatus.TITLE_PLATFORM_MISMATCH;
+        }
+        if (remote.exactAchievementDetails()) {
+            return remote.achievements().isEmpty()
+                    ? XboxAchievementDetailsStatus.NO_ACHIEVEMENTS
+                    : XboxAchievementDetailsStatus.AVAILABLE;
+        }
+        if (title.sourceVersion() <= 1) {
+            return XboxAchievementDetailsStatus.LEGACY_NOT_SUPPORTED;
+        }
+        if (remote.totalAchievements() == 0 && remote.totalGamerscore() == 0) {
+            return XboxAchievementDetailsStatus.NO_ACHIEVEMENTS;
+        }
+        return XboxAchievementDetailsStatus.DETAILS_UNAVAILABLE;
+    }
+
+    private boolean isPcOnly(List<String> devices) {
+        boolean pc = devices.stream().map(this::normalizeDevice)
+                .anyMatch(device -> device.contains("pc") || device.contains("windows")
+                        || device.contains("win32"));
+        boolean xbox = devices.stream().map(this::normalizeDevice)
+                .anyMatch(device -> device.startsWith("xbox"));
+        return pc && !xbox;
+    }
+
+    private boolean supportsPlatform(String platformCode, List<String> devices) {
+        if (devices.isEmpty()) return true;
+        Set<String> normalized = devices.stream().map(this::normalizeDevice)
+                .collect(java.util.stream.Collectors.toSet());
+        return switch (platformCode) {
+            case "XBOX_SERIES" -> normalized.contains("xboxseries")
+                    || normalized.contains("xboxone");
+            case "XBOX_ONE" -> normalized.contains("xboxone");
+            case "XBOX_360" -> normalized.contains("xbox360");
+            case "ORIGINAL_XBOX" -> normalized.contains("xbox")
+                    || normalized.contains("originalxbox");
+            default -> true;
+        };
+    }
+
+    private String normalizeDevice(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]", "");
     }
 
     private double percent(int value, int total) {
