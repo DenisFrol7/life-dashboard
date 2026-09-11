@@ -15,9 +15,11 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Service
 public class XboxBulkProgressService {
@@ -71,18 +73,21 @@ public class XboxBulkProgressService {
         int playtimeUpdated = 0;
         int playtimeUnavailable = 0;
         int playthroughPlaytimeUpdated = 0;
+        Set<Long> playtimeAppliedTitleIds = new HashSet<>();
         for (UserGame copy : linkedCopies) {
             Long remoteMinutes = playtimeByTitle.get(copy.getXboxTitleId());
+            boolean applyPlaytime = remoteMinutes != null
+                    && playtimeAppliedTitleIds.add(copy.getXboxTitleId());
             if (remoteMinutes == null) {
                 playtimeUnavailable++;
-            } else {
+            } else if (applyPlaytime) {
                 long trackedMinutes = sessions.totalMinutes(copy.getId(), userId);
                 long legacyMinutes = Math.max(0, remoteMinutes - trackedMinutes);
                 if (legacyMinutes != copy.getLegacyPlaytimeMinutes()) {
                     playtimeUpdated += games.updateXboxPlaytime(copy.getId(), userId, legacyMinutes);
                 }
             }
-            if (remoteMinutes != null
+            if (applyPlaytime
                     && playthroughs.fillXboxAchievementPlaytime(copy.getId(), remoteMinutes,
                             isAchievementCompletionKnown(titlesById.get(copy.getXboxTitleId()),
                                     progressByCopyId.get(copy.getId())))) {

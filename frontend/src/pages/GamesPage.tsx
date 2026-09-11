@@ -101,6 +101,10 @@ const emptyProgress: XboxProgressInput = {
 };
 const isXbox = (code: string) =>
   code.startsWith("XBOX_") || code === "ORIGINAL_XBOX";
+const supportsXboxProgress = (entry: GameLibrary) =>
+  isXbox(entry.platform.code) ||
+  (entry.platform.code === "PC" &&
+    ["MICROSOFT_STORE", "GAME_PASS"].includes(entry.source.code));
 type AchievementProvider = "XBOX" | "STEAM";
 type GameQualityIssueKind =
   | "RAWG"
@@ -375,7 +379,7 @@ export function GamesPage() {
         )
           issues.push("STEAM_LINK");
         if (
-          copies.some((entry) => isXbox(entry.platform.code) && entry.xboxTitleId == null)
+          copies.some((entry) => supportsXboxProgress(entry) && entry.xboxTitleId == null)
         )
           issues.push("XBOX_LINK");
         if (
@@ -390,7 +394,7 @@ export function GamesPage() {
         if (
           copies.some(
             (entry) =>
-              isXbox(entry.platform.code) &&
+              supportsXboxProgress(entry) &&
               entry.xboxTitleId != null &&
               xbox[entry.id] == null,
           )
@@ -398,7 +402,7 @@ export function GamesPage() {
           issues.push("XBOX_PROGRESS");
         if (
           copies.some((entry) => {
-            if (!isXbox(entry.platform.code) || entry.xboxTitleId == null)
+            if (!supportsXboxProgress(entry) || entry.xboxTitleId == null)
               return false;
             const status = xbox[entry.id]?.achievementDetailsStatus;
             return (
@@ -427,6 +431,7 @@ export function GamesPage() {
     new Set(libraryEntries.filter(predicate).map((item) => item.contentId))
       .size;
   const xboxGames = countGamesBy((item) => isXbox(item.platform.code));
+  const xboxProgressGames = countGamesBy(supportsXboxProgress);
   const pcGames = countGamesBy((item) => item.platform.code === "PC");
   const gamePassGames = countGamesBy(
     (item) => item.source.code === "GAME_PASS",
@@ -597,7 +602,7 @@ export function GamesPage() {
         </select>
         <button
           className="secondary-button icon-button steam-import-button"
-          disabled={syncingXbox || xboxGames === 0}
+          disabled={syncingXbox || xboxProgressGames === 0}
           onClick={() => void updateXboxProgress()}
           title="Обновить достижения и время связанных Xbox-игр"
         >
@@ -1372,6 +1377,7 @@ const xboxMatchLabels: Record<XboxImportMatch, string> = {
 };
 
 const xboxPlatformLabels: Record<string, string> = {
+  PC: "PC",
   ORIGINAL_XBOX: "Original Xbox",
   XBOX_360: "Xbox 360",
   XBOX_ONE: "Xbox One",
@@ -1884,10 +1890,22 @@ function XboxImportPreviewDialog({
     }));
   };
 
+  const setAllStoreSources = () => {
+    setSourceByTitleId((current) => ({
+      ...current,
+      ...Object.fromEntries(
+        selectedForImport.map((game) => [
+          game.titleId,
+          game.platformCode === "PC" ? "MICROSOFT_STORE" : "XBOX_STORE",
+        ]),
+      ),
+    }));
+  };
+
   const runImport = async () => {
     if (selectedForImport.length === 0 || unresolvedReviews.length > 0) return;
     const confirmed = window.confirm(
-      `Импортировать ${selectedForImport.length} игр из истории Xbox? Перед записью backend автоматически создаст резервную копию. Проверьте источник Xbox Store или Game Pass у выбранных игр.`,
+      `Импортировать ${selectedForImport.length} игр из истории Xbox? Перед записью backend автоматически создаст резервную копию. Проверьте источник Microsoft/Xbox Store или Game Pass у выбранных игр.`,
     );
     if (!confirmed) return;
     setImporting(true);
@@ -1972,7 +1990,7 @@ function XboxImportPreviewDialog({
         {preview && (
           <>
             <p className="steam-import-profile">
-              История профиля · {includedSummary.total} из {preview.totalGames} консольных игр
+              История профиля · {includedSummary.total} из {preview.totalGames} игр Xbox-профиля
             </p>
             <div className="steam-import-summary">
               <div>
@@ -1998,8 +2016,8 @@ function XboxImportPreviewDialog({
             </div>
             <div className="xbox-import-source-defaults">
               <span>Источник для добавляемых:</span>
-              <button type="button" onClick={() => setAllSources("XBOX_STORE")}>
-                Все — Xbox Store
+              <button type="button" onClick={setAllStoreSources}>
+                Все — магазин
               </button>
               <button type="button" onClick={() => setAllSources("GAME_PASS")}>
                 Все — Game Pass
@@ -2061,6 +2079,9 @@ function XboxImportPreviewDialog({
                         ? ` · запускалась ${new Intl.DateTimeFormat("ru-RU").format(new Date(game.lastPlayedAt))}`
                         : ""}
                     </small>
+                    {game.sharedAchievementSet && (
+                      <em>Общий набор достижений PC и Xbox</em>
+                    )}
                     {game.matchedContentTitle && (
                       <em>В каталоге: {game.matchedContentTitle}</em>
                     )}
@@ -2105,7 +2126,11 @@ function XboxImportPreviewDialog({
                         disabled={importing}
                         aria-label={`Источник ${game.title}`}
                       >
-                        <option value="XBOX_STORE">Xbox Store</option>
+                        {game.platformCode === "PC" ? (
+                          <option value="MICROSOFT_STORE">Microsoft Store</option>
+                        ) : (
+                          <option value="XBOX_STORE">Xbox Store</option>
+                        )}
                         <option value="GAME_PASS">Game Pass</option>
                       </select>
                     )}
@@ -2274,7 +2299,16 @@ export function GameForm({
   const selectedPlatform = platforms.find(
     (value) => value.id === entry.platformId,
   );
-  const xboxEnabled = selectedPlatform ? isXbox(selectedPlatform.code) : false;
+  const selectedSource = sources.find((value) => value.id === entry.sourceId);
+  const xboxEnabled = Boolean(
+    selectedPlatform &&
+      selectedSource &&
+      (isXbox(selectedPlatform.code) ||
+        (selectedPlatform.code === "PC" &&
+          ["MICROSOFT_STORE", "GAME_PASS"].includes(
+            selectedSource.code,
+          ))),
+  );
   const compatibleSources = sources.filter((value) =>
     entry.accessType === "SUBSCRIPTION"
       ? value.type === "SUBSCRIPTION"
@@ -3011,7 +3045,7 @@ export function GameSessionForm({
   const [error, setError] = useState<string | null>(null);
   const selectedEntry = library.find((entry) => entry.id === libraryId);
   const achievementsEnabled = selectedEntry
-    ? isXbox(selectedEntry.platform.code)
+    ? supportsXboxProgress(selectedEntry)
     : false;
   useEffect(() => {
     if (!achievementsEnabled) {

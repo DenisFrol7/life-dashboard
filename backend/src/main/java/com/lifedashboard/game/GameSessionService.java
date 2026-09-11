@@ -72,8 +72,9 @@ public class GameSessionService {
                 request.unlockedAchievements(), request.earnedGamerscore(), group);
     }
     private void validateXboxFields(UserGame game, int achievements, int gamerscore) {
-        if ((achievements > 0 || gamerscore > 0) && !isXbox(game))
-            throw new InvalidRequestException("Достижения можно добавлять только к игровым сессиям Xbox");
+        if ((achievements > 0 || gamerscore > 0) && !XboxIntegration.supportsProgress(game))
+            throw new InvalidRequestException(
+                    "Достижения Xbox можно добавлять к Xbox-играм и PC-копиям из Microsoft Store или Game Pass");
     }
     private XboxAchievementGroup resolveGroup(UserGame game, GameSessionRequest request) {
         if (request.achievementGroupId() != null) {
@@ -88,7 +89,8 @@ public class GameSessionService {
     }
     private void adjustGroup(UserGame game, XboxAchievementGroup group, int achievementDelta, int gamerscoreDelta) {
         if (achievementDelta == 0 && gamerscoreDelta == 0) return;
-        if (!isXbox(game) || group == null) throw new InvalidRequestException("Выберите группу достижений Xbox");
+        if (!XboxIntegration.supportsProgress(game) || group == null)
+            throw new InvalidRequestException("Выберите группу достижений Xbox");
         int achievements = group.getUnlockedAchievements() + achievementDelta;
         int gamerscore = group.getEarnedGamerscore() + gamerscoreDelta;
         if (achievements < 0 || achievements > group.getTotalAchievements())
@@ -98,10 +100,6 @@ public class GameSessionService {
         group.update(group.getName(), group.getTotalAchievements(), achievements,
                 group.getTotalGamerscore(), gamerscore, group.getCompletedAt());
         achievementGroupService.recalculate(game);
-    }
-    private boolean isXbox(UserGame game) {
-        String code = game.getPlatform().getCode();
-        return code.startsWith("XBOX_") || code.equals("ORIGINAL_XBOX");
     }
     private GameSessionResponse response(GameSession session) {
         UserGame game = session.getLibraryEntry();

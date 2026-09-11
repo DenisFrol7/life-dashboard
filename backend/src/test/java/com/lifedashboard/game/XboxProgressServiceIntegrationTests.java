@@ -60,6 +60,19 @@ class XboxProgressServiceIntegrationTests {
     }
 
     @Test
+    void supportsMicrosoftStorePcCopies() {
+        try {
+            long pcEntry = createLibraryEntry("PC", "MICROSOFT_STORE");
+
+            var result = progressService.put(pcEntry,
+                    new XboxProgressRequest(20, 7, 1000, 350));
+
+            assertEquals(7, result.unlockedAchievements());
+            assertEquals(350, result.earnedGamerscore());
+        } finally { cleanup(); }
+    }
+
+    @Test
     void aggregatesBaseGameAndDlcProgress() {
         try {
             long entryId = createLibraryEntry("XBOX_SERIES");
@@ -102,10 +115,14 @@ class XboxProgressServiceIntegrationTests {
     }
 
     private long createLibraryEntry(String platformCode) {
+        return createLibraryEntry(platformCode, "XBOX_STORE");
+    }
+
+    private long createLibraryEntry(String platformCode, String sourceCode) {
         long contentId = contentService.create(new ContentItemRequest(TITLE, null, ContentType.GAME,
                 null, 2025, null, null, null, ReleaseStatus.RELEASED)).id();
         long platform = platforms.findByCode(platformCode).orElseThrow().getId();
-        long source = sources.findByCode("XBOX_STORE").orElseThrow().getId();
+        long source = sources.findByCode(sourceCode).orElseThrow().getId();
         return gameLibraryService.create(contentId, new GameLibraryRequest(platform, source,
                 GameAccessType.OWNED, null, null, null, 0L)).id();
     }

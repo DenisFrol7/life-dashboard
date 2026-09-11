@@ -65,9 +65,9 @@ public class XboxProgressService {
     private UserGame findXboxGame(Long id) {
         UserGame game = gameRepository.findByIdAndUserContentUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Копия игры с идентификатором " + id + " не найдена"));
-        String code = game.getPlatform().getCode();
-        if (!code.startsWith("XBOX_") && !code.equals("ORIGINAL_XBOX"))
-            throw new InvalidRequestException("Прогресс Xbox доступен только для платформ Xbox");
+        if (!XboxIntegration.supportsProgress(game))
+            throw new InvalidRequestException(
+                    "Прогресс Xbox доступен для платформ Xbox и PC-копий из Microsoft Store или Game Pass");
         return game;
     }
     private void validate(XboxProgressRequest r) {

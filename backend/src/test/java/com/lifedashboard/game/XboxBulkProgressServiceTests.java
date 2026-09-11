@@ -123,6 +123,35 @@ class XboxBulkProgressServiceTests {
         verify(progressSync).sync(2L, history);
     }
 
+    @Test
+    void appliesSharedTitlePlaytimeToOnlyOneLibraryCopy() {
+        Instant playedAt = Instant.parse("2026-09-03T12:00:00Z");
+        OpenXblTitle title = title(404L, "Play Anywhere", playedAt);
+        OpenXblTitleHistory history = new OpenXblTitleHistory("xuid", List.of(title));
+        UserGame xboxCopy = copy(4L, 404L, "Play Anywhere");
+        UserGame pcCopy = copy(5L, 404L, "Play Anywhere");
+        XboxGameProgress xboxProgress = stored(xboxCopy,
+                Instant.parse("2026-09-04T12:00:00Z"));
+        XboxGameProgress pcProgress = stored(pcCopy,
+                Instant.parse("2026-09-04T12:00:00Z"));
+        when(xboxProgress.getId()).thenReturn(14L);
+        when(pcProgress.getId()).thenReturn(15L);
+        when(achievements.existsByProgressId(14L)).thenReturn(true);
+        when(achievements.existsByProgressId(15L)).thenReturn(true);
+        when(openXbl.titleHistory()).thenReturn(history);
+        when(openXbl.playtimeMinutes("xuid", List.of(404L))).thenReturn(Map.of(404L, 120L));
+        when(games.findXboxCopies(1L)).thenReturn(List.of(xboxCopy, pcCopy));
+        when(progress.findAllByUserId(1L)).thenReturn(List.of(xboxProgress, pcProgress));
+        when(games.updateXboxPlaytime(4L, 1L, 120L)).thenReturn(1);
+
+        XboxBulkSyncResponse result = service().syncLinked();
+
+        assertEquals(1, result.playtimeUpdated());
+        verify(games).updateXboxPlaytime(4L, 1L, 120L);
+        verify(games, never()).updateXboxPlaytime(5L, 1L, 120L);
+        verify(sessions, never()).totalMinutes(5L, 1L);
+    }
+
     private XboxBulkProgressService service() {
         return new XboxBulkProgressService(openXbl, games, sessions, progress, achievements,
                 progressSync, playthroughs, 1L);

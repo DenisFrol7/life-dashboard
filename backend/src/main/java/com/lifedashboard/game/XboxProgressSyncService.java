@@ -110,10 +110,9 @@ public class XboxProgressSyncService {
         UserGame game = games.findByIdAndUserContentUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Копия игры с идентификатором " + id + " не найдена"));
-        String code = game.getPlatform().getCode();
-        if (!code.startsWith("XBOX_") && !code.equals("ORIGINAL_XBOX")) {
+        if (!XboxIntegration.supportsProgress(game)) {
             throw new InvalidRequestException(
-                    "Синхронизация Xbox доступна только для платформ Xbox");
+                    "Синхронизация Xbox доступна для платформ Xbox и PC-копий из Microsoft Store или Game Pass");
         }
         return game;
     }
@@ -128,26 +127,16 @@ public class XboxProgressSyncService {
         Set<String> expectedNames = new HashSet<>();
         if (content.getTitle() != null) expectedNames.add(normalizeTitle(content.getTitle()));
         if (content.getOriginalTitle() != null) expectedNames.add(normalizeTitle(content.getOriginalTitle()));
-        String requiredDevice = deviceFor(game.getPlatform().getCode());
         return titles.stream()
                 .filter(title -> expectedNames.contains(normalizeTitle(title.name())))
-                .filter(title -> requiredDevice == null || title.devices().stream()
-                        .anyMatch(device -> device.equalsIgnoreCase(requiredDevice)))
+                .filter(title -> XboxIntegration.supportsPlatform(
+                        game.getPlatform().getCode(), title.devices()))
                 .sorted(Comparator.comparingInt(OpenXblTitle::currentAchievements).reversed()
                         .thenComparing(OpenXblTitle::lastPlayedAt,
                                 Comparator.nullsLast(Comparator.reverseOrder())))
                 .findFirst()
                 .orElseThrow(() -> new InvalidRequestException(
                         "Не удалось однозначно найти эту игру в истории Xbox-профиля"));
-    }
-
-    private String deviceFor(String platformCode) {
-        return switch (platformCode) {
-            case "XBOX_360" -> "Xbox360";
-            case "XBOX_ONE" -> "XboxOne";
-            case "XBOX_SERIES" -> "XboxSeries";
-            default -> null;
-        };
     }
 
     private String normalizeTitle(String value) {
@@ -217,10 +206,11 @@ public class XboxProgressSyncService {
 
     private XboxAchievementDetailsStatus achievementDetailsStatus(UserGame game,
             OpenXblTitle title, OpenXblProgress remote) {
-        if (isPcOnly(title.devices())) {
+        if (!"PC".equals(game.getPlatform().getCode())
+                && XboxIntegration.isPcOnly(title.devices())) {
             return XboxAchievementDetailsStatus.POSSIBLE_PC_VERSION;
         }
-        if (!supportsPlatform(game.getPlatform().getCode(), title.devices())) {
+        if (!XboxIntegration.supportsPlatform(game.getPlatform().getCode(), title.devices())) {
             return XboxAchievementDetailsStatus.TITLE_PLATFORM_MISMATCH;
         }
         if (remote.exactAchievementDetails()) {
@@ -235,35 +225,6 @@ public class XboxProgressSyncService {
             return XboxAchievementDetailsStatus.NO_ACHIEVEMENTS;
         }
         return XboxAchievementDetailsStatus.DETAILS_UNAVAILABLE;
-    }
-
-    private boolean isPcOnly(List<String> devices) {
-        boolean pc = devices.stream().map(this::normalizeDevice)
-                .anyMatch(device -> device.contains("pc") || device.contains("windows")
-                        || device.contains("win32"));
-        boolean xbox = devices.stream().map(this::normalizeDevice)
-                .anyMatch(device -> device.startsWith("xbox"));
-        return pc && !xbox;
-    }
-
-    private boolean supportsPlatform(String platformCode, List<String> devices) {
-        if (devices.isEmpty()) return true;
-        Set<String> normalized = devices.stream().map(this::normalizeDevice)
-                .collect(java.util.stream.Collectors.toSet());
-        return switch (platformCode) {
-            case "XBOX_SERIES" -> normalized.contains("xboxseries")
-                    || normalized.contains("xboxone");
-            case "XBOX_ONE" -> normalized.contains("xboxone");
-            case "XBOX_360" -> normalized.contains("xbox360");
-            case "ORIGINAL_XBOX" -> normalized.contains("xbox")
-                    || normalized.contains("originalxbox");
-            default -> true;
-        };
-    }
-
-    private String normalizeDevice(String value) {
-        return value == null ? "" : value.toLowerCase(Locale.ROOT)
-                .replaceAll("[^a-z0-9]", "");
     }
 
     private double percent(int value, int total) {

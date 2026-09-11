@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,17 +38,21 @@ class XboxImportPreviewServiceTests {
                 title(100L, "Linked", List.of("PC", "XboxSeries"), "Application", false),
                 title(200L, "Portal® 2™", List.of("XboxOne", "XboxSeries"), "Application", true),
                 title(300L, "Legacy", List.of("Xbox360", "XboxOne"), "XboxArcadeGame", false),
-                title(400L, "PC only", List.of("Win32"), "Application", false))));
+                title(400L, "PC only", List.of("Win32"), "Application", false),
+                titleWithoutAchievements(500L, "Ordinary PC launch", List.of("Win32")))));
 
         XboxImportPreview result = service().preview();
 
-        assertEquals(3, result.totalGames());
+        assertEquals(4, result.totalGames());
         assertEquals(1, result.alreadyImported());
         assertEquals(1, result.matchedExisting());
-        assertEquals(1, result.newGames());
+        assertEquals(2, result.newGames());
         assertEquals("XBOX_SERIES", find(result, 200L).platformCode());
         assertEquals("GAME_PASS", find(result, 200L).suggestedSourceCode());
         assertEquals("XBOX_360", find(result, 300L).platformCode());
+        assertEquals("PC", find(result, 400L).platformCode());
+        assertEquals("MICROSOFT_STORE", find(result, 400L).suggestedSourceCode());
+        assertTrue(find(result, 100L).sharedAchievementSet());
     }
 
     private XboxImportPreviewService service() {
@@ -64,6 +69,12 @@ class XboxImportPreviewServiceTests {
         return new OpenXblTitle(id, name, devices, 5, 10, 500, 1000, 2,
                 Instant.parse("2026-01-01T00:00:00Z"), mediaType,
                 "https://example.com/" + id + ".jpg", gamePass);
+    }
+
+    private OpenXblTitle titleWithoutAchievements(long id, String name,
+            List<String> devices) {
+        return new OpenXblTitle(id, name, devices, 0, 0, 0, 0, 2,
+                Instant.parse("2026-01-01T00:00:00Z"), "Application", null, false);
     }
 
     private ContentItem content(long id, String title) {

@@ -138,6 +138,35 @@ class XboxProgressSyncServiceTests {
     }
 
     @Test
+    void synchronizesASeparatePcAchievementSetForMicrosoftStoreCopy() {
+        UserGame game = linkedGame("PC", 902L);
+        GameSource source = mock(GameSource.class);
+        when(game.getSource()).thenReturn(source);
+        when(source.getCode()).thenReturn("MICROSOFT_STORE");
+        OpenXblTitle title = new OpenXblTitle(902L, "Separate PC version",
+                List.of("PC", "WindowsOneCore"), 5, 10, 500, 1000, 2, null);
+        XboxGameProgress stored = storedProgress(game, 10, 5, 1000, 500);
+        when(stored.getAchievementDetailsStatus()).thenReturn(
+                XboxAchievementDetailsStatus.AVAILABLE);
+        when(games.findByIdAndUserContentUserId(7L, 1L)).thenReturn(Optional.of(game));
+        when(openXbl.titleHistory()).thenReturn(new OpenXblTitleHistory("xuid", List.of(title)));
+        when(openXbl.progress("xuid", title)).thenReturn(
+                new OpenXblProgress(902L, 10, 5, 1000, 500, null, true,
+                        List.of(new OpenXblAchievement("1", "Achievement", null,
+                                null, null, 100, false, true, null))));
+        when(groups.findAllByLibraryEntryIdOrderByGroupTypeAscIdAsc(7L)).thenReturn(List.of());
+        when(progress.findByLibraryEntryId(7L)).thenReturn(Optional.of(stored));
+        when(progress.save(stored)).thenReturn(stored);
+
+        XboxProgressSyncResponse result = service().sync(7L);
+
+        assertEquals(XboxAchievementDetailsStatus.AVAILABLE,
+                result.progress().achievementDetailsStatus());
+        verify(stored).updateAchievementDetailsStatus(XboxAchievementDetailsStatus.AVAILABLE);
+        verify(achievements).saveAll(any());
+    }
+
+    @Test
     void reportsWhenModernTitleReturnsOnlyAggregateProgress() {
         UserGame game = linkedGame("XBOX_SERIES", 901L);
         OpenXblTitle title = new OpenXblTitle(901L, "Unavailable details",

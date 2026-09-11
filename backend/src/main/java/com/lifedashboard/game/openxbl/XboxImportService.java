@@ -116,7 +116,7 @@ public class XboxImportService {
                 skipped++;
                 continue;
             }
-            if (library.findByXboxTitleIdAndUserContentUserId(row.titleId(), userId).isPresent()) {
+            if (library.existsByXboxTitleIdAndUserContentUserId(row.titleId(), userId)) {
                 skipped++;
                 continue;
             }
@@ -139,7 +139,7 @@ public class XboxImportService {
             GamingPlatform platform = platforms.findByCode(row.platformCode())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Игровая платформа " + row.platformCode() + " не найдена"));
-            GameSource source = findSource(selectedGame.sourceCode());
+            GameSource source = findSource(selectedGame.sourceCode(), row.platformCode());
             GameAccessType accessType = "GAME_PASS".equals(selectedGame.sourceCode())
                     ? GameAccessType.SUBSCRIPTION : GameAccessType.OWNED;
             UserContent entry = userContent.findByUserIdAndContentId(userId, content.getId())
@@ -214,8 +214,11 @@ public class XboxImportService {
                 .ifPresent(copy -> copy.linkXboxTitle(row.titleId()));
     }
 
-    private GameSource findSource(String code) {
-        if (!"XBOX_STORE".equals(code) && !"GAME_PASS".equals(code)) {
+    private GameSource findSource(String code, String platformCode) {
+        boolean valid = "GAME_PASS".equals(code)
+                || "PC".equals(platformCode) && "MICROSOFT_STORE".equals(code)
+                || !"PC".equals(platformCode) && "XBOX_STORE".equals(code);
+        if (!valid) {
             throw new InvalidRequestException("Недопустимый источник Xbox-игры: " + code);
         }
         return sources.findByCode(code)

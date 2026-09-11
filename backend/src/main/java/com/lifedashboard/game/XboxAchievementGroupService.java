@@ -91,9 +91,9 @@ public class XboxAchievementGroupService {
     private UserGame findXboxGame(Long id) {
         UserGame game = games.findByIdAndUserContentUserId(id, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Копия игры с идентификатором " + id + " не найдена"));
-        String code = game.getPlatform().getCode();
-        if (!code.startsWith("XBOX_") && !code.equals("ORIGINAL_XBOX"))
-            throw new InvalidRequestException("Группы достижений доступны только для платформ Xbox");
+        if (!XboxIntegration.supportsProgress(game))
+            throw new InvalidRequestException(
+                    "Группы достижений Xbox доступны для платформ Xbox и PC-копий из Microsoft Store или Game Pass");
         return game;
     }
     private double percent(int value, int total) { return total == 0 ? 0.0 : Math.round(value * 10000.0 / total) / 100.0; }

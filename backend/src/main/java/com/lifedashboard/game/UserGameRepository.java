@@ -12,15 +12,16 @@ public interface UserGameRepository extends JpaRepository<UserGame, Long> {
                                @Param("platformId") Long platformId);
     Optional<UserGame> findByIdAndUserContentUserId(Long id, Long userId);
     Optional<UserGame> findBySteamAppIdAndUserContentUserId(Long steamAppId, Long userId);
-    Optional<UserGame> findByXboxTitleIdAndUserContentUserId(Long xboxTitleId, Long userId);
+    boolean existsByXboxTitleIdAndUserContentUserId(Long xboxTitleId, Long userId);
     Optional<UserGame> findFirstByUserContentUserIdAndUserContentContentIdOrderByIdAsc(Long userId, Long contentId);
     @Query("select g from UserGame g join fetch g.userContent uc join fetch uc.content " +
            "join g.source s where uc.user.id=:userId and s.code='STEAM' " +
            "and g.steamAppId is not null order by g.id")
     List<UserGame> findSteamCopies(@Param("userId") Long userId);
     @Query("select g from UserGame g join fetch g.userContent uc join fetch uc.content " +
-           "join fetch g.platform p where uc.user.id=:userId " +
-           "and (p.code like 'XBOX_%' or p.code='ORIGINAL_XBOX') order by g.id")
+           "join fetch g.platform p join fetch g.source s where uc.user.id=:userId " +
+           "and (p.code like 'XBOX_%' or p.code='ORIGINAL_XBOX' " +
+           "or (p.code='PC' and s.code in ('MICROSOFT_STORE','GAME_PASS'))) order by g.id")
     List<UserGame> findXboxCopies(@Param("userId") Long userId);
     @Modifying
     @Transactional
@@ -32,7 +33,8 @@ public interface UserGameRepository extends JpaRepository<UserGame, Long> {
     @Transactional
     @Query("update UserGame g set g.legacyPlaytimeMinutes=:playtimeMinutes " +
            "where g.id=:id and g.userContent.user.id=:userId " +
-           "and (g.platform.code like 'XBOX_%' or g.platform.code='ORIGINAL_XBOX')")
+           "and (g.platform.code like 'XBOX_%' or g.platform.code='ORIGINAL_XBOX' " +
+           "or (g.platform.code='PC' and g.source.code in ('MICROSOFT_STORE','GAME_PASS')))")
     int updateXboxPlaytime(@Param("id") Long id, @Param("userId") Long userId,
                            @Param("playtimeMinutes") long playtimeMinutes);
 }

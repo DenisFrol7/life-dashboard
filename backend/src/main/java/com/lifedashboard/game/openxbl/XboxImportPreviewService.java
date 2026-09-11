@@ -5,6 +5,7 @@ import com.lifedashboard.content.ContentItemRepository;
 import com.lifedashboard.content.ContentType;
 import com.lifedashboard.game.UserGame;
 import com.lifedashboard.game.UserGameRepository;
+import com.lifedashboard.game.XboxIntegration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,11 +53,12 @@ public class XboxImportPreviewService {
         for (UserGame copy : copies) {
             Long contentId = copy.getUserContent().getContent().getId();
             copiesByContent.computeIfAbsent(contentId, ignored -> new ArrayList<>()).add(copy);
-            if (copy.getXboxTitleId() != null) copiesByXboxTitle.put(copy.getXboxTitleId(), copy);
+            if (copy.getXboxTitleId() != null) copiesByXboxTitle.putIfAbsent(copy.getXboxTitleId(), copy);
         }
         Map<String, List<ContentItem>> exactTitles = exactTitles(catalog);
         List<XboxImportPreviewItem> rows = source.titles().stream()
                 .filter(title -> platformCode(title) != null)
+                .filter(title -> !"PC".equals(platformCode(title)) || hasAchievementData(title))
                 .map(title -> match(title, catalog, exactTitles, copiesByContent, copiesByXboxTitle))
                 .sorted(Comparator.comparing(XboxImportPreviewItem::match)
                         .thenComparing(XboxImportPreviewItem::title, String.CASE_INSENSITIVE_ORDER))
@@ -81,9 +83,18 @@ public class XboxImportPreviewService {
         List<ContentItem> exact = exactTitles.getOrDefault(normalize(game.name()), List.of());
         if (exact.size() == 1) {
             ContentItem item = exact.getFirst();
-            UserGame xboxCopy = copiesByContent.getOrDefault(item.getId(), List.of()).stream()
+            List<UserGame> contentCopies = copiesByContent.getOrDefault(item.getId(), List.of());
+            UserGame xboxCopy = contentCopies.stream()
+                    .filter(XboxIntegration::supportsProgress)
                     .filter(copy -> platformCode.equals(copy.getPlatform().getCode()))
                     .findFirst().orElse(null);
+            if (xboxCopy == null) {
+                xboxCopy = contentCopies.stream()
+                        .filter(XboxIntegration::supportsProgress)
+                        .filter(copy -> XboxIntegration.supportsPlatform(
+                                copy.getPlatform().getCode(), game.devices()))
+                        .findFirst().orElse(null);
+            }
             return row(game, xboxCopy == null ? XboxImportMatch.MATCHED : XboxImportMatch.ALREADY_IMPORTED,
                     item, xboxCopy == null ? null : xboxCopy.getId(), platformCode);
         }
@@ -110,7 +121,8 @@ public class XboxImportPreviewService {
         return new XboxImportPreviewItem(game.titleId(), game.name(), platformCode,
                 game.lastPlayedAt(), game.imageUrl(), game.currentAchievements(),
                 game.totalAchievements(), game.currentGamerscore(), game.totalGamerscore(),
-                game.gamePass() ? "GAME_PASS" : "XBOX_STORE", match,
+                suggestedSource(game, platformCode),
+                XboxIntegration.isSharedAchievementSet(game.devices()), match,
                 item == null ? null : item.getId(), item == null ? null : item.getTitle(),
                 libraryEntryId);
     }
@@ -123,7 +135,20 @@ public class XboxImportPreviewService {
         if (hasDevice(title, "XboxSeries")) return "XBOX_SERIES";
         if (hasDevice(title, "XboxOne")) return "XBOX_ONE";
         if (hasDevice(title, "Xbox360")) return "XBOX_360";
+        if (title.devices().stream().map(String::toLowerCase)
+                .anyMatch(device -> device.contains("pc") || device.contains("windows")
+                        || device.contains("win32"))) return "PC";
         return null;
+    }
+
+    private String suggestedSource(OpenXblTitle title, String platformCode) {
+        if (title.gamePass()) return "GAME_PASS";
+        return "PC".equals(platformCode) ? "MICROSOFT_STORE" : "XBOX_STORE";
+    }
+
+    private boolean hasAchievementData(OpenXblTitle title) {
+        return title.currentAchievements() > 0 || title.totalAchievements() > 0
+                || title.currentGamerscore() > 0 || title.totalGamerscore() > 0;
     }
 
     private boolean hasDevice(OpenXblTitle title, String expected) {

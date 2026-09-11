@@ -73,8 +73,6 @@ class XboxImportServiceTests {
         when(users.findById(1L)).thenReturn(Optional.of(user));
         when(library.findByIdAndUserContentUserId(77L, 1L)).thenReturn(Optional.of(existingCopy));
         when(existingCopy.getXboxTitleId()).thenReturn(null);
-        when(library.findByXboxTitleIdAndUserContentUserId(2L, 1L)).thenReturn(Optional.empty());
-        when(library.findByXboxTitleIdAndUserContentUserId(3L, 1L)).thenReturn(Optional.empty());
         when(contentItems.findById(10L)).thenReturn(Optional.of(existingContent));
         when(platforms.findByCode("XBOX_SERIES")).thenReturn(Optional.of(series));
         when(platforms.findByCode("XBOX_360")).thenReturn(Optional.of(xbox360));
@@ -134,7 +132,6 @@ class XboxImportServiceTests {
         GamingPlatform xbox360 = mock(GamingPlatform.class);
         GameSource xboxStore = mock(GameSource.class);
         when(users.findById(1L)).thenReturn(Optional.of(user));
-        when(library.findByXboxTitleIdAndUserContentUserId(4L, 1L)).thenReturn(Optional.empty());
         when(platforms.findByCode("XBOX_360")).thenReturn(Optional.of(xbox360));
         when(sources.findByCode("XBOX_STORE")).thenReturn(Optional.of(xboxStore));
         when(metadataResolver.resolve(review)).thenReturn(new XboxGameMetadata(null, null, null));
@@ -182,7 +179,7 @@ class XboxImportServiceTests {
     private XboxImportPreviewItem row(long titleId, String title, String platform,
             XboxImportMatch match, Long contentId, Long libraryId) {
         return new XboxImportPreviewItem(titleId, title, platform, null,
-                "xbox-image", 0, 0, 0, 0, "XBOX_STORE", match,
+                "xbox-image", 0, 0, 0, 0, "XBOX_STORE", false, match,
                 contentId, contentId == null ? null : "Existing", libraryId);
     }
 }

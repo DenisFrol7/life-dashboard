@@ -65,9 +65,13 @@ const formatDate = (value?: string | null) =>
     : "—";
 const formatMinutes = (minutes: number) =>
   `${Math.floor(minutes / 60)} ч ${minutes % 60} мин`;
-const isXbox = (entry: GameLibrary) =>
+const isXboxPlatform = (entry: GameLibrary) =>
   entry.platform.code.startsWith("XBOX_") ||
   entry.platform.code === "ORIGINAL_XBOX";
+const supportsXboxProgress = (entry: GameLibrary) =>
+  isXboxPlatform(entry) ||
+  (entry.platform.code === "PC" &&
+    ["MICROSOFT_STORE", "GAME_PASS"].includes(entry.source.code));
 const isSteam = (entry: GameLibrary) => entry.source.code === "STEAM";
 const xboxAchievementDiagnostic = (
   status: XboxAchievementDetailsStatus,
@@ -169,7 +173,10 @@ export function GameDetailsPage() {
       setSelectedLibraryId((current) =>
         gameLibraries.some((item) => item.id === current)
           ? current
-          : (gameLibraries.find(isXbox)?.id ?? gameLibraries[0]?.id ?? null),
+          : (gameLibraries.find(isXboxPlatform)?.id ??
+            gameLibraries.find(supportsXboxProgress)?.id ??
+            gameLibraries[0]?.id ??
+            null),
       );
       setPlatforms(platformList);
       setSources(sourceList);
@@ -213,7 +220,7 @@ export function GameDetailsPage() {
     setShowAchievementDetails(false);
     setShowSteamAchievements(false);
     setShowXboxAchievements(false);
-    if (selectedLibrary && isXbox(selectedLibrary)) {
+    if (selectedLibrary && supportsXboxProgress(selectedLibrary)) {
       void Promise.all([
         getXboxProgress(selectedLibrary.id),
         getXboxAchievementGroups(selectedLibrary.id),
@@ -287,9 +294,18 @@ export function GameDetailsPage() {
         <span>{error ?? "Игра не найдена"}</span>
       </div>
     );
-  const xbox = library ? isXbox(library) : false;
+  const xbox = library ? supportsXboxProgress(library) : false;
   const steam = library ? isSteam(library) : false;
-  const hasXbox = libraries.some(isXbox);
+  const sharedXboxAchievementSet = Boolean(
+    library?.xboxTitleId != null &&
+      libraries.some(
+        (entry) =>
+          entry.id !== library.id &&
+          supportsXboxProgress(entry) &&
+          entry.xboxTitleId === library.xboxTitleId,
+      ),
+  );
+  const hasXbox = libraries.some(isXboxPlatform);
   const hasPc = libraries.some((entry) => entry.platform.code === "PC");
   const showRawgAttribution = Boolean(game.rawgSlug);
   const achievementPercent = progress?.achievementPercent ?? 0;
@@ -368,7 +384,7 @@ export function GameDetailsPage() {
   };
 
   const synchronizeXbox = async () => {
-    if (!library || !isXbox(library)) return;
+    if (!library || !supportsXboxProgress(library)) return;
     setSyncingXbox(true);
     setXboxError(null);
     setXboxSyncNote(null);
@@ -507,6 +523,11 @@ export function GameDetailsPage() {
                     : "Загрузить из Xbox"}
               </button>
             </div>
+            {sharedXboxAchievementSet && (
+              <small className="steam-sync-date">
+                Общий набор достижений для PC- и Xbox-копии
+              </small>
+            )}
             {xboxError && <div className="form-error">{xboxError}</div>}
             {progress ? (
               <div className="xbox-progress-columns">
@@ -733,7 +754,7 @@ export function GameDetailsPage() {
                       {entry.platform.name}
                       {entry.edition ? ` · ${entry.edition}` : ""}
                     </small>
-                    {isXbox(entry) && (
+                    {supportsXboxProgress(entry) && (
                       <small>
                         Xbox Play Anywhere ·{" "}
                         {game.xboxPlayAnywhere ? "Да" : "Нет"}
@@ -1011,7 +1032,7 @@ function LibraryEntryModal({
       const saved = entry
         ? await updateGameLibrary(entry.id, input)
         : await createGameLibrary(contentId, input);
-      if (!entry && isXbox(saved))
+      if (!entry && supportsXboxProgress(saved))
         await putXboxProgress(saved.id, {
           totalAchievements: 0,
           unlockedAchievements: 0,

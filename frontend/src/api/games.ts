@@ -115,14 +115,15 @@ export type XboxImportMatch =
 export type XboxImportPreviewItem = {
   titleId: number;
   title: string;
-  platformCode: "ORIGINAL_XBOX" | "XBOX_360" | "XBOX_ONE" | "XBOX_SERIES";
+  platformCode: "PC" | "ORIGINAL_XBOX" | "XBOX_360" | "XBOX_ONE" | "XBOX_SERIES";
   lastPlayedAt: string | null;
   imageUrl: string | null;
   unlockedAchievements: number;
   totalAchievements: number;
   earnedGamerscore: number;
   totalGamerscore: number;
-  suggestedSourceCode: "XBOX_STORE" | "GAME_PASS";
+  suggestedSourceCode: "XBOX_STORE" | "MICROSOFT_STORE" | "GAME_PASS";
+  sharedAchievementSet: boolean;
   match: XboxImportMatch;
   matchedContentId: number | null;
   matchedContentTitle: string | null;
@@ -142,7 +143,7 @@ export type XboxImportPreparation = {
 };
 export type XboxImportSelection = {
   titleId: number;
-  sourceCode: "XBOX_STORE" | "GAME_PASS";
+  sourceCode: "XBOX_STORE" | "MICROSOFT_STORE" | "GAME_PASS";
   resolution?: "SUGGESTED_MATCH" | "NEW_GAME";
 };
 export type XboxImportResult = {
