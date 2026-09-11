@@ -8,6 +8,7 @@ import com.lifedashboard.content.UserContentRepository;
 import com.lifedashboard.data.DataTransferService;
 import com.lifedashboard.game.GameSource;
 import com.lifedashboard.game.GameSourceRepository;
+import com.lifedashboard.game.GameSessionRepository;
 import com.lifedashboard.game.GamingPlatform;
 import com.lifedashboard.game.GamingPlatformRepository;
 import com.lifedashboard.game.UserGame;
@@ -46,6 +47,7 @@ class SteamImportServiceTests {
     @Mock ContentItemRepository contentItems;
     @Mock UserContentRepository userContent;
     @Mock UserGameRepository library;
+    @Mock GameSessionRepository sessions;
     @Mock GamingPlatformRepository platforms;
     @Mock GameSourceRepository sources;
     @Mock UserRepository users;
@@ -223,8 +225,10 @@ class SteamImportServiceTests {
         when(library.findBySteamAppIdAndUserContentUserId(7L, 1L)).thenReturn(Optional.empty());
         when(library.findByIdAndUserContentUserId(77L, 1L)).thenReturn(Optional.of(existingCopy));
         when(existingCopy.getSteamAppId()).thenReturn(null);
+        when(existingCopy.getId()).thenReturn(77L);
         when(existingCopy.getSource()).thenReturn(steam);
         when(steam.getCode()).thenReturn("STEAM");
+        when(sessions.totalMinutes(77L, 1L)).thenReturn(60L);
 
         SteamImportService service = service();
         SteamImportPreparation preparation = service.prepare(new SteamImportSelection(List.of(7L)));
@@ -235,7 +239,7 @@ class SteamImportServiceTests {
         assertEquals(1, result.imported());
         assertEquals(1, result.linkedExistingCatalog());
         assertEquals(0, result.catalogCreated());
-        verify(existingCopy).linkSteamApp(7L, 240L);
+        verify(existingCopy).linkSteamApp(7L, 180L);
         verify(library, org.mockito.Mockito.never()).save(any(UserGame.class));
         verifyNoInteractions(contentItems, userContent, metadataResolver);
     }
@@ -257,7 +261,7 @@ class SteamImportServiceTests {
 
     private SteamImportService service() {
         return new SteamImportService(previewService, contentItems, userContent, library,
-                platforms, sources, users, metadataResolver, dataTransfer, 1L);
+                sessions, platforms, sources, users, metadataResolver, dataTransfer, 1L);
     }
 
     private SteamImportPreview preview(List<SteamImportPreviewItem> games) {

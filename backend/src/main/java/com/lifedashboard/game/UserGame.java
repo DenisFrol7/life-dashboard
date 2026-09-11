@@ -64,6 +64,9 @@ public class UserGame {
         this.steamAppId = steamAppId;
         this.legacyPlaytimeMinutes = playtimeMinutes;
     }
+    public void synchronizeSteamPlaytime(long playtimeMinutes) {
+        this.legacyPlaytimeMinutes = playtimeMinutes;
+    }
     public Long getXboxTitleId() { return xboxTitleId; }
     public void linkXboxTitle(long xboxTitleId) { this.xboxTitleId = xboxTitleId; }
     public UserContentStatus getStatus() { return status; }

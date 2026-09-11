@@ -17,6 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.OptionalLong;
 
 @Component
 public class SteamClient {
@@ -106,6 +107,13 @@ public class SteamClient {
                     exception.getClass().getSimpleName());
             throw new InvalidRequestException("Не удалось загрузить недавно запущенные игры из Steam");
         }
+    }
+
+    public OptionalLong playtimeMinutes(long appId) {
+        return library().games().stream()
+                .filter(game -> game.appId() == appId)
+                .mapToLong(SteamOwnedGame::playtimeMinutes)
+                .findFirst();
     }
 
     List<SteamOwnedGame> parseOwnedGames(JsonNode root) {

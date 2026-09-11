@@ -13,6 +13,7 @@ import com.lifedashboard.data.DataTransferService;
 import com.lifedashboard.game.GameAccessType;
 import com.lifedashboard.game.GameSource;
 import com.lifedashboard.game.GameSourceRepository;
+import com.lifedashboard.game.GameSessionRepository;
 import com.lifedashboard.game.GamingPlatform;
 import com.lifedashboard.game.GamingPlatformRepository;
 import com.lifedashboard.game.UserGame;
@@ -44,6 +45,7 @@ public class SteamImportService {
     private final ContentItemRepository contentItems;
     private final UserContentRepository userContent;
     private final UserGameRepository library;
+    private final GameSessionRepository sessions;
     private final GamingPlatformRepository platforms;
     private final GameSourceRepository sources;
     private final UserRepository users;
@@ -54,7 +56,8 @@ public class SteamImportService {
 
     public SteamImportService(SteamImportPreviewService previewService,
             ContentItemRepository contentItems, UserContentRepository userContent,
-            UserGameRepository library, GamingPlatformRepository platforms,
+            UserGameRepository library, GameSessionRepository sessions,
+            GamingPlatformRepository platforms,
             GameSourceRepository sources, UserRepository users,
             SteamGameMetadataResolver metadataResolver,
             DataTransferService dataTransfer,
@@ -63,6 +66,7 @@ public class SteamImportService {
         this.contentItems = contentItems;
         this.userContent = userContent;
         this.library = library;
+        this.sessions = sessions;
         this.platforms = platforms;
         this.sources = sources;
         this.users = users;
@@ -219,7 +223,9 @@ public class SteamImportService {
                 .filter(copy -> copy.getSteamAppId() == null)
                 .filter(copy -> "STEAM".equals(copy.getSource().getCode()))
                 .map(copy -> {
-                    copy.linkSteamApp(row.appId(), row.playtimeMinutes());
+                    long trackedMinutes = sessions.totalMinutes(copy.getId(), userId);
+                    copy.linkSteamApp(row.appId(),
+                            Math.max(0, row.playtimeMinutes() - trackedMinutes));
                     return true;
                 })
                 .orElse(false);

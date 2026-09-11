@@ -23,15 +23,18 @@ public class SteamRecentProgressService {
     private final SteamClient steam;
     private final UserGameRepository gameRepository;
     private final SteamGameProgressRepository progressRepository;
+    private final GameSessionRepository sessions;
     private final SteamProgressService progressService;
     private final long userId;
 
     public SteamRecentProgressService(SteamClient steam, UserGameRepository gameRepository,
-            SteamGameProgressRepository progressRepository, SteamProgressService progressService,
+            SteamGameProgressRepository progressRepository, GameSessionRepository sessions,
+            SteamProgressService progressService,
             @Value("${app.default-user-id}") long userId) {
         this.steam = steam;
         this.gameRepository = gameRepository;
         this.progressRepository = progressRepository;
+        this.sessions = sessions;
         this.progressService = progressService;
         this.userId = userId;
     }
@@ -72,9 +75,11 @@ public class SteamRecentProgressService {
             for (UserGame copy : copies) {
                 matched++;
                 handledCopyIds.add(copy.getId());
-                if (copy.getLegacyPlaytimeMinutes() != recent.playtimeMinutes()) {
+                long trackedMinutes = sessions.totalMinutes(copy.getId(), userId);
+                long legacyMinutes = Math.max(0, recent.playtimeMinutes() - trackedMinutes);
+                if (copy.getLegacyPlaytimeMinutes() != legacyMinutes) {
                     playtimeUpdated += gameRepository.updateSteamPlaytime(copy.getId(), userId,
-                            recent.playtimeMinutes());
+                            legacyMinutes);
                 }
                 SteamGameProgress stored = progressByCopyId.get(copy.getId());
                 if (isUpToDate(stored, recent.lastPlayedAt())) {
@@ -85,7 +90,8 @@ public class SteamRecentProgressService {
                     continue;
                 }
                 try {
-                    SteamProgressResponse progress = progressService.sync(copy.getId());
+                    SteamProgressResponse progress = progressService.sync(copy.getId(),
+                            recent.playtimeMinutes());
                     Status status;
                     if (stored == null) {
                         initiallySynced++;

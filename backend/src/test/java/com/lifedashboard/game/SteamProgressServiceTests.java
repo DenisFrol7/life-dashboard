@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -29,6 +30,7 @@ class SteamProgressServiceTests {
     @Mock SteamGameProgressRepository progressRepository;
     @Mock SteamAchievementRepository achievementRepository;
     @Mock UserGameRepository gameRepository;
+    @Mock GameSessionRepository sessions;
     @Mock GamePlaythroughService playthroughService;
     @Mock SteamClient steam;
 
@@ -41,6 +43,8 @@ class SteamProgressServiceTests {
         when(game.getSource()).thenReturn(source);
         when(source.getCode()).thenReturn("STEAM");
         when(game.getSteamAppId()).thenReturn(620L);
+        when(steam.playtimeMinutes(620L)).thenReturn(OptionalLong.of(600L));
+        when(sessions.totalMinutes(7L, 1L)).thenReturn(120L);
         Instant unlockedAt = Instant.parse("2024-05-01T10:15:30Z");
         when(steam.achievements(620L)).thenReturn(new SteamAchievementSnapshot(620L, "Portal 2", List.of(
                 new SteamAchievementData("LOCKED", "Locked", null, null, null,
@@ -65,6 +69,7 @@ class SteamProgressServiceTests {
         assertNull(result.achievements().get(1).unlockedAt());
         verify(progressRepository).saveAndFlush(any(SteamGameProgress.class));
         verify(achievementRepository).saveAll(anyList());
+        verify(game).synchronizeSteamPlaytime(480L);
         verify(playthroughService, never()).recordSteamAchievementCompletion(any(), any());
     }
 
@@ -77,6 +82,8 @@ class SteamProgressServiceTests {
         when(game.getSource()).thenReturn(source);
         when(source.getCode()).thenReturn("STEAM");
         when(game.getSteamAppId()).thenReturn(620L);
+        when(steam.playtimeMinutes(620L)).thenReturn(OptionalLong.of(300L));
+        when(sessions.totalMinutes(7L, 1L)).thenReturn(45L);
         Instant firstUnlockedAt = Instant.parse("2024-04-01T10:15:30Z");
         Instant lastUnlockedAt = Instant.parse("2024-05-01T10:15:30Z");
         when(steam.achievements(620L)).thenReturn(new SteamAchievementSnapshot(620L, "Portal 2", List.of(
@@ -94,6 +101,7 @@ class SteamProgressServiceTests {
 
         assertEquals(100.0, result.achievementPercent());
         verify(playthroughService).recordSteamAchievementCompletion(game, lastUnlockedAt);
+        verify(game).synchronizeSteamPlaytime(255L);
     }
 
     @Test
@@ -112,6 +120,6 @@ class SteamProgressServiceTests {
 
     private SteamProgressService service() {
         return new SteamProgressService(progressRepository, achievementRepository,
-                gameRepository, playthroughService, steam, 1L);
+                gameRepository, sessions, playthroughService, steam, 1L);
     }
 }

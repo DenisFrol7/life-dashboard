@@ -27,6 +27,7 @@ class SteamRecentProgressServiceTests {
     @Mock SteamClient steam;
     @Mock UserGameRepository gameRepository;
     @Mock SteamGameProgressRepository progressRepository;
+    @Mock GameSessionRepository sessions;
     @Mock SteamProgressService progressService;
 
     @Test
@@ -46,7 +47,7 @@ class SteamRecentProgressServiceTests {
         when(current.getTotalAchievements()).thenReturn(106);
         when(progressRepository.findAllByLibraryEntryIdIn(List.of(11L, 12L)))
                 .thenReturn(List.of(current));
-        when(progressService.sync(11L)).thenReturn(progress(11L, 620L, 51, 51));
+        when(progressService.sync(11L, 0L)).thenReturn(progress(11L, 620L, 51, 51));
 
         SteamRecentSyncResponse result = service().syncRecent();
 
@@ -60,7 +61,7 @@ class SteamRecentProgressServiceTests {
         assertEquals(0, result.failed());
         assertEquals(SteamRecentSyncResponse.Status.INITIALIZED, result.games().get(0).status());
         assertEquals(SteamRecentSyncResponse.Status.UP_TO_DATE, result.games().get(1).status());
-        verify(progressService).sync(11L);
+        verify(progressService).sync(11L, 0L);
         verify(progressService, never()).sync(12L);
     }
 
@@ -74,8 +75,8 @@ class SteamRecentProgressServiceTests {
         when(gameRepository.findSteamCopies(1L)).thenReturn(List.of(first, second));
         when(progressRepository.findAllByLibraryEntryIdIn(List.of(1L, 2L)))
                 .thenReturn(List.of());
-        when(progressService.sync(1L)).thenThrow(new InvalidRequestException("Steam timeout"));
-        when(progressService.sync(2L)).thenReturn(progress(2L, 20L, 5, 10));
+        when(progressService.sync(1L, 0L)).thenThrow(new InvalidRequestException("Steam timeout"));
+        when(progressService.sync(2L, 0L)).thenReturn(progress(2L, 20L, 5, 10));
 
         SteamRecentSyncResponse result = service().syncRecent();
 
@@ -85,7 +86,7 @@ class SteamRecentProgressServiceTests {
         assertEquals(1, result.failed());
         assertEquals("Steam timeout", result.games().get(0).message());
         assertEquals(SteamRecentSyncResponse.Status.INITIALIZED, result.games().get(1).status());
-        verify(progressService).sync(2L);
+        verify(progressService).sync(2L, 0L);
     }
 
     @Test
@@ -115,31 +116,32 @@ class SteamRecentProgressServiceTests {
     }
 
     @Test
-    void updatesPlaytimeForAnImportedRecentlyPlayedGame() {
+    void subtractsTrackedSessionsFromSynchronizedSteamPlaytime() {
         Instant lastPlayed = Instant.parse("2026-09-04T12:00:00Z");
         when(steam.recentlyPlayedGames()).thenReturn(List.of(
                 new SteamOwnedGame(620L, "Portal 2", 480, lastPlayed, null)));
         UserGame copy = libraryCopy(15L, 620L);
         when(copy.getLegacyPlaytimeMinutes()).thenReturn(120L);
+        when(sessions.totalMinutes(15L, 1L)).thenReturn(90L);
         when(gameRepository.findSteamCopies(1L)).thenReturn(List.of(copy));
         SteamGameProgress current = mock(SteamGameProgress.class);
         when(current.getLibraryEntry()).thenReturn(copy);
         when(current.getLastSyncedAt()).thenReturn(lastPlayed);
         when(progressRepository.findAllByLibraryEntryIdIn(List.of(15L)))
                 .thenReturn(List.of(current));
-        when(gameRepository.updateSteamPlaytime(15L, 1L, 480L)).thenReturn(1);
+        when(gameRepository.updateSteamPlaytime(15L, 1L, 390L)).thenReturn(1);
 
         SteamRecentSyncResponse result = service().syncRecent();
 
         assertEquals(1, result.playtimeUpdated());
         assertEquals(1, result.upToDate());
-        verify(gameRepository).updateSteamPlaytime(15L, 1L, 480L);
+        verify(gameRepository).updateSteamPlaytime(15L, 1L, 390L);
         verify(progressService, never()).sync(15L);
     }
 
     private SteamRecentProgressService service() {
         return new SteamRecentProgressService(steam, gameRepository, progressRepository,
-                progressService, 1L);
+                sessions, progressService, 1L);
     }
 
     private SteamOwnedGame game(long appId, String title, Instant lastPlayedAt) {

@@ -313,12 +313,7 @@ export function GameDetailsPage() {
     try {
       const synchronized = await syncSteamProgress(library.id);
       setSteamProgress(synchronized);
-      if (
-        synchronized.totalAchievements > 0 &&
-        synchronized.unlockedAchievements === synchronized.totalAchievements
-      ) {
-        await load();
-      }
+      await load();
     } catch (reason) {
       setSteamError(
         reason instanceof Error

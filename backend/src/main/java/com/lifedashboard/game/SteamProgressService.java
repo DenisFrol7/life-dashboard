@@ -24,17 +24,19 @@ public class SteamProgressService {
     private final SteamGameProgressRepository progressRepository;
     private final SteamAchievementRepository achievementRepository;
     private final UserGameRepository gameRepository;
+    private final GameSessionRepository sessions;
     private final GamePlaythroughService playthroughService;
     private final SteamClient steam;
     private final long userId;
 
     public SteamProgressService(SteamGameProgressRepository progressRepository,
             SteamAchievementRepository achievementRepository, UserGameRepository gameRepository,
-            GamePlaythroughService playthroughService, SteamClient steam,
+            GameSessionRepository sessions, GamePlaythroughService playthroughService, SteamClient steam,
             @Value("${app.default-user-id}") long userId) {
         this.progressRepository = progressRepository;
         this.achievementRepository = achievementRepository;
         this.gameRepository = gameRepository;
+        this.sessions = sessions;
         this.playthroughService = playthroughService;
         this.steam = steam;
         this.userId = userId;
@@ -50,6 +52,21 @@ public class SteamProgressService {
     @Transactional
     public SteamProgressResponse sync(Long libraryEntryId) {
         UserGame game = findSteamGame(libraryEntryId);
+        steam.playtimeMinutes(game.getSteamAppId()).ifPresent(remoteMinutes -> {
+            synchronizePlaytime(game, remoteMinutes);
+        });
+        return synchronizeAchievements(game);
+    }
+
+    @Transactional
+    public SteamProgressResponse sync(Long libraryEntryId, long remotePlaytimeMinutes) {
+        UserGame game = findSteamGame(libraryEntryId);
+        synchronizePlaytime(game, remotePlaytimeMinutes);
+        return synchronizeAchievements(game);
+    }
+
+    private SteamProgressResponse synchronizeAchievements(UserGame game) {
+        Long libraryEntryId = game.getId();
         SteamAchievementSnapshot snapshot = steam.achievements(game.getSteamAppId());
         SteamGameProgress progress = progressRepository.findByLibraryEntryId(libraryEntryId)
                 .orElseGet(() -> new SteamGameProgress(game));
@@ -81,6 +98,11 @@ public class SteamProgressService {
             playthroughService.recordSteamAchievementCompletion(game, lastUnlocked);
         }
         return response(game, progress, synchronizedAchievements);
+    }
+
+    private void synchronizePlaytime(UserGame game, long remotePlaytimeMinutes) {
+        long trackedMinutes = sessions.totalMinutes(game.getId(), userId);
+        game.synchronizeSteamPlaytime(Math.max(0, remotePlaytimeMinutes - trackedMinutes));
     }
 
     private UserGame findSteamGame(Long libraryEntryId) {
