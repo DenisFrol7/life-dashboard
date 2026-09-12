@@ -26,6 +26,7 @@ import {
   getXboxAchievements,
   getXboxAchievementGroups,
   getXboxProgress,
+  putGameProfile,
   putXboxProgress,
   syncSteamProgress,
   syncXboxProgress,
@@ -1032,6 +1033,14 @@ function LibraryEntryModal({
       const saved = entry
         ? await updateGameLibrary(entry.id, input)
         : await createGameLibrary(contentId, input);
+      await putGameProfile(contentId, {
+        status: saved.status,
+        rating: saved.rating,
+        favorite: saved.favorite,
+        startedAt: saved.startedAt,
+        completedAt: saved.completedAt,
+        personalNote: saved.personalNote,
+      });
       if (!entry && supportsXboxProgress(saved))
         await putXboxProgress(saved.id, {
           totalAchievements: 0,
