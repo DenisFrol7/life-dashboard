@@ -3,9 +3,10 @@ import { getAnalytics, type Analytics, type AnalyticsDailyPoint, type AnalyticsO
 import { getApiErrorMessage } from '../api/client'
 
 type Period = 7 | 30 | 365
-type ChartPoint = { label: string; steps: number; sleepMinutes: number; gameMinutes: number }
+type ChartPoint = { key: string; label: string; tooltipLabel: string; steps: number; sleepMinutes: number; gameMinutes: number }
 const localDate = (date: Date) => date.toLocaleDateString('en-CA')
 const dateLabel = (date: string) => new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(new Date(`${date}T12:00:00`))
+const dayLabel = (date: string) => new Intl.DateTimeFormat('ru-RU', { day: 'numeric' }).format(new Date(`${date}T12:00:00`))
 const duration = (minutes: number) => `${Math.floor(minutes / 60)} ч ${minutes % 60} мин`
 const number = (value: number) => value.toLocaleString('ru-RU')
 
@@ -48,13 +49,13 @@ export function AnalyticsPage() {
 }
 
 function MetricCard({ label, value, detail, change }: { label: string; value: string; detail: string; change: number | null }) { return <article className="analytics-metric"><span>{label}</span><strong>{value}</strong><small>{detail}</small><em className={change != null && change < 0 ? 'negative' : ''}>{change == null ? 'Нет данных для сравнения' : `${change > 0 ? '+' : ''}${change}% к прошлому периоду`}</em></article> }
-function BarChart({ points, field, goal }: { points: ChartPoint[]; field: keyof Pick<ChartPoint, 'steps' | 'sleepMinutes' | 'gameMinutes'>; goal?: number }) { const maximum = Math.max(goal ?? 0, ...points.map(point => point[field]), 1); return <div className="analytics-bars">{points.map(point => <div key={point.label} title={`${point.label}: ${field === 'steps' ? number(point[field]) : duration(point[field])}`}><span>{field === 'steps' ? (point[field] ? number(point[field]) : '') : (point[field] ? duration(point[field]) : '')}</span><i className={goal && point[field] >= goal ? 'goal' : ''} style={{ height: `${Math.max(point[field] ? 4 : 1, point[field] / maximum * 100)}%` }} /><small>{point.label}</small></div>)}</div> }
+function BarChart({ points, field, goal }: { points: ChartPoint[]; field: keyof Pick<ChartPoint, 'steps' | 'sleepMinutes' | 'gameMinutes'>; goal?: number }) { const maximum = Math.max(goal ?? 0, ...points.map(point => point[field]), 1); return <div className="analytics-bars">{points.map(point => { const height = Math.max(point[field] ? 4 : 1, point[field] / maximum * 100); return <div key={point.key} title={`${point.tooltipLabel}: ${field === 'steps' ? number(point[field]) : duration(point[field])}`}><div className="analytics-bar-track"><span style={{ bottom: `calc(${height}% + 4px)` }}>{field === 'steps' ? (point[field] ? number(point[field]) : '') : (point[field] ? duration(point[field]) : '')}</span><i className={goal && point[field] >= goal ? 'goal' : ''} style={{ height: `${height}%` }} /></div><small>{point.label}</small></div> })}</div> }
 function MediaStats({ data }: { data: AnalyticsOverview }) { return <article className="analytics-detail-card"><p className="eyebrow">Медиатека</p><h2>Просмотрено</h2><dl><div><dt>Фильмы</dt><dd>{data.moviesWatched}</dd></div><div><dt>Эпизоды сериалов</dt><dd>{data.seriesEpisodesWatched}</dd></div><div><dt>Эпизоды аниме</dt><dd>{data.animeEpisodesWatched}</dd></div></dl></article> }
 function ReadingStats({ data }: { data: AnalyticsOverview }) { return <article className="analytics-detail-card"><p className="eyebrow">Книги</p><h2>Чтение</h2><dl><div><dt>Прочитано страниц</dt><dd>{number(data.pagesRead)}</dd></div><div><dt>Время чтения</dt><dd>{duration(data.readingMinutes)}</dd></div></dl></article> }
 
 function chartPoints(daily: AnalyticsDailyPoint[]): ChartPoint[] {
-  if (daily.length <= 60) return daily.map(point => ({ label: dateLabel(point.date), steps: point.steps, sleepMinutes: point.sleepMinutes, gameMinutes: point.gameMinutes }))
+  if (daily.length <= 60) return daily.map(point => ({ key: point.date, label: dayLabel(point.date), tooltipLabel: dateLabel(point.date), steps: point.steps, sleepMinutes: point.sleepMinutes, gameMinutes: point.gameMinutes }))
   const months = new Map<string, ChartPoint & { days: number; sleepDays: number }>()
-  daily.forEach(point => { const key = point.date.slice(0, 7); const current = months.get(key) ?? { label: new Intl.DateTimeFormat('ru-RU', { month: 'short', year: 'numeric' }).format(new Date(`${key}-15T12:00:00`)), steps: 0, sleepMinutes: 0, gameMinutes: 0, days: 0, sleepDays: 0 }; current.steps += point.steps; current.days++; current.gameMinutes += point.gameMinutes; if (point.sleepSessions) { current.sleepMinutes += point.sleepMinutes; current.sleepDays++ } months.set(key, current) })
-  return [...months.values()].map(point => ({ label: point.label, steps: Math.round(point.steps / point.days), sleepMinutes: point.sleepDays ? Math.round(point.sleepMinutes / point.sleepDays) : 0, gameMinutes: point.gameMinutes }))
+  daily.forEach(point => { const key = point.date.slice(0, 7); const label = new Intl.DateTimeFormat('ru-RU', { month: 'short', year: 'numeric' }).format(new Date(`${key}-15T12:00:00`)); const current = months.get(key) ?? { key, label, tooltipLabel: label, steps: 0, sleepMinutes: 0, gameMinutes: 0, days: 0, sleepDays: 0 }; current.steps += point.steps; current.days++; current.gameMinutes += point.gameMinutes; if (point.sleepSessions) { current.sleepMinutes += point.sleepMinutes; current.sleepDays++ } months.set(key, current) })
+  return [...months.values()].map(point => ({ key: point.key, label: point.label, tooltipLabel: point.tooltipLabel, steps: Math.round(point.steps / point.days), sleepMinutes: point.sleepDays ? Math.round(point.sleepMinutes / point.sleepDays) : 0, gameMinutes: point.gameMinutes }))
 }

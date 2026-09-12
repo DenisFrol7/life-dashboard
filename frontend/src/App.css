@@ -1603,12 +1603,13 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .analytics-metric > em.negative { color: #a76464; }
 .analytics-chart-card { min-width: 0; padding: 20px; }
 .analytics-chart-card .panel-heading > span { color: #829089; font-size: 12px; }
-.analytics-bars { display: flex; height: 220px; align-items: end; gap: 7px; margin-top: 18px; padding-top: 25px; border-bottom: 1px solid #dce3df; }
-.analytics-bars > div { display: flex; height: 100%; min-width: 0; flex: 1; flex-direction: column; justify-content: flex-end; align-items: center; }
-.analytics-bars span { overflow: hidden; width: 100%; height: 20px; color: #7b8983; font-size: 9px; text-align: center; white-space: nowrap; }
-.analytics-bars i { width: min(22px, 72%); min-height: 1px; border-radius: 5px 5px 0 0; background: #7896ad; transition: height .25s ease; }
+.analytics-bars { display: flex; height: 220px; align-items: stretch; gap: 7px; margin-top: 18px; padding-top: 25px; border-bottom: 1px solid #dce3df; }
+.analytics-bars > div { display: flex; height: 100%; min-width: 0; flex: 1; flex-direction: column; align-items: center; }
+.analytics-bar-track { position: relative; width: 100%; min-height: 0; flex: 1; }
+.analytics-bars span { position: absolute; overflow: hidden; width: 100%; height: 14px; color: #7b8983; font-size: 9px; line-height: 14px; text-align: center; white-space: nowrap; }
+.analytics-bars i { position: absolute; bottom: 0; left: 50%; width: min(22px, 72%); min-height: 1px; border-radius: 5px 5px 0 0; background: #7896ad; transform: translateX(-50%); transition: height .25s ease; }
 .analytics-bars i.goal { background: #6e9b78; }
-.analytics-bars small { overflow: hidden; width: 100%; height: 24px; padding-top: 7px; color: #85918c; font-size: 9px; text-align: center; white-space: nowrap; }
+.analytics-bars small { overflow: hidden; width: 100%; height: 24px; flex: 0 0 24px; padding-top: 7px; color: #85918c; font-size: 9px; text-align: center; white-space: nowrap; }
 .analytics-lower-grid, .analytics-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .analytics-lower-grid .analytics-bars { height: 170px; }
 .analytics-detail-card { padding: 20px; }
