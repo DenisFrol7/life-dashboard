@@ -20,6 +20,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -87,12 +88,43 @@ class XboxBulkProgressServiceTests {
         assertEquals(1, result.playthroughPlaytimeUpdated());
         assertFalse(result.playtimeSyncFailed());
         assertEquals(3, result.games().size());
-        verify(openXbl).titleHistory();
+        verify(openXbl, times(2)).titleHistory();
         verify(progressSync).sync(1L, history);
         verify(progressSync, never()).sync(2L, history);
         verify(progressSync, never()).sync(3L, history);
         verify(games).updateXboxPlaytime(1L, 1L, 150L);
         verify(games).updateXboxPlaytime(2L, 1L, 150L);
+    }
+
+    @Test
+    void retriesAndMergesIncompleteTitleHistory() {
+        Instant playedAt = Instant.parse("2026-09-03T12:00:00Z");
+        OpenXblTitle firstTitle = title(101L, "First", playedAt);
+        OpenXblTitle omittedTitle = title(202L, "Omitted", playedAt);
+        OpenXblTitleHistory incomplete = new OpenXblTitleHistory("xuid", List.of(firstTitle));
+        OpenXblTitleHistory complete = new OpenXblTitleHistory("xuid", List.of(firstTitle, omittedTitle));
+        UserGame first = copy(1L, 101L, "First");
+        UserGame omitted = copy(2L, 202L, "Omitted");
+        XboxGameProgress firstProgress = stored(first, Instant.parse("2026-09-04T12:00:00Z"));
+        XboxGameProgress omittedProgress = stored(omitted, Instant.parse("2026-09-04T12:00:00Z"));
+        when(firstProgress.getId()).thenReturn(11L);
+        when(omittedProgress.getId()).thenReturn(12L);
+        when(firstProgress.getUnlockedAchievements()).thenReturn(5);
+        when(firstProgress.getTotalAchievements()).thenReturn(10);
+        when(omittedProgress.getUnlockedAchievements()).thenReturn(5);
+        when(omittedProgress.getTotalAchievements()).thenReturn(10);
+        when(achievements.existsByProgressId(11L)).thenReturn(true);
+        when(achievements.existsByProgressId(12L)).thenReturn(true);
+        when(openXbl.titleHistory()).thenReturn(incomplete, complete);
+        when(openXbl.playtimeMinutes("xuid", List.of(101L, 202L))).thenReturn(Map.of());
+        when(games.findXboxCopies(1L)).thenReturn(List.of(first, omitted));
+        when(progress.findAllByUserId(1L)).thenReturn(List.of(firstProgress, omittedProgress));
+
+        XboxBulkSyncResponse result = service().syncLinked();
+
+        assertEquals(0, result.failed());
+        assertEquals(2, result.upToDate());
+        verify(openXbl, times(2)).titleHistory();
     }
 
     @Test

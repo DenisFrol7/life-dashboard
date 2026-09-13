@@ -50,13 +50,13 @@ public class XboxBulkProgressService {
     }
 
     public XboxBulkSyncResponse syncLinked() {
-        OpenXblTitleHistory history = openXbl.titleHistory();
         List<UserGame> xboxCopies = games.findXboxCopies(userId);
         List<UserGame> linkedCopies = xboxCopies.stream()
                 .filter(copy -> copy.getXboxTitleId() != null)
                 .toList();
         List<Long> linkedTitleIds = new ArrayList<>(new LinkedHashSet<>(linkedCopies.stream()
                 .map(UserGame::getXboxTitleId).toList()));
+        OpenXblTitleHistory history = completeTitleHistory(linkedTitleIds);
         Map<Long, OpenXblTitle> titlesById = indexTitles(history);
         Map<Long, XboxGameProgress> progressByCopyId = new HashMap<>();
         for (XboxGameProgress stored : progress.findAllByUserId(userId)) {
@@ -141,6 +141,21 @@ public class XboxBulkProgressService {
                 updated, initialized, upToDate, xboxCopies.size() - linkedCopies.size(),
                 failed, completionsRecorded, playtimeUpdated, playtimeUnavailable,
                 playthroughPlaytimeUpdated, playtimeSyncFailed, List.copyOf(results));
+    }
+
+    private OpenXblTitleHistory completeTitleHistory(List<Long> linkedTitleIds) {
+        OpenXblTitleHistory history = openXbl.titleHistory();
+        Set<Long> returnedTitleIds = new HashSet<>();
+        for (OpenXblTitle title : history.titles()) returnedTitleIds.add(title.titleId());
+        long missing = linkedTitleIds.stream().filter(id -> !returnedTitleIds.contains(id)).count();
+        if (missing == 0) return history;
+
+        log.warn("OpenXBL title history omitted {} linked titles; retrying once", missing);
+        OpenXblTitleHistory retry = openXbl.titleHistory();
+        Map<Long, OpenXblTitle> merged = new java.util.LinkedHashMap<>();
+        for (OpenXblTitle title : history.titles()) merged.put(title.titleId(), title);
+        for (OpenXblTitle title : retry.titles()) merged.put(title.titleId(), title);
+        return new OpenXblTitleHistory(retry.xuid(), List.copyOf(merged.values()));
     }
 
     private Map<Long, OpenXblTitle> indexTitles(OpenXblTitleHistory history) {

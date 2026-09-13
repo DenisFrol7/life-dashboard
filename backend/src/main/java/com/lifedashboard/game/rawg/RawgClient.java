@@ -12,6 +12,7 @@ import tools.jackson.databind.JsonNode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 @Component
 public class RawgClient {
@@ -27,13 +28,13 @@ public class RawgClient {
     public List<GameData> search(String query) {
         ensureConfigured();
         try {
-            JsonNode root = client.get().uri(uri -> uri.path("/games")
-                            .queryParam("key", apiKey)
-                            .queryParam("search", query)
-                            .queryParam("search_precise", true)
-                            .queryParam("page_size", 12)
-                            .build())
-                    .retrieve().body(JsonNode.class);
+            JsonNode root = requestWithRetry(() -> client.get().uri(uri -> uri.path("/games")
+                                    .queryParam("key", apiKey)
+                                    .queryParam("search", query)
+                                    .queryParam("search_precise", true)
+                                    .queryParam("page_size", 12)
+                                    .build())
+                            .retrieve().body(JsonNode.class), "search for '" + query + "'");
             if (root == null) return List.of();
             List<GameData> result = new ArrayList<>();
             for (JsonNode node : root.path("results")) result.add(map(node));
@@ -50,9 +51,9 @@ public class RawgClient {
     public GameData getGame(long rawgId) {
         ensureConfigured();
         try {
-            JsonNode node = client.get().uri(uri -> uri.path("/games/{id}")
-                            .queryParam("key", apiKey).build(rawgId))
-                    .retrieve().body(JsonNode.class);
+            JsonNode node = requestWithRetry(() -> client.get().uri(uri -> uri.path("/games/{id}")
+                                    .queryParam("key", apiKey).build(rawgId))
+                            .retrieve().body(JsonNode.class), "game " + rawgId);
             if (node == null) throw new InvalidRequestException("RAWG вернул пустой ответ");
             return map(node);
         } catch (RestClientResponseException exception) {
@@ -98,6 +99,24 @@ public class RawgClient {
     private void ensureConfigured() {
         if (apiKey.isBlank())
             throw new InvalidRequestException("Добавьте RAWG_API_KEY в файл .env и перезапустите backend");
+    }
+
+    private JsonNode requestWithRetry(Supplier<JsonNode> request, String operation) {
+        for (int attempt = 1; ; attempt++) {
+            try {
+                return request.get();
+            } catch (RestClientResponseException exception) {
+                int status = exception.getStatusCode().value();
+                if (attempt >= 3 || (status != 502 && status != 503 && status != 504)) throw exception;
+                log.warn("RAWG {} returned {}; retrying ({}/3)", operation, status, attempt + 1);
+                try {
+                    Thread.sleep(250L * attempt);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw exception;
+                }
+            }
+        }
     }
 
     private InvalidRequestException apiError(RestClientResponseException exception) {
