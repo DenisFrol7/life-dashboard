@@ -177,6 +177,15 @@ public class XboxBulkProgressService {
                 || stored.getLastUpdatedAt().isBefore(title.lastPlayedAt())) {
             return false;
         }
+        // Achievements can change without lastTimePlayed changing in title history.
+        // Local totals may be higher because manually added DLC is included there,
+        // so only a higher remote value proves that a refresh is needed.
+        if (title.currentAchievements() > stored.getUnlockedAchievements()
+                || title.currentGamerscore() > stored.getEarnedGamerscore()
+                || title.totalAchievements() > stored.getTotalAchievements()
+                || title.totalGamerscore() > stored.getTotalGamerscore()) {
+            return false;
+        }
         return title.sourceVersion() <= 1 || achievements.existsByProgressId(stored.getId());
     }
 

@@ -20,6 +20,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -55,6 +56,8 @@ class XboxBulkProgressServiceTests {
         when(currentProgress.getId()).thenReturn(12L);
         when(currentProgress.getUnlockedAchievements()).thenReturn(8);
         when(currentProgress.getTotalAchievements()).thenReturn(10);
+        when(currentProgress.getEarnedGamerscore()).thenReturn(800);
+        when(currentProgress.getTotalGamerscore()).thenReturn(1000);
         XboxProgressResponse synchronizedProgress = new XboxProgressResponse(
                 11L, 1L, 10, 5, 50.0, 1000, 500, 50.0, null,
                 Instant.parse("2026-09-04T13:00:00Z"),
@@ -111,8 +114,12 @@ class XboxBulkProgressServiceTests {
         when(omittedProgress.getId()).thenReturn(12L);
         when(firstProgress.getUnlockedAchievements()).thenReturn(5);
         when(firstProgress.getTotalAchievements()).thenReturn(10);
+        when(firstProgress.getEarnedGamerscore()).thenReturn(500);
+        when(firstProgress.getTotalGamerscore()).thenReturn(1000);
         when(omittedProgress.getUnlockedAchievements()).thenReturn(5);
         when(omittedProgress.getTotalAchievements()).thenReturn(10);
+        when(omittedProgress.getEarnedGamerscore()).thenReturn(500);
+        when(omittedProgress.getTotalGamerscore()).thenReturn(1000);
         when(achievements.existsByProgressId(11L)).thenReturn(true);
         when(achievements.existsByProgressId(12L)).thenReturn(true);
         when(openXbl.titleHistory()).thenReturn(incomplete, complete);
@@ -136,6 +143,10 @@ class XboxBulkProgressServiceTests {
         XboxGameProgress currentProgress = stored(current,
                 Instant.parse("2026-09-04T12:00:00Z"));
         when(currentProgress.getId()).thenReturn(12L);
+        when(currentProgress.getUnlockedAchievements()).thenReturn(5);
+        when(currentProgress.getTotalAchievements()).thenReturn(10);
+        when(currentProgress.getEarnedGamerscore()).thenReturn(500);
+        when(currentProgress.getTotalGamerscore()).thenReturn(1000);
         XboxProgressResponse synchronizedProgress = new XboxProgressResponse(
                 12L, 2L, 10, 8, 80.0, 1000, 800, 80.0, null,
                 Instant.parse("2026-09-04T13:00:00Z"),
@@ -156,6 +167,45 @@ class XboxBulkProgressServiceTests {
     }
 
     @Test
+    void refreshesWhenAchievementsIncreaseWithoutNewLastPlayedDate() {
+        assertRefreshesWhenSummaryIncreases(6, 500, 10, 1000);
+    }
+
+    @Test
+    void refreshesWhenGamerscoreIncreasesWithoutNewLastPlayedDate() {
+        assertRefreshesWhenSummaryIncreases(5, 550, 10, 1000);
+    }
+
+    @Test
+    void refreshesWhenTotalAchievementsIncreaseWithoutNewLastPlayedDate() {
+        assertRefreshesWhenSummaryIncreases(5, 500, 11, 1100);
+    }
+
+    @Test
+    void doesNotRefreshOnlyBecauseManualDlcMakesLocalTotalsHigher() {
+        Instant playedAt = Instant.parse("2026-09-03T12:00:00Z");
+        OpenXblTitle title = title(202L, "With DLC", playedAt);
+        OpenXblTitleHistory history = new OpenXblTitleHistory("xuid", List.of(title));
+        UserGame copy = copy(2L, 202L, "With DLC");
+        XboxGameProgress stored = stored(copy, Instant.parse("2026-09-04T12:00:00Z"));
+        when(stored.getId()).thenReturn(12L);
+        when(stored.getUnlockedAchievements()).thenReturn(8);
+        when(stored.getTotalAchievements()).thenReturn(20);
+        when(stored.getEarnedGamerscore()).thenReturn(800);
+        when(stored.getTotalGamerscore()).thenReturn(2000);
+        when(openXbl.titleHistory()).thenReturn(history);
+        when(openXbl.playtimeMinutes("xuid", List.of(202L))).thenReturn(Map.of());
+        when(games.findXboxCopies(1L)).thenReturn(List.of(copy));
+        when(progress.findAllByUserId(1L)).thenReturn(List.of(stored));
+        when(achievements.existsByProgressId(12L)).thenReturn(true);
+
+        XboxBulkSyncResponse result = service().syncLinked();
+
+        assertEquals(1, result.upToDate());
+        verify(progressSync, never()).sync(2L, history);
+    }
+
+    @Test
     void appliesSharedTitlePlaytimeToOnlyOneLibraryCopy() {
         Instant playedAt = Instant.parse("2026-09-03T12:00:00Z");
         OpenXblTitle title = title(404L, "Play Anywhere", playedAt);
@@ -168,6 +218,14 @@ class XboxBulkProgressServiceTests {
                 Instant.parse("2026-09-04T12:00:00Z"));
         when(xboxProgress.getId()).thenReturn(14L);
         when(pcProgress.getId()).thenReturn(15L);
+        when(xboxProgress.getUnlockedAchievements()).thenReturn(5);
+        when(xboxProgress.getTotalAchievements()).thenReturn(10);
+        when(xboxProgress.getEarnedGamerscore()).thenReturn(500);
+        when(xboxProgress.getTotalGamerscore()).thenReturn(1000);
+        when(pcProgress.getUnlockedAchievements()).thenReturn(5);
+        when(pcProgress.getTotalAchievements()).thenReturn(10);
+        when(pcProgress.getEarnedGamerscore()).thenReturn(500);
+        when(pcProgress.getTotalGamerscore()).thenReturn(1000);
         when(achievements.existsByProgressId(14L)).thenReturn(true);
         when(achievements.existsByProgressId(15L)).thenReturn(true);
         when(openXbl.titleHistory()).thenReturn(history);
@@ -182,6 +240,38 @@ class XboxBulkProgressServiceTests {
         verify(games).updateXboxPlaytime(4L, 1L, 120L);
         verify(games, never()).updateXboxPlaytime(5L, 1L, 120L);
         verify(sessions, never()).totalMinutes(5L, 1L);
+    }
+
+    private void assertRefreshesWhenSummaryIncreases(int unlockedAchievements,
+            int earnedGamerscore, int totalAchievements, int totalGamerscore) {
+        Instant playedAt = Instant.parse("2026-09-03T12:00:00Z");
+        OpenXblTitle title = new OpenXblTitle(202L, "Changed", List.of("XboxSeries"),
+                unlockedAchievements, totalAchievements, earnedGamerscore,
+                totalGamerscore, 2, playedAt);
+        OpenXblTitleHistory history = new OpenXblTitleHistory("xuid", List.of(title));
+        UserGame copy = copy(2L, 202L, "Changed");
+        XboxGameProgress stored = stored(copy, Instant.parse("2026-09-04T12:00:00Z"));
+        when(stored.getUnlockedAchievements()).thenReturn(5);
+        lenient().when(stored.getTotalAchievements()).thenReturn(10);
+        lenient().when(stored.getEarnedGamerscore()).thenReturn(500);
+        lenient().when(stored.getTotalGamerscore()).thenReturn(1000);
+        XboxProgressResponse refreshed = new XboxProgressResponse(
+                12L, 2L, totalAchievements, unlockedAchievements, 50.0,
+                totalGamerscore, earnedGamerscore, 50.0, null,
+                Instant.parse("2026-09-04T13:00:00Z"),
+                XboxAchievementDetailsStatus.AVAILABLE);
+        when(openXbl.titleHistory()).thenReturn(history);
+        when(openXbl.playtimeMinutes("xuid", List.of(202L))).thenReturn(Map.of());
+        when(games.findXboxCopies(1L)).thenReturn(List.of(copy));
+        when(progress.findAllByUserId(1L)).thenReturn(List.of(stored));
+        when(progressSync.sync(2L, history)).thenReturn(new XboxProgressSyncResponse(
+                202L, "Changed", true, false, null, false, refreshed));
+
+        XboxBulkSyncResponse result = service().syncLinked();
+
+        assertEquals(1, result.updated());
+        assertEquals(0, result.upToDate());
+        verify(progressSync).sync(2L, history);
     }
 
     private XboxBulkProgressService service() {
