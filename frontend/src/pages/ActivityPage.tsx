@@ -3,6 +3,8 @@ import { deleteActivity, getActivityRange, putActivity, type DailyActivity } fro
 import { useToast } from '../components/ToastContext'
 
 const stepGoal = 7_000
+const chartMaximum = 12_000
+const chartTicks = [12_000, 9_000, 7_000, 5_000, 3_000, 1_000, 0]
 const activeDayThreshold = 1_000
 const isoDate = (date: Date) => date.toLocaleDateString('en-CA')
 const today = isoDate(new Date())
@@ -40,8 +42,6 @@ export function ActivityPage() {
     const date = shiftDate(today, index - period + 1)
     return { date, steps: items.find((item) => item.activityDate === date)?.steps ?? 0 }
   }), [items, period])
-  const chartMaximum = 9_000
-
   return <div className="activity-page">
     <section className="activity-summary">
       <div><p className="eyebrow">Сегодня</p><strong>{(current?.steps ?? 0).toLocaleString('ru-RU')}</strong><span>шагов из {stepGoal.toLocaleString('ru-RU')}</span></div>
@@ -56,15 +56,19 @@ export function ActivityPage() {
         <div className="panel-heading"><div><p className="eyebrow">Динамика</p><h3>Шаги по дням</h3></div><div className="period-switch"><button className={period === 7 ? 'active' : ''} onClick={() => setPeriod(7)}>7 дней</button><button className={period === 30 ? 'active' : ''} onClick={() => setPeriod(30)}>30 дней</button></div></div>
         {loading ? <div className="loading"><span />Загружаем историю…</div> : <div className={`step-chart period-${period}`}>
           <div className="step-chart-scale" aria-hidden="true">
-            <span style={{ top: '0%' }}><b>9 000</b></span>
-            <span className="goal" style={{ top: `${(1 - stepGoal / chartMaximum) * 100}%` }}><b>{stepGoal.toLocaleString('ru-RU')}</b></span>
-            <span style={{ top: `${(1 - 5_000 / chartMaximum) * 100}%` }}><b>5 000</b></span>
-            <span style={{ top: `${(1 - 3_000 / chartMaximum) * 100}%` }}><b>3 000</b></span>
-            <span style={{ top: `${(1 - 1_000 / chartMaximum) * 100}%` }}><b>1 000</b></span>
+            {chartTicks.map((value) => <span
+              className={`${value === chartMaximum ? 'maximum ' : ''}${value === 0 ? 'zero ' : ''}${value === stepGoal ? 'goal' : ''}`.trim()}
+              key={value}
+              style={{ bottom: `${value / chartMaximum * 100}%` }}
+            >{value > 0 && <b>{value.toLocaleString('ru-RU')}</b>}</span>)}
+            {!chartTicks.includes(stepGoal) && <span className="goal" style={{ bottom: `${stepGoal / chartMaximum * 100}%` }}><b>{stepGoal.toLocaleString('ru-RU')}</b></span>}
           </div>
-          {chartData.map((item) => <button className={item.date === selectedDate ? 'selected' : ''} key={item.date} onClick={() => setSelectedDate(item.date)} title={`${formatDate(item.date)}: ${item.steps.toLocaleString('ru-RU')} шагов`}>
-            <span className="bar-value">{period === 7 && item.steps ? item.steps.toLocaleString('ru-RU') : ''}</span><i className={item.steps >= stepGoal ? 'goal-reached' : ''} style={{ height: `${Math.max(2, Math.min(100, item.steps / chartMaximum * 100))}%` }} /><small>{period === 7 ? formatDate(item.date, { weekday: 'short' }) : new Date(`${item.date}T12:00:00`).getDate()}</small>
-          </button>)}
+          {chartData.map((item) => {
+            const height = item.steps === 0 ? 0 : Math.max(2, Math.min(100, item.steps / chartMaximum * 100))
+            return <button className={item.date === selectedDate ? 'selected' : ''} key={item.date} onClick={() => setSelectedDate(item.date)} title={`${formatDate(item.date)}: ${item.steps.toLocaleString('ru-RU')} шагов`}>
+              <span className="bar-value">{period === 7 && item.steps ? item.steps.toLocaleString('ru-RU') : ''}</span><i className={`${item.steps >= stepGoal ? 'goal-reached ' : ''}${item.steps === 0 ? 'empty' : ''}`.trim()} style={{ height: `${height}%` }} /><small>{period === 7 ? formatDate(item.date, { weekday: 'short' }) : new Date(`${item.date}T12:00:00`).getDate()}</small>
+            </button>
+          })}
         </div>}
         <div className="chart-goal"><span />Цель — {stepGoal.toLocaleString('ru-RU')} шагов в день</div>
       </article>

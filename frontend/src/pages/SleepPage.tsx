@@ -4,6 +4,8 @@ import { useToast } from '../components/ToastContext'
 import { Pencil, Plus, Trash2, X } from 'lucide-react'
 
 const sleepGoalMinutes = 8 * 60
+const sleepChartMaximumMinutes = 10 * 60
+const sleepChartTicks = [10 * 60, 8 * 60, 6 * 60, 4 * 60, 2 * 60, 0]
 const localDate = (value: string | Date) => new Date(value).toLocaleDateString('en-CA')
 const today = localDate(new Date())
 const formatDuration = (minutes: number) => `${Math.floor(minutes / 60)} ч ${minutes % 60} мин`
@@ -62,13 +64,16 @@ export function SleepPage() {
         <div className="panel-heading"><div><p className="eyebrow">Период</p><h3>Продолжительность сна</h3></div><div className="period-switch"><button className={period === 7 ? 'active' : ''} onClick={() => setPeriod(7)}>7 дней</button><button className={period === 30 ? 'active' : ''} onClick={() => setPeriod(30)}>30 дней</button></div></div>
         {loading ? <div className="loading"><span />Загружаем историю…</div> : <div className={`sleep-chart period-${period}`}>
           <div className="sleep-chart-scale" aria-hidden="true">
-            <span style={{ top: '0%' }}><b>10 ч</b></span>
-            <span className="goal" style={{ top: '20%' }}><b>8 ч</b></span>
-            <span style={{ top: '40%' }}><b>6 ч</b></span>
-            <span style={{ top: '60%' }}><b>4 ч</b></span>
-            <span style={{ top: '80%' }}><b>2 ч</b></span>
+            {sleepChartTicks.map((value) => <span
+              className={`${value === sleepChartMaximumMinutes ? 'maximum ' : ''}${value === 0 ? 'zero ' : ''}${value === sleepGoalMinutes ? 'goal' : ''}`.trim()}
+              key={value}
+              style={{ bottom: `${value / sleepChartMaximumMinutes * 100}%` }}
+            >{value > 0 && <b>{value / 60} ч</b>}</span>)}
           </div>
-          {chartData.map((day) => <div className="sleep-chart-day" key={day.key}><span>{day.minutes ? formatDuration(day.minutes) : '—'}</span><i style={{ height: `${Math.max(2, Math.min(100, day.minutes / 600 * 100))}%` }} className={day.minutes >= sleepGoalMinutes ? 'goal-reached' : ''} /><small>{day.label}</small></div>)}
+          {chartData.map((day) => {
+            const height = day.minutes === 0 ? 0 : Math.max(2, Math.min(100, day.minutes / sleepChartMaximumMinutes * 100))
+            return <div className="sleep-chart-day" key={day.key}><span>{day.minutes ? formatDuration(day.minutes) : '—'}</span><i style={{ height: `${height}%` }} className={`${day.minutes >= sleepGoalMinutes ? 'goal-reached ' : ''}${day.minutes === 0 ? 'empty' : ''}`.trim()} /><small>{day.label}</small></div>
+          })}
         </div>}
       </article>
       <article className="sleep-panel sleep-breakdown">
