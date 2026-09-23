@@ -29,6 +29,11 @@ public class XboxProgressController {
     @PostMapping("/sync") public XboxProgressSyncResponse sync(@PathVariable Long libraryEntryId) {
         return syncService.sync(libraryEntryId);
     }
+    @PostMapping("/initialize")
+    public ResponseEntity<Void> initialize(@PathVariable Long libraryEntryId) {
+        service.initializeFromTitleHistory(libraryEntryId);
+        return ResponseEntity.noContent().build();
+    }
     @DeleteMapping public ResponseEntity<Void> delete(@PathVariable Long libraryEntryId) {
         service.delete(libraryEntryId); return ResponseEntity.noContent().build();
     }

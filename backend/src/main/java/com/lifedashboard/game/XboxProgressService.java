@@ -2,6 +2,9 @@ package com.lifedashboard.game;
 
 import com.lifedashboard.common.error.*;
 import com.lifedashboard.game.dto.*;
+import com.lifedashboard.game.openxbl.OpenXblClient;
+import com.lifedashboard.game.openxbl.OpenXblTitle;
+import com.lifedashboard.game.openxbl.OpenXblTitleHistory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,15 +19,16 @@ public class XboxProgressService {
     private final XboxAchievementRepository achievementRepository;
     private final UserGameRepository gameRepository;
     private final XboxAchievementGroupService achievementGroups;
+    private final OpenXblClient openXbl;
     private final long userId;
 
     public XboxProgressService(XboxGameProgressRepository progressRepository,
             XboxAchievementRepository achievementRepository, UserGameRepository gameRepository,
-            XboxAchievementGroupService achievementGroups,
+            XboxAchievementGroupService achievementGroups, OpenXblClient openXbl,
             @Value("${app.default-user-id}") long userId) {
         this.progressRepository = progressRepository; this.achievementRepository = achievementRepository;
         this.gameRepository = gameRepository;
-        this.achievementGroups = achievementGroups; this.userId = userId;
+        this.achievementGroups = achievementGroups; this.openXbl = openXbl; this.userId = userId;
     }
 
     @Transactional
@@ -33,6 +37,24 @@ public class XboxProgressService {
         UserGame game = findXboxGame(libraryEntryId);
         achievementGroups.putBase(game, request);
         return response(progressRepository.findByLibraryEntryId(libraryEntryId).orElseThrow());
+    }
+    @Transactional
+    public void initializeFromTitleHistory(Long libraryEntryId) {
+        UserGame game = findXboxGame(libraryEntryId);
+        if (progressRepository.findByLibraryEntryId(libraryEntryId).isPresent()) return;
+        if (game.getXboxTitleId() == null) {
+            throw new InvalidRequestException(
+                    "Сначала свяжите копию игры с Xbox Title ID");
+        }
+        OpenXblTitle title = findTitle(openXbl.titleHistory(), game.getXboxTitleId());
+        if (title == null) title = findTitle(openXbl.titleHistory(), game.getXboxTitleId());
+        if (title == null) {
+            throw new InvalidRequestException(
+                    "Связанная игра не найдена в истории Xbox-профиля");
+        }
+        achievementGroups.putBase(game, new XboxProgressRequest(
+                Math.max(title.totalAchievements(), title.currentAchievements()), 0,
+                Math.max(title.totalGamerscore(), title.currentGamerscore()), 0));
     }
     public XboxProgressResponse get(Long libraryEntryId) {
         findXboxGame(libraryEntryId);
@@ -75,6 +97,11 @@ public class XboxProgressService {
             throw new InvalidRequestException("Количество полученных достижений не может превышать их общее количество");
         if (r.earnedGamerscore() > r.totalGamerscore())
             throw new InvalidRequestException("Полученный Gamerscore не может превышать общий Gamerscore");
+    }
+    private OpenXblTitle findTitle(OpenXblTitleHistory history, long titleId) {
+        return history.titles().stream()
+                .filter(title -> title.titleId() == titleId)
+                .findFirst().orElse(null);
     }
     private double percent(int value, int total) {
         return total == 0 ? 0.0 : Math.round(value * 10000.0 / total) / 100.0;

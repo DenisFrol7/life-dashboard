@@ -13,6 +13,9 @@ import com.lifedashboard.game.GamingPlatform;
 import com.lifedashboard.game.GamingPlatformRepository;
 import com.lifedashboard.game.UserGame;
 import com.lifedashboard.game.UserGameRepository;
+import com.lifedashboard.game.XboxAchievementGroupService;
+import com.lifedashboard.game.XboxGameProgressRepository;
+import com.lifedashboard.game.dto.XboxProgressRequest;
 import com.lifedashboard.game.rawg.RawgClient;
 import com.lifedashboard.game.steamgriddb.SteamGridDbCoverCandidate;
 import com.lifedashboard.game.steamgriddb.SteamGridDbGameCandidate;
@@ -51,6 +54,8 @@ class XboxImportServiceTests {
     @Mock UserRepository users;
     @Mock XboxGameMetadataResolver metadataResolver;
     @Mock DataTransferService dataTransfer;
+    @Mock XboxGameProgressRepository progress;
+    @Mock XboxAchievementGroupService achievementGroups;
 
     @Test
     void backsUpAndImportsSelectedGamesWithChosenSources() {
@@ -81,6 +86,7 @@ class XboxImportServiceTests {
         when(userContent.findByUserIdAndContentId(1L, 10L)).thenReturn(Optional.of(existingEntry));
         when(userContent.findByUserIdAndContentId(1L, null)).thenReturn(Optional.empty());
         when(userContent.save(any(UserContent.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(library.save(any(UserGame.class))).thenAnswer(invocation -> invocation.getArgument(0));
         RawgClient.GameData rawg = new RawgClient.GameData(300L, "new-game", "New Game",
                 null, LocalDate.of(2020, 5, 4), "Description", "rawg-background",
                 "Adventure", "Studio", List.of("Xbox 360"), false);
@@ -116,6 +122,8 @@ class XboxImportServiceTests {
                 .map(UserGame::getXboxTitleId).toList());
         assertEquals(List.of(GameAccessType.SUBSCRIPTION, GameAccessType.OWNED),
                 copies.getAllValues().stream().map(UserGame::getAccessType).toList());
+        verify(achievementGroups, org.mockito.Mockito.times(3)).putBase(
+                any(UserGame.class), eq(new XboxProgressRequest(20, 0, 1000, 0)));
         InOrder backupBeforeWrites = inOrder(dataTransfer, library);
         backupBeforeWrites.verify(dataTransfer).createAutomaticBackup();
         backupBeforeWrites.verify(library, org.mockito.Mockito.times(2)).save(any(UserGame.class));
@@ -138,6 +146,7 @@ class XboxImportServiceTests {
         when(contentItems.save(any(ContentItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(userContent.findByUserIdAndContentId(1L, null)).thenReturn(Optional.empty());
         when(userContent.save(any(UserContent.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(library.save(any(UserGame.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         XboxImportService service = service();
         XboxImportPreparation preparation = service.prepare(new XboxImportSelection(List.of(4L)));
@@ -173,13 +182,14 @@ class XboxImportServiceTests {
 
     private XboxImportService service() {
         return new XboxImportService(previewService, contentItems, userContent, library,
-                platforms, sources, users, metadataResolver, dataTransfer, 1L);
+                platforms, sources, users, metadataResolver, dataTransfer,
+                progress, achievementGroups, 1L);
     }
 
     private XboxImportPreviewItem row(long titleId, String title, String platform,
             XboxImportMatch match, Long contentId, Long libraryId) {
         return new XboxImportPreviewItem(titleId, title, platform, null,
-                "xbox-image", 0, 0, 0, 0, "XBOX_STORE", false, match,
+                "xbox-image", 0, 20, 0, 1000, "XBOX_STORE", false, match,
                 contentId, contentId == null ? null : "Existing", libraryId);
     }
 }

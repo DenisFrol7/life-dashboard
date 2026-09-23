@@ -23,6 +23,7 @@ import {
   getSteamGridDbCovers,
   getXboxAchievementGroups,
   getXboxLibrarySummary,
+  initializeXboxProgress,
   importXboxGames,
   importSteamGames,
   prepareXboxImport,
@@ -3041,20 +3042,32 @@ export function GameSessionForm({
     achievementGroupId: session?.achievementGroupId ?? null,
   });
   const [groups, setGroups] = useState<XboxAchievementGroup[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectedEntry = library.find((entry) => entry.id === libraryId);
   const achievementsEnabled = selectedEntry
     ? supportsXboxProgress(selectedEntry)
     : false;
+  const achievementValuesEntered =
+    input.unlockedAchievements > 0 || input.earnedGamerscore > 0;
   useEffect(() => {
+    let active = true;
     if (!achievementsEnabled) {
       setGroups([]);
+      setLoadingGroups(false);
       setInput((current) => ({ ...current, achievementGroupId: null }));
       return;
     }
-    getXboxAchievementGroups(libraryId)
-      .then((values) => {
+    const loadGroups = async () => {
+      setLoadingGroups(true);
+      try {
+        let values = await getXboxAchievementGroups(libraryId);
+        if (values.length === 0 && selectedEntry?.xboxTitleId != null) {
+          await initializeXboxProgress(libraryId);
+          values = await getXboxAchievementGroups(libraryId);
+        }
+        if (!active) return;
         setGroups(values);
         setInput((current) => ({
           ...current,
@@ -3065,15 +3078,22 @@ export function GameSessionForm({
             : (values.find((value) => value.groupType === "BASE_GAME")?.id ??
               null),
         }));
-      })
-      .catch((reason: unknown) =>
+      } catch (reason: unknown) {
+        if (!active) return;
         setError(
           reason instanceof Error
             ? reason.message
-            : "Не удалось загрузить группы достижений",
-        ),
-      );
-  }, [achievementsEnabled, libraryId]);
+            : "Не удалось подготовить раздел достижений",
+        );
+      } finally {
+        if (active) setLoadingGroups(false);
+      }
+    };
+    void loadGroups();
+    return () => {
+      active = false;
+    };
+  }, [achievementsEnabled, libraryId, selectedEntry?.xboxTitleId]);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true);
@@ -3180,7 +3200,8 @@ export function GameSessionForm({
             <label>
               Раздел достижений
               <select
-                required
+                required={achievementValuesEntered}
+                disabled={loadingGroups || groups.length === 0}
                 value={input.achievementGroupId ?? ""}
                 onChange={(event) =>
                   setInput((current) => ({
@@ -3189,6 +3210,13 @@ export function GameSessionForm({
                   }))
                 }
               >
+                <option value="" disabled>
+                  {loadingGroups
+                    ? "Подготавливаем разделы…"
+                    : groups.length === 0
+                      ? "Разделы недоступны"
+                      : "Выберите раздел"}
+                </option>
                 {groups.map((group) => (
                   <option key={group.id} value={group.id}>
                     {group.name}
@@ -3254,7 +3282,14 @@ export function GameSessionForm({
           <button className="secondary-button" type="button" onClick={onClose}>
             Отмена
           </button>
-          <button className="primary-button" disabled={saving}>
+          <button
+            className="primary-button"
+            disabled={
+              saving ||
+              loadingGroups ||
+              (achievementValuesEntered && input.achievementGroupId == null)
+            }
+          >
             {saving ? "Сохраняем…" : "Сохранить"}
           </button>
         </div>

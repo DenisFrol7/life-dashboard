@@ -496,6 +496,11 @@ export const putXboxProgress = (libraryId: number, input: XboxProgressInput) =>
     method: "PUT",
     body: JSON.stringify(input),
   });
+export const initializeXboxProgress = (libraryId: number) =>
+  apiRequest<void>(
+    `/api/games/library/${libraryId}/xbox-progress/initialize`,
+    { method: "POST" },
+  );
 export const syncXboxProgress = (libraryId: number) =>
   apiRequest<XboxProgressSyncResult>(
     `/api/games/library/${libraryId}/xbox-progress/sync`,

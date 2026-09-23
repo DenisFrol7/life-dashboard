@@ -17,6 +17,9 @@ import com.lifedashboard.game.GamingPlatform;
 import com.lifedashboard.game.GamingPlatformRepository;
 import com.lifedashboard.game.UserGame;
 import com.lifedashboard.game.UserGameRepository;
+import com.lifedashboard.game.XboxAchievementGroupService;
+import com.lifedashboard.game.XboxGameProgressRepository;
+import com.lifedashboard.game.dto.XboxProgressRequest;
 import com.lifedashboard.game.rawg.RawgClient;
 import com.lifedashboard.user.User;
 import com.lifedashboard.user.UserRepository;
@@ -49,6 +52,8 @@ public class XboxImportService {
     private final UserRepository users;
     private final XboxGameMetadataResolver metadataResolver;
     private final DataTransferService dataTransfer;
+    private final XboxGameProgressRepository progress;
+    private final XboxAchievementGroupService achievementGroups;
     private final long userId;
     private final ConcurrentMap<String, BackupSession> backupSessions = new ConcurrentHashMap<>();
 
@@ -57,6 +62,8 @@ public class XboxImportService {
             UserGameRepository library, GamingPlatformRepository platforms,
             GameSourceRepository sources, UserRepository users,
             XboxGameMetadataResolver metadataResolver, DataTransferService dataTransfer,
+            XboxGameProgressRepository progress,
+            XboxAchievementGroupService achievementGroups,
             @Value("${app.default-user-id}") long userId) {
         this.previewService = previewService;
         this.contentItems = contentItems;
@@ -67,6 +74,8 @@ public class XboxImportService {
         this.users = users;
         this.metadataResolver = metadataResolver;
         this.dataTransfer = dataTransfer;
+        this.progress = progress;
+        this.achievementGroups = achievementGroups;
         this.userId = userId;
     }
 
@@ -148,7 +157,8 @@ public class XboxImportService {
             copy.update(platform, source, accessType, null, null, null, 0,
                     UserContentStatus.NOT_STARTED, null, null);
             copy.linkXboxTitle(row.titleId());
-            library.save(copy);
+            copy = library.save(copy);
+            initializeBaseProgress(copy, row);
             imported++;
         }
         return new XboxImportResult(selected.size(), imported, catalogCreated,
@@ -210,8 +220,18 @@ public class XboxImportService {
     private void linkExistingCopy(XboxImportPreviewItem row) {
         if (row.matchedLibraryEntryId() == null) return;
         library.findByIdAndUserContentUserId(row.matchedLibraryEntryId(), userId)
-                .filter(copy -> copy.getXboxTitleId() == null)
-                .ifPresent(copy -> copy.linkXboxTitle(row.titleId()));
+                .ifPresent(copy -> {
+                    if (copy.getXboxTitleId() == null) copy.linkXboxTitle(row.titleId());
+                    initializeBaseProgress(copy, row);
+                });
+    }
+
+    private void initializeBaseProgress(UserGame copy, XboxImportPreviewItem row) {
+        if (progress.findByLibraryEntryId(copy.getId()).isPresent()) return;
+        int totalAchievements = Math.max(row.totalAchievements(), row.unlockedAchievements());
+        int totalGamerscore = Math.max(row.totalGamerscore(), row.earnedGamerscore());
+        achievementGroups.putBase(copy,
+                new XboxProgressRequest(totalAchievements, 0, totalGamerscore, 0));
     }
 
     private GameSource findSource(String code, String platformCode) {
