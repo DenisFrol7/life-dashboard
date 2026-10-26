@@ -40,6 +40,7 @@ public class UserContent {
     public Instant getStartedAt() { return startedAt; }
     public Instant getCompletedAt() { return completedAt; }
     public String getPersonalNote() { return personalNote; }
+    public void changeRating(Short rating) { this.rating = rating; }
     public void changeStatus(UserContentStatus status, Instant completedAt) {
         this.status = status;
         this.completedAt = completedAt;

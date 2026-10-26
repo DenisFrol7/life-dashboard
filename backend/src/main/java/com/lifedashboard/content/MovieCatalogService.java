@@ -9,7 +9,6 @@ import com.lifedashboard.content.dto.KinopoiskRatingsPreview;
 import com.lifedashboard.content.dto.KinopoiskRatingsImportResult;
 import com.lifedashboard.content.dto.KinopoiskMovieEnrichmentResult;
 import com.lifedashboard.content.dto.MovieCatalogPageResponse;
-import com.lifedashboard.content.dto.LibraryEntryRequest;
 import com.lifedashboard.data.DataTransferService;
 import com.lifedashboard.content.myshows.KinopoiskCatalogClient;
 import com.lifedashboard.common.error.DuplicateResourceException;
@@ -130,8 +129,7 @@ public class MovieCatalogService {
             item.setKinopoiskFilmId(source.filmId());
             item = items.save(item);
             Short rating = source.userRating() == null ? null : source.userRating().shortValue();
-            contentService.putInLibrary(item.getId(), new LibraryEntryRequest(UserContentStatus.COMPLETED,
-                    rating, false, null, null, null));
+            contentService.importMovieRating(item.getId(), rating);
             if (isNew) created++; else updated++;
         }
         ratingsCache.remove(profileId);

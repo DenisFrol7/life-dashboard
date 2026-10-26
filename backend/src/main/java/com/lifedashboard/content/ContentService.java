@@ -61,6 +61,16 @@ public class ContentService {
         reconcileFullyWatchedStatus(entry.getContent(), entry);
         return toResponse(libraryRepository.save(entry));
     }
+    @Transactional
+    public void importMovieRating(Long contentId, Short rating) {
+        UserContent entry = libraryRepository.findByUserIdAndContentId(defaultUserId, contentId).orElse(null);
+        if (entry == null) {
+            putInLibrary(contentId, new LibraryEntryRequest(UserContentStatus.COMPLETED,
+                    rating, false, null, null, null));
+        } else if (rating != null) {
+            entry.changeRating(rating);
+        }
+    }
     public List<LibraryEntryResponse> getLibrary(UserContentStatus status) {
         List<UserContent> entries = status == null ? libraryRepository.findAllByUserIdOrderByIdDesc(defaultUserId)
                 : libraryRepository.findAllByUserIdAndStatusOrderByIdDesc(defaultUserId, status);
