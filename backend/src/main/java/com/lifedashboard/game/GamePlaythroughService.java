@@ -2,6 +2,7 @@ package com.lifedashboard.game;
 
 import org.jspecify.annotations.NonNull;
 import com.lifedashboard.common.error.ResourceNotFoundException;
+import com.lifedashboard.content.UserContentStatus;
 import com.lifedashboard.game.dto.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -42,8 +43,14 @@ public class GamePlaythroughService {
         GamePlaythrough item = findPlaythrough(id);
         Instant completedAt = request.completedAt() == null ? item.getCompletedAt() : request.completedAt();
         String note = request.note() == null || request.note().isBlank() ? null : request.note().trim();
+        UserGame game = item.getLibraryEntry();
+        // Only a correction to the copy's current completion may update its dates.
+        boolean updateCopyCompletion = game.getStatus() == UserContentStatus.COMPLETED
+                && item.getCompletedAt().equals(game.getCompletedAt())
+                && !completedAt.equals(item.getCompletedAt())
+                && item.getPlaythroughNumber() == playthroughs.maxNumber(game.getId());
         item.update(completedAt, note);
-        item.getLibraryEntry().markCompleted(completedAt);
+        if (updateCopyCompletion) game.markCompleted(completedAt);
         return response(item);
     }
     @Transactional
