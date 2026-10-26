@@ -86,13 +86,14 @@ public class BookService {
     }
     @Transactional public ReadingSessionResponse addSession(Long id,ReadingSessionRequest request) {
         Book book=find(id); validateSession(book,request); UserContent entry=findLibrary(book);
+        adjustProgress(book,entry,request.pagesRead(),request.listenedMinutes());
         ReadingSession value=new ReadingSession(entry); apply(value,request); sessions.save(value);
-        adjustProgress(book,entry,request.pagesRead(),request.listenedMinutes()); return sessionResponse(value);
+        return sessionResponse(value);
     }
     @Transactional public ReadingSessionResponse updateSession(Long sessionId,ReadingSessionRequest request) {
         ReadingSession value=findSession(sessionId); Book book=findByContent(value.getUserContent().getContent().getId()); validateSession(book,request);
         int pageDelta=request.pagesRead()-value.getPagesRead(); int minuteDelta=request.listenedMinutes()-value.getListenedMinutes();
-        apply(value,request); adjustProgress(book,value.getUserContent(),pageDelta,minuteDelta); return sessionResponse(value);
+        adjustProgress(book,value.getUserContent(),pageDelta,minuteDelta); apply(value,request); return sessionResponse(value);
     }
     @Transactional public void deleteSession(Long sessionId) {
         ReadingSession value=findSession(sessionId); Book book=findByContent(value.getUserContent().getContent().getId());
@@ -101,9 +102,14 @@ public class BookService {
 
     private void adjustProgress(Book book,UserContent entry,int pageDelta,int minuteDelta) {
         BookProgress value=findProgress(entry);
-        int page=book.getBookFormat()==BookFormat.AUDIOBOOK?0:Math.max(0,Math.min(book.getPageCount(),value.getCurrentPage()+pageDelta));
-        int minute=book.getBookFormat()==BookFormat.AUDIOBOOK?Math.max(0,Math.min(book.getDurationMinutes(),value.getCurrentMinute()+minuteDelta)):0;
-        value.update(page,minute); progress.save(value);
+        boolean audio=book.getBookFormat()==BookFormat.AUDIOBOOK;
+        long page=audio?0:Math.max(0L,(long)value.getCurrentPage()+pageDelta);
+        long minute=audio?Math.max(0L,(long)value.getCurrentMinute()+minuteDelta):0;
+        if(!audio&&page>book.getPageCount())
+            throw new InvalidRequestException("Количество прочитанных страниц превышает оставшийся объём книги. Уменьшите количество страниц в сеансе.");
+        if(audio&&minute>book.getDurationMinutes())
+            throw new InvalidRequestException("Количество прослушанных минут превышает оставшуюся длительность аудиокниги. Уменьшите количество минут в сеансе.");
+        value.update((int)page,(int)minute); progress.save(value);
     }
     private void completeProgress(Book book,UserContent entry) {
         BookProgress value=findProgress(entry);
