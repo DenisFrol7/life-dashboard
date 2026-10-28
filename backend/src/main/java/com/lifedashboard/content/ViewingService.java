@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Stream;
 
 @Service
 @Transactional(readOnly = true)
@@ -174,8 +175,9 @@ public class ViewingService {
 
     @Transactional
     public WatchResponse watchEpisode(Long id, WatchRequest request) {
-        ContentEpisode episode = episode(id); User user = user(); ensureLibrary(episode.getSeason().getContent(), user);
-        EpisodeWatch watch = episodeWatches.save(new EpisodeWatch(user, episode, time(request),
+        ContentEpisode episode = episode(id); User user = user(); Instant watchedAt = time(request);
+        ensureLibrary(episode.getSeason().getContent(), user, watchedAt);
+        EpisodeWatch watch = episodeWatches.save(new EpisodeWatch(user, episode, watchedAt,
                 episodeWatches.maxNumber(id, userId) + 1));
         refresh(episode.getSeason().getContent()); return response(watch);
     }
@@ -199,7 +201,7 @@ public class ViewingService {
         if (content.getItemType() != ContentType.MOVIE) throw new InvalidRequestException("История просмотров доступна только для фильмов");
         User user = user(); Instant watchedAt = time(request); UserContent entry = ensureLibrary(content, user, watchedAt);
         MovieWatch watch = movieWatches.save(new MovieWatch(user, content, watchedAt, movieWatches.maxNumber(id, userId) + 1));
-        entry.changeStatus(UserContentStatus.COMPLETED, watch.getWatchedAt());
+        entry.changeStatus(UserContentStatus.COMPLETED, movieWatches.latestWatchAt(id, userId).orElseThrow());
         return new WatchResponse(watch.getId(), id, watch.getWatchedAt(), watch.getWatchNumber());
     }
 
@@ -208,8 +210,19 @@ public class ViewingService {
                 .map((@NonNull MovieWatch watch) -> movieResponse(watch)).toList();
     }
 
-    @Transactional public WatchResponse updateMovieWatch(Long id, WatchRequest request) { MovieWatch watch = movieWatch(id); watch.changeWatchedAt(time(request)); return movieResponse(watch); }
-    @Transactional public void deleteMovieWatch(Long id) { movieWatches.delete(movieWatch(id)); }
+    @Transactional
+    public WatchResponse updateMovieWatch(Long id, WatchRequest request) {
+        MovieWatch watch = movieWatch(id);
+        watch.changeWatchedAt(time(request));
+        refreshMovieCompletion(watch.getContent());
+        return movieResponse(watch);
+    }
+    @Transactional
+    public void deleteMovieWatch(Long id) {
+        MovieWatch watch = movieWatch(id); ContentItem content = watch.getContent();
+        movieWatches.delete(watch);
+        refreshMovieCompletion(content);
+    }
     public Long contentIdForSeason(Long id) { return season(id).getContent().getId(); }
     public Long contentIdForEpisode(Long id) { return episode(id).getSeason().getContent().getId(); }
 
@@ -224,11 +237,19 @@ public class ViewingService {
     }
 
     private void refreshIfInLibrary(ContentItem content) { if (library.findByUserIdAndContentId(userId, content.getId()).isPresent()) refresh(content); }
+    private void refreshMovieCompletion(ContentItem content) {
+        library.findByUserIdAndContentId(userId, content.getId())
+                .filter(entry -> entry.getStatus() == UserContentStatus.COMPLETED)
+                .ifPresent(entry -> entry.changeStatus(UserContentStatus.COMPLETED,
+                        movieWatches.latestWatchAt(content.getId(), userId).orElse(null)));
+    }
     private Instant completionDate(ContentItem content) {
-        if (episodeWatches.individualWatchCount(userId, content.getId()) > 0) return Instant.now();
-        return seasonCompletions.findAllByUserIdAndSeasonContentId(userId, content.getId()).stream()
-                .map((@NonNull SeasonCompletion completion) -> completion.getCompletedAt())
-                .filter(value -> value != null).max(Comparator.naturalOrder()).orElse(null);
+        return Stream.concat(
+                episodeWatches.latestIndividualWatchAt(userId, content.getId()).stream(),
+                seasonCompletions.findAllByUserIdAndSeasonContentId(userId, content.getId()).stream()
+                        .map((@NonNull SeasonCompletion completion) -> completion.getCompletedAt())
+                        .filter(value -> value != null))
+                .max(Comparator.naturalOrder()).orElse(null);
     }
     private void moveCompletedLibraryToProgress(ContentItem content) { library.findAllByContentId(content.getId()).stream()
             .filter((@NonNull UserContent entry) -> entry.getStatus() == UserContentStatus.PAUSED || entry.getStatus() == UserContentStatus.COMPLETED)
@@ -247,7 +268,6 @@ public class ViewingService {
             saveCompletion(season, completedAt, total);
     }
     private void saveCompletion(ContentSeason season, Instant completedAt, int count) { SeasonCompletion completion = seasonCompletions.findByUserIdAndSeasonId(userId, season.getId()).orElseGet(() -> new SeasonCompletion(user(), season)); completion.update(completedAt, count); seasonCompletions.save(completion); }
-    private UserContent ensureLibrary(ContentItem content, User user) { return ensureLibrary(content, user, Instant.now()); }
     private UserContent ensureLibrary(ContentItem content, User user, Instant startedAt) { return library.findByUserIdAndContentId(userId, content.getId()).orElseGet(() -> { UserContent entry = new UserContent(user, content); entry.update(UserContentStatus.IN_PROGRESS, null, false, startedAt, null, null); return library.save(entry); }); }
     private void requireSeries(ContentItem content) { if (content.getItemType() != ContentType.SERIES && content.getItemType() != ContentType.ANIME) throw new InvalidRequestException("Сезоны доступны только для сериалов и аниме"); }
     private ContentItem item(Long id) { return items.findById(id).orElseThrow(() -> new ResourceNotFoundException("Материал с идентификатором " + id + " не найден")); }
