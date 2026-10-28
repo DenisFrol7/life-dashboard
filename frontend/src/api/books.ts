@@ -112,6 +112,8 @@ export const putBookLibrary = (id: number, input: BookLibraryInput) =>
   });
 export const removeBookLibrary = (id: number) =>
   apiRequest<Book>(`/api/books/${id}/library`, { method: "DELETE" });
+export const clearBookReadingHistory = (id: number) =>
+  apiRequest<Book>(`/api/books/${id}/reading-history`, { method: "DELETE" });
 export const putBookProgress = (
   id: number,
   currentPage: number | null,

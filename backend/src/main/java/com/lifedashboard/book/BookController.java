@@ -11,6 +11,7 @@ public class BookController{
  @GetMapping("/covers/{filename:.+}") public ResponseEntity<Resource> cover(@PathVariable String filename){return ResponseEntity.ok().contentType(covers.mediaType(filename)).cacheControl(CacheControl.maxAge(java.time.Duration.ofDays(30)).cachePublic()).body(covers.load(filename));}
  @PutMapping("/{id}/library") public BookResponse library(@PathVariable Long id,@Valid @RequestBody LibraryEntryRequest request){return service.putLibrary(id,request);}
  @DeleteMapping("/{id}/library") public BookResponse removeLibrary(@PathVariable Long id){return service.removeLibrary(id);}
+ @DeleteMapping("/{id}/reading-history") public BookResponse clearReadingHistory(@PathVariable Long id){return service.clearReadingHistory(id);}
  @PutMapping("/{id}/progress") public BookResponse progress(@PathVariable Long id,@Valid @RequestBody BookProgressRequest request){return service.putProgress(id,request);}
  @PostMapping("/{id}/sessions") public ResponseEntity<ReadingSessionResponse> session(@PathVariable Long id,@Valid @RequestBody ReadingSessionRequest request){ReadingSessionResponse result=service.addSession(id,request);return ResponseEntity.created(URI.create("/api/books/"+id+"/sessions/"+result.id())).body(result);}
  @PutMapping("/sessions/{id}") public ReadingSessionResponse updateSession(@PathVariable Long id,@Valid @RequestBody ReadingSessionRequest request){return service.updateSession(id,request);}

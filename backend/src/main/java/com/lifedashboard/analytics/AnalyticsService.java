@@ -181,8 +181,8 @@ public class AnalyticsService {
                 SELECT day, SUM(pages_read) AS pages_read, SUM(duration_minutes) AS reading_minutes
                 FROM (SELECT (session.started_at AT TIME ZONE :timezone)::date AS day,
                              session.pages_read, session.duration_minutes
-                      FROM reading_sessions session JOIN user_content library ON library.id = session.user_content_id
-                      WHERE library.user_id = :userId AND session.started_at >= :fromInstant
+                      FROM reading_sessions session
+                      WHERE session.user_id = :userId AND session.started_at >= :fromInstant
                         AND session.started_at < :toInstant) source
                 GROUP BY day
             )

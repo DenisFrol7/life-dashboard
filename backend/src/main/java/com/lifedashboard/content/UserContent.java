@@ -33,6 +33,7 @@ public class UserContent {
         this.completedAt = completedAt; this.personalNote = personalNote;
     }
     public Long getId() { return id; }
+    public User getUser() { return user; }
     public ContentItem getContent() { return content; }
     public UserContentStatus getStatus() { return status; }
     public Short getRating() { return rating; }

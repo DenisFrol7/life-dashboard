@@ -7,12 +7,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ReadingSessionRepository extends JpaRepository<ReadingSession, Long> {
-    List<ReadingSession> findAllByUserContentIdOrderByStartedAtDesc(Long userContentId);
-    @EntityGraph(attributePaths = "userContent")
-    List<ReadingSession> findAllByUserContentUserIdOrderByStartedAtDesc(Long userId);
-    Optional<ReadingSession> findByIdAndUserContentUserId(Long id, Long userId);
+    List<ReadingSession> findAllByUserIdAndBookIdOrderByStartedAtDesc(Long userId,Long bookId);
+    @EntityGraph(attributePaths = "book")
+    List<ReadingSession> findAllByUserIdOrderByStartedAtDesc(Long userId);
+    Optional<ReadingSession> findByIdAndUserId(Long id, Long userId);
+    void deleteAllByUserIdAndBookId(Long userId,Long bookId);
 
-    @EntityGraph(attributePaths = {"userContent", "userContent.content"})
-    List<ReadingSession> findAllByUserContentUserIdAndStartedAtGreaterThanEqualAndStartedAtLessThanOrderByStartedAtAsc(
+    @EntityGraph(attributePaths = {"book", "book.content"})
+    List<ReadingSession> findAllByUserIdAndStartedAtGreaterThanEqualAndStartedAtLessThanOrderByStartedAtAsc(
             Long userId, Instant from, Instant to);
 }

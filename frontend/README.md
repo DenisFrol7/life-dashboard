@@ -21,6 +21,7 @@ npm run dev
 
 ```powershell
 npm run lint
+npm test
 npm run build
 npm audit
 ```

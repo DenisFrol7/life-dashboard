@@ -11,6 +11,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
+import com.lifedashboard.book.BookService;
+import com.lifedashboard.book.BookFormat;
+import com.lifedashboard.book.dto.*;
+import com.lifedashboard.content.UserContentStatus;
+import com.lifedashboard.content.dto.LibraryEntryRequest;
+import jakarta.persistence.EntityManager;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -40,6 +46,8 @@ class DataTransferIntegrationTests {
 
     @Autowired
     private JdbcTemplate jdbc;
+    @Autowired BookService books;
+    @Autowired EntityManager entityManager;
 
     @TempDir
     Path backupDirectory;
@@ -85,6 +93,32 @@ class DataTransferIntegrationTests {
         assertThat(secondImport.rowCount()).isEqualTo(firstImport.rowCount());
         assertThat(Files.exists(Path.of(secondImport.backupFile()))).isTrue();
         assertThat(Files.readString(Path.of(secondImport.backupFile()))).contains("\"formatVersion\":1");
+    }
+
+    @Test
+    void roundTripsBookHistoryOutsideLibrary() {
+        long id = books.create(new BookRequest("Archived reading backup test","Author",BookFormat.PAPER,
+                200,null,2020,null,null,null)).id();
+        books.putLibrary(id,new LibraryEntryRequest(UserContentStatus.IN_PROGRESS,null,false,null,null,null));
+        books.putProgress(id,new BookProgressRequest(50,null));
+        books.addSession(id,new ReadingSessionRequest(Instant.parse("2020-02-01T12:00:00Z"),30,20,0,"Session"));
+        entityManager.flush(); entityManager.clear();
+        books.removeLibrary(id);
+        var original = books.get(id);
+        entityManager.flush(); entityManager.clear();
+        DataTransferService service = new DataTransferService(jdbc,backupDirectory,Clock.systemUTC());
+        byte[] archive = service.exportData();
+
+        books.clearReadingHistory(id);
+        entityManager.flush(); entityManager.clear();
+        assertThat(books.get(id).sessions()).isEmpty();
+        service.importData(archive);
+        entityManager.clear();
+
+        assertThat(books.get(id)).isEqualTo(original);
+        assertThat(books.get(id).libraryEntryId()).isNull();
+        assertThat(books.get(id).currentPage()).isEqualTo(70);
+        assertThat(books.get(id).sessions()).hasSize(1);
     }
 
     @Test

@@ -32,6 +32,7 @@ import type { LibraryStatus } from "../api/movies";
 import { bookFormatLabels, bookStatusLabels, progressText } from "./bookUi";
 import { ErrorState, LoadingState } from "../components/AsyncState";
 import { useToast } from "../components/ToastContext";
+import { saveLibraryForm } from "./libraryForm";
 
 const emptyBook: BookInput = {
   title: "",
@@ -447,11 +448,15 @@ export function BookForm({
     setSaving(true);
     setError(null);
     try {
-      const saved = book
-        ? await updateBook(book.id, item)
-        : await createBook(item);
-      if (inLibrary) await putBookLibrary(saved.id, library);
-      else if (book?.libraryEntryId) await removeBookLibrary(saved.id);
+      const saved = await saveLibraryForm({
+        title: book?.title ?? item.title,
+        inLibrary,
+        wasInLibrary: Boolean(book?.libraryEntryId),
+        saveItem: () => book ? updateBook(book.id, item) : createBook(item),
+        putLibrary: (id) => putBookLibrary(id, library),
+        removeLibrary: removeBookLibrary,
+      });
+      if (!saved) return;
       showToast(book ? "Книга обновлена" : "Книга добавлена");
       onSaved();
     } catch (reason) {
@@ -463,7 +468,7 @@ export function BookForm({
     }
   };
   const remove = async () => {
-    if (!book || !confirm(`Удалить «${book.title}»?`)) return;
+    if (!book || !confirm(`Удалить «${book.title}» из каталога вместе с прогрессом и всей историей чтения?`)) return;
     try {
       await deleteBook(book.id);
       showToast("Книга удалена");

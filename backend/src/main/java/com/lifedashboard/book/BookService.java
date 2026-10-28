@@ -4,6 +4,7 @@ import com.lifedashboard.book.dto.*;
 import com.lifedashboard.common.error.*;
 import com.lifedashboard.content.*;
 import com.lifedashboard.content.dto.*;
+import com.lifedashboard.user.User;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -33,16 +34,16 @@ public class BookService {
         Map<Long,UserContent> libraryByContent=new HashMap<>();
         for(UserContent entry:library.findAllByUserIdOrderByIdDesc(userId))
             libraryByContent.put(entry.getContent().getId(),entry);
-        Map<Long,BookProgress> progressByLibrary=new HashMap<>();
-        for(BookProgress value:progress.findAllByUserContentUserId(userId))
-            progressByLibrary.put(value.getUserContent().getId(),value);
-        Map<Long,List<ReadingSession>> sessionsByLibrary=new HashMap<>();
-        for(ReadingSession session:sessions.findAllByUserContentUserIdOrderByStartedAtDesc(userId))
-            sessionsByLibrary.computeIfAbsent(session.getUserContent().getId(),ignored->new ArrayList<>()).add(session);
+        Map<Long,BookProgress> progressByBook=new HashMap<>();
+        for(BookProgress value:progress.findAllByUserId(userId))
+            progressByBook.put(value.getBook().getId(),value);
+        Map<Long,List<ReadingSession>> sessionsByBook=new HashMap<>();
+        for(ReadingSession session:sessions.findAllByUserIdOrderByStartedAtDesc(userId))
+            sessionsByBook.computeIfAbsent(session.getBook().getId(),ignored->new ArrayList<>()).add(session);
         return books.findCatalog().stream().map((@NonNull Book book)->{
             UserContent entry=libraryByContent.get(book.getContent().getId());
-            BookProgress current=entry==null?null:progressByLibrary.get(entry.getId());
-            List<ReadingSession> history=entry==null?List.of():sessionsByLibrary.getOrDefault(entry.getId(),List.of());
+            BookProgress current=progressByBook.get(book.getId());
+            List<ReadingSession> history=sessionsByBook.getOrDefault(book.getId(),List.of());
             return response(book,entry,current,history);
         }).toList();
     }
@@ -71,8 +72,14 @@ public class BookService {
     @Transactional public BookResponse removeLibrary(Long id) {
         Book book=find(id); contentService.removeFromLibrary(book.getContent().getId()); return response(book);
     }
+    @Transactional public BookResponse clearReadingHistory(Long id) {
+        Book book=find(id);
+        sessions.deleteAllByUserIdAndBookId(userId,id);
+        progress.deleteByUserIdAndBookId(userId,id);
+        return response(book);
+    }
     @Transactional public BookResponse putProgress(Long id,BookProgressRequest request) {
-        Book book=find(id); UserContent entry=findLibrary(book); BookProgress value=findProgress(entry);
+        Book book=find(id); UserContent entry=findLibrary(book); BookProgress value=findProgress(book,entry.getUser());
         if(book.getBookFormat()==BookFormat.AUDIOBOOK) {
             int minute=request.currentMinute()==null?0:request.currentMinute();
             if(minute>book.getDurationMinutes()) throw new InvalidRequestException("Текущая минута не может превышать длительность аудиокниги");
@@ -86,22 +93,22 @@ public class BookService {
     }
     @Transactional public ReadingSessionResponse addSession(Long id,ReadingSessionRequest request) {
         Book book=find(id); validateSession(book,request); UserContent entry=findLibrary(book);
-        adjustProgress(book,entry,request.pagesRead(),request.listenedMinutes());
-        ReadingSession value=new ReadingSession(entry); apply(value,request); sessions.save(value);
+        adjustProgress(book,entry.getUser(),request.pagesRead(),request.listenedMinutes());
+        ReadingSession value=new ReadingSession(entry.getUser(),book); apply(value,request); sessions.save(value);
         return sessionResponse(value);
     }
     @Transactional public ReadingSessionResponse updateSession(Long sessionId,ReadingSessionRequest request) {
-        ReadingSession value=findSession(sessionId); Book book=findByContent(value.getUserContent().getContent().getId()); validateSession(book,request);
+        ReadingSession value=findSession(sessionId); Book book=value.getBook(); validateSession(book,request);
         int pageDelta=request.pagesRead()-value.getPagesRead(); int minuteDelta=request.listenedMinutes()-value.getListenedMinutes();
-        adjustProgress(book,value.getUserContent(),pageDelta,minuteDelta); apply(value,request); return sessionResponse(value);
+        adjustProgress(book,value.getUser(),pageDelta,minuteDelta); apply(value,request); return sessionResponse(value);
     }
     @Transactional public void deleteSession(Long sessionId) {
-        ReadingSession value=findSession(sessionId); Book book=findByContent(value.getUserContent().getContent().getId());
-        adjustProgress(book,value.getUserContent(),-value.getPagesRead(),-value.getListenedMinutes()); sessions.delete(value);
+        ReadingSession value=findSession(sessionId); Book book=value.getBook();
+        adjustProgress(book,value.getUser(),-value.getPagesRead(),-value.getListenedMinutes()); sessions.delete(value);
     }
 
-    private void adjustProgress(Book book,UserContent entry,int pageDelta,int minuteDelta) {
-        BookProgress value=findProgress(entry);
+    private void adjustProgress(Book book,User user,int pageDelta,int minuteDelta) {
+        BookProgress value=findProgress(book,user);
         boolean audio=book.getBookFormat()==BookFormat.AUDIOBOOK;
         long page=audio?0:Math.max(0L,(long)value.getCurrentPage()+pageDelta);
         long minute=audio?Math.max(0L,(long)value.getCurrentMinute()+minuteDelta):0;
@@ -112,16 +119,15 @@ public class BookService {
         value.update((int)page,(int)minute); progress.save(value);
     }
     private void completeProgress(Book book,UserContent entry) {
-        BookProgress value=findProgress(entry);
+        BookProgress value=findProgress(book,entry.getUser());
         if(book.getBookFormat()==BookFormat.AUDIOBOOK) value.update(0,book.getDurationMinutes());
         else value.update(book.getPageCount(),0);
         progress.save(value);
     }
-    private BookProgress findProgress(UserContent entry) { return progress.findByUserContentId(entry.getId()).orElseGet(() -> new BookProgress(entry)); }
-    private ReadingSession findSession(Long id) { return sessions.findByIdAndUserContentUserId(id,userId)
+    private BookProgress findProgress(Book book,User user) { return progress.findByUserIdAndBookId(userId,book.getId()).orElseGet(() -> new BookProgress(user,book)); }
+    private ReadingSession findSession(Long id) { return sessions.findByIdAndUserId(id,userId)
             .orElseThrow(() -> new ResourceNotFoundException("Сеанс чтения с идентификатором "+id+" не найден")); }
     private Book find(Long id) { return books.findById(id).orElseThrow(() -> new ResourceNotFoundException("Книга с идентификатором "+id+" не найдена")); }
-    private Book findByContent(Long contentId) { return books.findByContentId(contentId).orElseThrow(); }
     private UserContent findLibrary(Book book) { return library.findByUserIdAndContentId(userId,book.getContent().getId())
             .orElseThrow(() -> new InvalidRequestException("Книга должна быть добавлена в библиотеку")); }
     private void validateBook(BookRequest request) {
@@ -146,8 +152,8 @@ public class BookService {
     private String normalizeIsbn(String value) { String normalized=normalize(value); return normalized==null?null:normalized.replaceAll("[^0-9Xx]","").toUpperCase(Locale.ROOT); }
     private BookResponse response(Book book) {
         UserContent entry=library.findByUserIdAndContentId(userId,book.getContent().getId()).orElse(null);
-        BookProgress current=entry==null?null:progress.findByUserContentId(entry.getId()).orElse(null);
-        List<ReadingSession> history=entry==null?List.of():sessions.findAllByUserContentIdOrderByStartedAtDesc(entry.getId());
+        BookProgress current=progress.findByUserIdAndBookId(userId,book.getId()).orElse(null);
+        List<ReadingSession> history=sessions.findAllByUserIdAndBookIdOrderByStartedAtDesc(userId,book.getId());
         return response(book,entry,current,history);
     }
     private BookResponse response(Book book,UserContent entry,BookProgress current,List<ReadingSession> history) {
@@ -158,7 +164,7 @@ public class BookService {
         List<ReadingSessionResponse> sessionHistory=history.stream()
                 .map((@NonNull ReadingSession session)->sessionResponse(session)).toList();
         ContentItem c=book.getContent();
-        return new BookResponse(book.getId(),c.getId(),c.getTitle(),book.getAuthor(),book.getBookFormat(),book.getPageCount(),book.getDurationMinutes(),c.getReleaseYear(),c.getGenre(),c.getCoverUrl(),c.getDescription(),book.getGoogleBooksId(),book.getIsbn(),entry==null?null:entry.getId(),entry==null?null:entry.getStatus(),entry==null?null:entry.getRating(),entry!=null&&entry.isFavorite(),entry==null?null:entry.getPersonalNote(),entry==null?null:entry.getStartedAt(),entry==null?null:entry.getCompletedAt(),entry==null?null:page,entry==null?null:minute,percent,sessionHistory);
+        return new BookResponse(book.getId(),c.getId(),c.getTitle(),book.getAuthor(),book.getBookFormat(),book.getPageCount(),book.getDurationMinutes(),c.getReleaseYear(),c.getGenre(),c.getCoverUrl(),c.getDescription(),book.getGoogleBooksId(),book.getIsbn(),entry==null?null:entry.getId(),entry==null?null:entry.getStatus(),entry==null?null:entry.getRating(),entry!=null&&entry.isFavorite(),entry==null?null:entry.getPersonalNote(),entry==null?null:entry.getStartedAt(),entry==null?null:entry.getCompletedAt(),entry==null&&current==null?null:page,entry==null&&current==null?null:minute,percent,sessionHistory);
     }
     private ReadingSessionResponse sessionResponse(ReadingSession value) { return new ReadingSessionResponse(value.getId(),value.getStartedAt(),value.getDurationMinutes(),value.getPagesRead(),value.getListenedMinutes(),value.getNote()); }
 }

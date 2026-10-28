@@ -96,6 +96,7 @@ Frontend:
 ```powershell
 Set-Location frontend
 npm run lint
+npm test
 npm run build
 npm audit
 ```

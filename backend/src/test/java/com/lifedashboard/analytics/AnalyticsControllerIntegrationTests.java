@@ -176,16 +176,16 @@ class AnalyticsControllerIntegrationTests {
         addEpisodeWatch("Analytics test anime", "ANIME", "ANIME", FROM);
 
         Long bookContentId = addContent("Analytics test book", "BOOK", null);
-        Long bookLibraryId = addLibraryEntry(bookContentId);
-        jdbc.update("""
+        addLibraryEntry(bookContentId);
+        Long bookId = jdbc.queryForObject("""
                 INSERT INTO books(content_id, author, book_format, page_count)
-                VALUES (?, 'Test author', 'PAPER', 200)
-                """, bookContentId);
+                VALUES (?, 'Test author', 'PAPER', 200) RETURNING id
+                """, Long.class, bookContentId);
         jdbc.update("""
-                INSERT INTO reading_sessions(user_content_id, started_at, duration_minutes,
+                INSERT INTO reading_sessions(user_id, book_id, started_at, duration_minutes,
                                              pages_read, listened_minutes)
-                VALUES (?, ?::date + time '19:00', 30, 25, 0)
-                """, bookLibraryId, FROM);
+                VALUES (1, ?, ?::date + time '19:00', 30, 25, 0)
+                """, bookId, FROM);
 
         mockMvc.perform(get("/api/analytics").param("from", FROM.toString()).param("to", TO.toString()))
                 .andExpect(status().isOk())

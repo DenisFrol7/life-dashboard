@@ -126,11 +126,11 @@ public class TimelineService {
 
     private void addReading(List<TimelineItemResponse> result, Instant from, Instant to, ZoneId zone) {
         for (ReadingSession session : readingSessions
-                .findAllByUserContentUserIdAndStartedAtGreaterThanEqualAndStartedAtLessThanOrderByStartedAtAsc(userId, from, to)) {
+                .findAllByUserIdAndStartedAtGreaterThanEqualAndStartedAtLessThanOrderByStartedAtAsc(userId, from, to)) {
             String detail = session.getListenedMinutes() > 0 ? "Прослушано " + session.getListenedMinutes() + " мин."
                     : session.getPagesRead() > 0 ? "Прочитано " + session.getPagesRead() + " стр." : "Сеанс чтения";
             result.add(item("book-" + session.getId(), "media", time(session.getStartedAt(), zone),
-                    session.getUserContent().getContent().getTitle(), detail, duration(session.getDurationMinutes()),
+                    session.getBook().getContent().getTitle(), detail, duration(session.getDurationMinutes()),
                     session.getDurationMinutes(), false));
         }
     }
