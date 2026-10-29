@@ -7,7 +7,10 @@ param(
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $backupPath = (Resolve-Path -LiteralPath $BackupFile).Path
-$containerTempPath = '/tmp/life-dashboard-restore.dump'
+$restoreToken = [guid]::NewGuid().ToString('N')
+$containerTempPath = "/tmp/life-dashboard-restore-$restoreToken.dump"
+$containerScriptPath = "/tmp/life-dashboard-restore-$restoreToken.sh"
+$restoreScript = Join-Path $PSScriptRoot 'postgres\restore.sh'
 $containerId = $null
 
 $tcpClient = New-Object System.Net.Sockets.TcpClient
@@ -43,9 +46,10 @@ try {
     & docker cp $backupPath "${containerId}:${containerTempPath}"
     if ($LASTEXITCODE -ne 0) { throw 'Could not copy the backup into the PostgreSQL container.' }
 
-    & docker compose exec -T postgres sh -c `
-        'test -n "$POSTGRES_USER" && test -n "$POSTGRES_DB" && pg_restore --list "$1" >/dev/null && pg_restore --clean --if-exists --no-owner --no-privileges -U "$POSTGRES_USER" -d "$POSTGRES_DB" "$1"' `
-        sh $containerTempPath
+    & docker cp $restoreScript "${containerId}:${containerScriptPath}"
+    if ($LASTEXITCODE -ne 0) { throw 'Could not copy the restore script into the PostgreSQL container.' }
+
+    & docker compose exec -T postgres sh $containerScriptPath $containerTempPath
     if ($LASTEXITCODE -ne 0) { throw 'Database restore failed.' }
 
     Write-Host "Database restored from: $backupPath"
@@ -53,7 +57,7 @@ try {
 }
 finally {
     if ($containerId) {
-        & docker compose exec -T postgres rm -f -- $containerTempPath 2>$null | Out-Null
+        & docker compose exec -T postgres rm -f -- $containerTempPath $containerScriptPath 2>$null | Out-Null
     }
     Pop-Location
 }
