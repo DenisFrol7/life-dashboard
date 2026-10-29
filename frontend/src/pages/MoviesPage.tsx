@@ -60,7 +60,7 @@ function KinopoiskRatingsDialog({ onClose, onImported }: { onClose: () => void; 
     <div className="habit-form kinopoisk-ratings-dialog">
       <div className="form-heading"><div><p className="eyebrow">Кинопоиск</p><h2>Импорт оценок</h2></div><button type="button" onClick={onClose}>×</button></div>
       {error && <div className="form-error">{error}</div>}
-      {enrichment && <div className="notice success"><strong>Подробные данные обновлены</strong><span>Обновлено: {enrichment.updated}. Осталось: {enrichment.remaining}.{enrichment.quotaExhausted ? ' Лимит исчерпан — продолжите завтра.' : ''}</span></div>}
+      {enrichment && <div className="notice success"><strong>Подробные данные обновлены</strong><span>Обновлено: {enrichment.updated}. Осталось: {enrichment.remaining}.{enrichment.quotaExhausted ? ' Достигнут лимит запросов Кинопоиска. Продолжите позже.' : ''}</span></div>}
       {result ? <div className="notice success"><strong>Импорт завершён</strong><span>Добавлено: {result.created}. Обновлено: {result.updated}. Пропущено: {result.skipped}.</span></div> : <>
         <div className="kinopoisk-profile-input"><label>ID профиля<input value={profileId} placeholder="Например, 1234567" onChange={(event) => setProfileId(event.target.value)} disabled={loading} /></label><button className="primary-button" type="button" disabled={loading || !profileId.trim()} onClick={() => void load()}>{loading && !preview ? 'Загружаем страницы…' : 'Загрузить оценки'}</button></div>
         {loading && <p className="form-hint">Операция может занять несколько минут. Не закрывайте окно.</p>}

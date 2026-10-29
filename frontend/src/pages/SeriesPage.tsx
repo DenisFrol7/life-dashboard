@@ -48,7 +48,7 @@ export function SeriesPage() {
     try {
       const result = await enrichSeriesFromKinopoisk(10)
       setCatalogUpdate(result)
-      showToast(result.rateLimited ? 'Дневная квота Кинопоиска исчерпана' : result.remaining ? `Обновлено: ${result.updated}, осталось: ${result.remaining}` : 'Каталог сериалов обновлён')
+      showToast(result.rateLimited ? `Обновлено: ${result.updated}, осталось: ${result.remaining}. Достигнут лимит запросов Кинопоиска` : result.remaining ? `Обновлено: ${result.updated}, осталось: ${result.remaining}` : 'Каталог сериалов обновлён')
       if (result.updated) await load()
     } catch (reason) { setError(getApiErrorMessage(reason, 'Не удалось обновить данные из Кинопоиска')) }
     finally { setCatalogUpdating(false) }
@@ -65,7 +65,7 @@ export function SeriesPage() {
     ] as const).map(([value, label]) => <button key={value || 'all'} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><div className="journal-search series-search"><span><Search /></span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти сериал" /></div><button className="secondary-button icon-button series-import-button" onClick={() => setImporting(true)}><FileSpreadsheet />Импорт MyShows</button><button className="primary-button series-add-button media-add-button icon-button" onClick={() => setEditing('new')}><Plus />Добавить сериал</button></section>
     <section className="series-catalog-layout"><div className="series-catalog-main">
     {error && <div className="notice error movies-error"><strong>Ошибка</strong><span>{error}</span></div>}
-    {catalogUpdate && <div className="notice"><strong>Обновление Кинопоиска</strong><span>{catalogUpdate.rateLimited ? 'Дневная квота закончилась. Продолжите после её сброса.' : catalogUpdate.remaining ? `Обновлено в этом пакете: ${catalogUpdate.updated}. Осталось сериалов: ${catalogUpdate.remaining}.` : 'Все связанные сериалы обновлены.'}</span></div>}
+    {catalogUpdate && <div className="notice"><strong>Обновление Кинопоиска</strong><span>{catalogUpdate.remaining ? `Обновлено в этом пакете: ${catalogUpdate.updated}. Осталось сериалов: ${catalogUpdate.remaining}.` : 'Все связанные сериалы обновлены.'}{catalogUpdate.rateLimited ? ' Достигнут лимит запросов Кинопоиска. Продолжите позже.' : ''}</span></div>}
     {loading ? <div className="loading"><span />Загружаем сериалы…</div> : visible.length === 0 ? <div className="media-empty"><span>▤</span><h2>Сериалов пока нет</h2><p>Добавьте первый сериал в каталог.</p></div> : <section className="movie-grid series-catalog-grid">{visible.map((item) => {
       const entry = library[item.id]
       const data = progress[item.id]

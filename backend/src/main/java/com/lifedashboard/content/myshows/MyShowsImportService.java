@@ -165,13 +165,9 @@ public class MyShowsImportService {
             try {
                 applyCatalog(item, kinopoisk.getCatalog(item.getKinopoiskFilmId()));
                 updated++;
-            } catch (InvalidRequestException exception) {
-                String message = exception.getMessage().toLowerCase(Locale.ROOT);
-                if (message.contains("rate limit") || message.contains("quota")) {
-                    rateLimited = true;
-                    break;
-                }
-                throw exception;
+            } catch (KinopoiskLimitException exception) {
+                rateLimited = true;
+                break;
             }
         }
         int remaining = (int) all.stream().filter(this::needsCatalogRefresh).count();

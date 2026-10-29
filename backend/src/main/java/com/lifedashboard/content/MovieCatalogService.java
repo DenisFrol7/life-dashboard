@@ -11,6 +11,7 @@ import com.lifedashboard.content.dto.KinopoiskMovieEnrichmentResult;
 import com.lifedashboard.content.dto.MovieCatalogPageResponse;
 import com.lifedashboard.data.DataTransferService;
 import com.lifedashboard.content.myshows.KinopoiskCatalogClient;
+import com.lifedashboard.content.myshows.KinopoiskLimitException;
 import com.lifedashboard.common.error.DuplicateResourceException;
 import com.lifedashboard.common.error.InvalidRequestException;
 import org.springframework.beans.factory.annotation.Value;
@@ -159,11 +160,11 @@ public class MovieCatalogService {
                 item.markKinopoiskEnriched();
                 items.save(item);
                 updated++;
+            } catch (KinopoiskLimitException exception) {
+                quotaExhausted = true;
+                break;
             } catch (InvalidRequestException exception) {
-                if (exception.getMessage() != null && exception.getMessage().contains("daily quota")) {
-                    quotaExhausted = true;
-                    break;
-                }
+                // An unavailable movie stays pending without blocking other movies in the batch.
             }
         }
         return new KinopoiskMovieEnrichmentResult(total, updated, total - updated, quotaExhausted, backupFile);

@@ -178,13 +178,13 @@ public class KinopoiskCatalogClient {
             } catch (RestClientResponseException exception) {
                 int status = exception.getStatusCode().value();
                 if (status == 401) throw new InvalidRequestException("API Кинопоиска отклонил ключ доступа (401)");
-                if (status == 402) throw new InvalidRequestException("Суточный лимит запросов API Кинопоиска исчерпан (402)");
+                if (status == 402) throw new KinopoiskLimitException("Суточный лимит запросов API Кинопоиска исчерпан (402)");
                 if (status != 429) {
                     throw new InvalidRequestException("Запрос к API Кинопоиска завершился ошибкой " + status);
                 }
                 if (attempt == 3) {
-                    throw new InvalidRequestException(
-                            "Kinopoisk API rate limit is still active. Please wait a few minutes and try again");
+                    throw new KinopoiskLimitException(
+                            "Превышена частота запросов к API Кинопоиска (429). Попробуйте через несколько минут");
                 }
                 sleep(5_000L * (attempt + 1));
             }
