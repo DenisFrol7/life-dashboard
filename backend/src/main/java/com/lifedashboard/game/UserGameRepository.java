@@ -5,9 +5,10 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 public interface UserGameRepository extends JpaRepository<UserGame, Long> {
-    @Query("select g from UserGame g where g.userContent.user.id=:userId " +
+    @Query("select g from UserGame g join fetch g.userContent uc join fetch uc.content " +
+           "join fetch g.platform p join fetch g.source where uc.user.id=:userId " +
            "and (:status is null or g.status=:status) " +
-           "and (:platformId is null or g.platform.id=:platformId) order by g.id desc")
+           "and (:platformId is null or p.id=:platformId) order by g.id desc")
     List<UserGame> findLibrary(@Param("userId") Long userId, @Param("status") UserContentStatus status,
                                @Param("platformId") Long platformId);
     Optional<UserGame> findByIdAndUserContentUserId(Long id, Long userId);
