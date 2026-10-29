@@ -36,36 +36,33 @@ public class MovieCatalogService {
         this.dataTransfer = dataTransfer; this.userId = userId;
     }
     public List<MovieCatalogResponse> getAll() {
-        return items.findMovieCatalog(userId).stream().map(item -> new MovieCatalogResponse(item.getId(),
-                item.getTitle(), item.getOriginalTitle(), ContentFormat.valueOf(item.getFormat()),
-                item.getReleaseYear(), item.getDescription(), item.getCoverUrl(), item.getDurationMinutes(),
-                ReleaseStatus.valueOf(item.getReleaseStatus()), item.getGenre(), item.getDeveloper(),
-                item.getReleaseDate(), item.getLibraryId(), item.getUserStatus() == null ? null
-                : UserContentStatus.valueOf(item.getUserStatus()), item.getRating(),
-                Boolean.TRUE.equals(item.getFavorite()), item.getStartedAt(), item.getCompletedAt(),
-                item.getPersonalNote(), item.getWatchCount(), item.getWatchedMinutes())).toList();
+        return items.findMovieCatalog(userId).stream().map(this::response).toList();
     }
 
     public MovieCatalogPageResponse getPage(int page, int size, String query, UserContentStatus status) {
         if (page < 0 || size < 1 || size > 100)
             throw new InvalidRequestException("Номер страницы фильмов не может быть отрицательным, а размер должен быть от 1 до 100");
-        List<MovieCatalogResponse> all = getAll();
         String normalized = Optional.ofNullable(normalize(query)).orElse("");
-        List<MovieCatalogResponse> filtered = all.stream()
-                .filter(item -> normalized.isEmpty() || normalize(item.title()).contains(normalized)
-                        || normalize(item.originalTitle()) != null && normalize(item.originalTitle()).contains(normalized))
-                .filter(item -> status == null || item.userStatus() == status)
-                .toList();
-        int from = Math.min(page * size, filtered.size());
-        int to = Math.min(from + size, filtered.size());
-        var statistics = new MovieCatalogPageResponse.Statistics(all.size(),
-                (int) all.stream().filter(item -> item.libraryId() != null).count(),
-                (int) all.stream().filter(item -> item.userStatus() == UserContentStatus.COMPLETED).count(),
-                (int) all.stream().filter(item -> item.userStatus() == UserContentStatus.PLANNED).count(),
-                (int) all.stream().filter(item -> item.format() == ContentFormat.LIVE_ACTION).count(),
-                (int) all.stream().filter(item -> item.format() == ContentFormat.ANIMATION).count());
-        return new MovieCatalogPageResponse(filtered.subList(from, to), page, size, filtered.size(),
-                to < filtered.size(), statistics);
+        String statusFilter = status == null ? "" : status.name();
+        long offset = (long) page * size;
+        var pageItems = items.findMovieCatalogPage(userId, normalized, statusFilter, size, offset)
+                .stream().map(this::response).toList();
+        var totals = items.movieCatalogStatistics(userId, normalized, statusFilter);
+        var statistics = new MovieCatalogPageResponse.Statistics(totals.getTotalMovies(),
+                totals.getInLibrary(), totals.getCompleted(), totals.getPlanned(),
+                totals.getLiveAction(), totals.getAnimation());
+        return new MovieCatalogPageResponse(pageItems, page, size, totals.getTotalItems(),
+                offset + pageItems.size() < totals.getTotalItems(), statistics);
+    }
+
+    private MovieCatalogResponse response(MovieCatalogProjection item) {
+        return new MovieCatalogResponse(item.getId(), item.getTitle(), item.getOriginalTitle(),
+                ContentFormat.valueOf(item.getFormat()), item.getReleaseYear(), item.getDescription(),
+                item.getCoverUrl(), item.getDurationMinutes(), ReleaseStatus.valueOf(item.getReleaseStatus()),
+                item.getGenre(), item.getDeveloper(), item.getReleaseDate(), item.getLibraryId(),
+                item.getUserStatus() == null ? null : UserContentStatus.valueOf(item.getUserStatus()),
+                item.getRating(), Boolean.TRUE.equals(item.getFavorite()), item.getStartedAt(),
+                item.getCompletedAt(), item.getPersonalNote(), item.getWatchCount(), item.getWatchedMinutes());
     }
 
     public List<KinopoiskMovieCandidate> searchKinopoisk(String query) {

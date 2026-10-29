@@ -68,7 +68,7 @@ public interface ContentItemRepository extends JpaRepository<ContentItem, Long> 
     List<MediaTimelineProjection> findMediaTimeline(@Param("userId") Long userId,
             @Param("from") Instant from, @Param("to") Instant to);
 
-    @Query(value = """
+    String MOVIE_CATALOG_SELECT = """
             select c.id, c.title, c.original_title as "originalTitle", c.format,
                    c.release_year as "releaseYear", c.description, c.cover_url as "coverUrl",
                    c.duration_minutes as "durationMinutes", c.release_status as "releaseStatus",
@@ -77,12 +77,60 @@ public interface ContentItemRepository extends JpaRepository<ContentItem, Long> 
                    uc.started_at as "startedAt", uc.completed_at as "completedAt", uc.personal_note as "personalNote",
                    count(w.id) as "watchCount",
                    count(w.id) * coalesce(c.duration_minutes, 0) as "watchedMinutes"
+            """;
+
+    String MOVIE_CATALOG_FILTER = """
+            (:search = '' or
+             strpos(regexp_replace(replace(lower(c.title), 'ё', 'е'), '[^[:alnum:]]', '', 'g'), :search) > 0 or
+             strpos(regexp_replace(replace(lower(c.original_title), 'ё', 'е'), '[^[:alnum:]]', '', 'g'), :search) > 0)
+            and (:status = '' or uc.status = :status)
+            """;
+
+    @Query(value = MOVIE_CATALOG_SELECT + """
               from content_items c
               left join user_content uc on uc.content_id = c.id and uc.user_id = :userId
               left join movie_watch_history w on w.content_id = c.id and w.user_id = :userId
              where c.item_type = 'MOVIE'
              group by c.id, uc.id
-             order by c.title
+             order by c.title, c.id
             """, nativeQuery = true)
     List<MovieCatalogProjection> findMovieCatalog(@Param("userId") Long userId);
+
+    @Query(value = """
+            with movie_page as (
+                select c.id
+                  from content_items c
+                  left join user_content uc on uc.content_id = c.id and uc.user_id = :userId
+                 where c.item_type = 'MOVIE' and
+            """ + MOVIE_CATALOG_FILTER + """
+                 order by c.title, c.id
+                 limit :pageSize offset :offset
+            )
+            """ + MOVIE_CATALOG_SELECT + """
+              from movie_page p
+              join content_items c on c.id = p.id
+              left join user_content uc on uc.content_id = c.id and uc.user_id = :userId
+              left join movie_watch_history w on w.content_id = c.id and w.user_id = :userId
+             group by c.id, uc.id
+             order by c.title, c.id
+            """, nativeQuery = true)
+    List<MovieCatalogProjection> findMovieCatalogPage(@Param("userId") Long userId,
+            @Param("search") String search, @Param("status") String status,
+            @Param("pageSize") int pageSize, @Param("offset") long offset);
+
+    @Query(value = """
+            select count(*) as "totalMovies", count(uc.id) as "inLibrary",
+                   count(*) filter (where uc.status = 'COMPLETED') as completed,
+                   count(*) filter (where uc.status = 'PLANNED') as planned,
+                   count(*) filter (where c.format = 'LIVE_ACTION') as "liveAction",
+                   count(*) filter (where c.format = 'ANIMATION') as animation,
+                   count(*) filter (where
+            """ + MOVIE_CATALOG_FILTER + """
+                   ) as "totalItems"
+              from content_items c
+              left join user_content uc on uc.content_id = c.id and uc.user_id = :userId
+             where c.item_type = 'MOVIE'
+            """, nativeQuery = true)
+    MovieCatalogStatisticsProjection movieCatalogStatistics(@Param("userId") Long userId,
+            @Param("search") String search, @Param("status") String status);
 }
