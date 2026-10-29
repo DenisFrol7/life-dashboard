@@ -60,7 +60,9 @@ public class DashboardService {
     private DashboardResponse.SleepSummary sleep(LocalDate date, ZoneId zone) {
         Instant from=date.atStartOfDay(zone).toInstant(), to=date.plusDays(1).atStartOfDay(zone).toInstant();
         List<SleepSession> sessions=sleepSessions.findAllByUserIdAndEndedAtGreaterThanEqualAndEndedAtLessThan(userId,from,to);
-        long minutes=sessions.stream().mapToLong(s->Duration.between(s.getStartedAt(),s.getEndedAt()).toMinutes()).sum();
+        long minutes=sessions.stream().mapToLong(session -> Math.max(0,
+                Duration.between(session.getStartedAt(),session.getEndedAt()).toMinutes()
+                        - Optional.ofNullable(session.getAwakeMinutes()).orElse(0))).sum();
         OptionalDouble avg=sessions.stream().filter(s->s.getQualityRating()!=null)
                 .mapToInt((@NonNull SleepSession session) -> session.getQualityRating()).average();
         return new DashboardResponse.SleepSummary(minutes,avg.isPresent()?(int)Math.round(avg.getAsDouble()):null,sessions.size());
