@@ -1,6 +1,7 @@
 package com.lifedashboard.content.shikimori;
 
 import com.lifedashboard.common.error.InvalidRequestException;
+import com.lifedashboard.common.http.ExternalApiHttp;
 import org.springframework.http.HttpHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +17,7 @@ import java.util.List;
 @Component
 public class ShikimoriClient {
     private static final Logger log = LoggerFactory.getLogger(ShikimoriClient.class);
-    private final RestClient client = RestClient.builder().baseUrl("https://shikimori.io").build();
+    private final RestClient client = ExternalApiHttp.builder("https://shikimori.io").build();
 
     public List<AnimeCandidate> search(String query) {
         try {
@@ -39,6 +40,7 @@ public class ShikimoriClient {
             throw new InvalidRequestException("Запрос к API Shikimori завершился ошибкой "
                     + exception.getStatusCode().value());
         } catch (RuntimeException exception) {
+            ExternalApiHttp.rethrowIfTimeout(exception, "Shikimori");
             if (exception instanceof InvalidRequestException invalid) throw invalid;
             log.warn("Failed to search Shikimori for '{}': {}", query, exception.toString(), exception);
             throw new InvalidRequestException("Не удалось выполнить поиск через API Shikimori");
@@ -69,6 +71,7 @@ public class ShikimoriClient {
         } catch (InvalidRequestException exception) {
             throw exception;
         } catch (RuntimeException exception) {
+            ExternalApiHttp.rethrowIfTimeout(exception, "Shikimori");
             log.warn("Failed to load Shikimori anime {}: {}", id, exception.toString(), exception);
             throw new InvalidRequestException("Не удалось обработать ответ API Shikimori для аниме " + id);
         }

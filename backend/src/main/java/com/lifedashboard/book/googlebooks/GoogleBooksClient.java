@@ -1,8 +1,9 @@
 package com.lifedashboard.book.googlebooks;
 import com.lifedashboard.common.error.InvalidRequestException;
+import com.lifedashboard.common.http.ExternalApiHttp;
 import org.slf4j.*;import org.springframework.beans.factory.annotation.Value;import org.springframework.http.HttpHeaders;import org.springframework.stereotype.Component;import org.springframework.web.client.*;import tools.jackson.databind.JsonNode;import java.util.*;
 @Component public class GoogleBooksClient{
- private static final Logger log=LoggerFactory.getLogger(GoogleBooksClient.class);private final RestClient client=RestClient.builder().baseUrl("https://www.googleapis.com/books/v1").build();private final String apiKey;
+ private static final Logger log=LoggerFactory.getLogger(GoogleBooksClient.class);private final RestClient client=ExternalApiHttp.builder("https://www.googleapis.com/books/v1").build();private final String apiKey;
  public GoogleBooksClient(@Value("${GOOGLE_BOOKS_API_KEY:}")String apiKey){this.apiKey=apiKey.trim();}
  public List<BookData> search(String query){
   try{
@@ -12,7 +13,7 @@ import org.slf4j.*;import org.springframework.beans.factory.annotation.Value;imp
     catch(RestClientResponseException e){last=e;if(e.getStatusCode().value()!=503)throw apiError(e);log.info("Google Books search returned 503; retrying ({}/5)",attempt+1);}
    }
    throw apiError(Objects.requireNonNull(last));
-  }catch(RuntimeException e){if(e instanceof InvalidRequestException invalid)throw invalid;log.warn("Google Books search failed: {}",e.toString());throw new InvalidRequestException("Не удалось подключиться к API Google Books");}
+  }catch(RuntimeException e){ExternalApiHttp.rethrowIfTimeout(e,"Google Books");if(e instanceof InvalidRequestException invalid)throw invalid;log.warn("Google Books search failed: {}",e.toString());throw new InvalidRequestException("Не удалось подключиться к API Google Books");}
  }
  private List<BookData> request(String query,boolean orderByRelevance){
   var request=client.get().uri(uri->{var builder=uri.path("/volumes").queryParam("q",query).queryParam("maxResults",12).queryParam("printType","books");if(orderByRelevance)builder.queryParam("orderBy","relevance");return builder.build();}).header(HttpHeaders.ACCEPT,"application/json");

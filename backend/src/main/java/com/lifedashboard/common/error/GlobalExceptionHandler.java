@@ -57,6 +57,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, exception.getMessage(), request, Map.of());
     }
 
+    @ExceptionHandler(ExternalApiTimeoutException.class)
+    public ResponseEntity<ApiError> handleExternalApiTimeout(
+            ExternalApiTimeoutException exception, HttpServletRequest request) {
+        return build(HttpStatus.GATEWAY_TIMEOUT, exception.getMessage(), request, Map.of());
+    }
+
     @ExceptionHandler({
             MethodArgumentTypeMismatchException.class,
             MissingServletRequestParameterException.class,
@@ -103,6 +109,7 @@ public class GlobalExceptionHandler {
             case BAD_REQUEST -> "Некорректный запрос";
             case NOT_FOUND -> "Не найдено";
             case CONFLICT -> "Конфликт данных";
+            case GATEWAY_TIMEOUT -> "Превышено время ожидания";
             default -> "Ошибка";
         };
     }

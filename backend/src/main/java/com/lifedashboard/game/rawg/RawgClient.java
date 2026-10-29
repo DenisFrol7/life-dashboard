@@ -1,6 +1,7 @@
 package com.lifedashboard.game.rawg;
 
 import com.lifedashboard.common.error.InvalidRequestException;
+import com.lifedashboard.common.http.ExternalApiHttp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,7 +22,7 @@ public class RawgClient {
     private final String apiKey;
 
     public RawgClient(@Value("${RAWG_API_KEY:}") String apiKey) {
-        this.client = RestClient.builder().baseUrl("https://api.rawg.io/api").build();
+        this.client = ExternalApiHttp.builder("https://api.rawg.io/api").build();
         this.apiKey = apiKey == null ? "" : apiKey.trim();
     }
 
@@ -42,6 +43,7 @@ public class RawgClient {
         } catch (RestClientResponseException exception) {
             throw apiError(exception);
         } catch (RuntimeException exception) {
+            ExternalApiHttp.rethrowIfTimeout(exception, "RAWG");
             if (exception instanceof InvalidRequestException invalid) throw invalid;
             log.warn("RAWG search failed for '{}': {}", query, exception.toString());
             throw new InvalidRequestException("Не удалось подключиться к API RAWG");
@@ -61,6 +63,7 @@ public class RawgClient {
                 throw new InvalidRequestException("Игра не найдена в RAWG");
             throw apiError(exception);
         } catch (RuntimeException exception) {
+            ExternalApiHttp.rethrowIfTimeout(exception, "RAWG");
             if (exception instanceof InvalidRequestException invalid) throw invalid;
             log.warn("RAWG game request failed for {}: {}", rawgId, exception.toString());
             throw new InvalidRequestException("Не удалось загрузить игру из RAWG");

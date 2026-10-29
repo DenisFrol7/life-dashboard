@@ -1,12 +1,14 @@
 package com.lifedashboard.content.myshows;
 
 import com.lifedashboard.common.error.InvalidRequestException;
+import com.lifedashboard.common.http.ExternalApiHttp;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
@@ -28,7 +30,7 @@ public class KinopoiskCatalogClient {
     private final String apiKey;
 
     public KinopoiskCatalogClient(@Value("${KINOPOISK_API_KEY:}") String apiKey) {
-        this.client = RestClient.builder().baseUrl("https://kinopoiskapiunofficial.tech").build();
+        this.client = ExternalApiHttp.builder("https://kinopoiskapiunofficial.tech").build();
         this.apiKey = apiKey.trim();
     }
 
@@ -47,6 +49,7 @@ public class KinopoiskCatalogClient {
             }
             return List.copyOf(result);
         } catch (RuntimeException exception) {
+            ExternalApiHttp.rethrowIfTimeout(exception, "Кинопоиска");
             if (exception instanceof InvalidRequestException invalid) throw invalid;
             log.warn("Failed to process Kinopoisk response for title '{}': {}", title,
                     exception.toString(), exception);
@@ -70,6 +73,7 @@ public class KinopoiskCatalogClient {
             }
             return List.copyOf(result);
         } catch (RuntimeException exception) {
+            ExternalApiHttp.rethrowIfTimeout(exception, "Кинопоиска");
             if (exception instanceof InvalidRequestException invalid) throw invalid;
             log.warn("Failed to process Kinopoisk movie search for title '{}': {}", title,
                     exception.toString(), exception);
@@ -187,6 +191,9 @@ public class KinopoiskCatalogClient {
                             "Превышена частота запросов к API Кинопоиска (429). Попробуйте через несколько минут");
                 }
                 sleep(5_000L * (attempt + 1));
+            } catch (RestClientException exception) {
+                ExternalApiHttp.rethrowIfTimeout(exception, "Кинопоиска");
+                throw exception;
             }
         }
         throw new IllegalStateException("Недостижимое состояние повторного запроса к Кинопоиску");

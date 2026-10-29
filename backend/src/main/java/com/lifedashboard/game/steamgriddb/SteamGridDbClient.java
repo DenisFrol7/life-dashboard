@@ -1,6 +1,7 @@
 package com.lifedashboard.game.steamgriddb;
 
 import com.lifedashboard.common.error.InvalidRequestException;
+import com.lifedashboard.common.http.ExternalApiHttp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,8 +24,7 @@ public class SteamGridDbClient {
 
     public SteamGridDbClient(@Value("${STEAMGRIDDB_API_KEY:}") String apiKey) {
         this.apiKey = apiKey == null ? "" : apiKey.trim();
-        this.client = RestClient.builder()
-                .baseUrl("https://www.steamgriddb.com/api/v2")
+        this.client = ExternalApiHttp.builder("https://www.steamgriddb.com/api/v2")
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + this.apiKey)
                 .build();
     }
@@ -47,6 +47,7 @@ public class SteamGridDbClient {
         } catch (RestClientResponseException exception) {
             throw apiError(exception);
         } catch (RuntimeException exception) {
+            ExternalApiHttp.rethrowIfTimeout(exception, "SteamGridDB");
             if (exception instanceof InvalidRequestException invalid) throw invalid;
             log.warn("SteamGridDB search failed for '{}': {}", query, exception.toString());
             throw new InvalidRequestException("Не удалось подключиться к API SteamGridDB");
@@ -70,6 +71,7 @@ public class SteamGridDbClient {
             if (exception.getStatusCode().value() == 404) return Optional.empty();
             throw apiError(exception);
         } catch (RuntimeException exception) {
+            ExternalApiHttp.rethrowIfTimeout(exception, "SteamGridDB");
             if (exception instanceof InvalidRequestException invalid) throw invalid;
             log.warn("SteamGridDB Steam app lookup failed for {}: {}", appId, exception.toString());
             throw new InvalidRequestException("Не удалось найти игру из Steam в SteamGridDB");
@@ -104,6 +106,7 @@ public class SteamGridDbClient {
             if (exception.getStatusCode().value() == 404) return List.of();
             throw apiError(exception);
         } catch (RuntimeException exception) {
+            ExternalApiHttp.rethrowIfTimeout(exception, "SteamGridDB");
             if (exception instanceof InvalidRequestException invalid) throw invalid;
             log.warn("SteamGridDB cover request failed for {}: {}", gameId, exception.toString());
             throw new InvalidRequestException("Не удалось загрузить обложки из SteamGridDB");

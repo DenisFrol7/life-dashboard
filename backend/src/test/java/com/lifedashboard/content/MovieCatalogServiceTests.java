@@ -1,6 +1,7 @@
 package com.lifedashboard.content;
 
 import com.lifedashboard.common.error.DuplicateResourceException;
+import com.lifedashboard.common.error.ExternalApiTimeoutException;
 import com.lifedashboard.content.myshows.KinopoiskCatalogClient;
 import com.lifedashboard.content.dto.ContentItemRequest;
 import com.lifedashboard.data.DataTransferService;
@@ -11,6 +12,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.nio.file.Path;
+import java.net.SocketTimeoutException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -80,6 +83,24 @@ class MovieCatalogServiceTests {
 
         assertEquals(821L, existing.getKinopoiskFilmId());
         verify(items).save(existing);
+    }
+
+    @Test
+    void enrichmentTimeoutStopsBatchInsteadOfSkippingEveryMovie() {
+        ContentItem first = new ContentItem("First movie");
+        first.setKinopoiskFilmId(1L);
+        ContentItem second = new ContentItem("Second movie");
+        second.setKinopoiskFilmId(2L);
+        when(items.findAllByItemTypeAndKinopoiskFilmIdIsNotNullAndKinopoiskEnrichedAtIsNullOrderByIdAsc(ContentType.MOVIE))
+                .thenReturn(List.of(first, second));
+        when(dataTransfer.createAutomaticBackup()).thenReturn(Path.of("test-backup.json"));
+        var failure = new ExternalApiTimeoutException("Кинопоиска", new SocketTimeoutException());
+        when(kinopoisk.getMovie(1L)).thenThrow(failure);
+
+        assertSame(failure, assertThrows(ExternalApiTimeoutException.class, () -> service().enrichMovies(400)));
+
+        verify(kinopoisk, never()).getMovie(2L);
+        verify(items, never()).save(any());
     }
 
     private MovieCatalogService service() { return new MovieCatalogService(items, kinopoisk, contentService, dataTransfer, 1L); }
