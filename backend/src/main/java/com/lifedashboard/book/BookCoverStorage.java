@@ -2,11 +2,15 @@ package com.lifedashboard.book;
 
 import com.lifedashboard.common.error.InvalidRequestException;
 import com.lifedashboard.common.error.ResourceNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
@@ -25,6 +29,7 @@ import java.util.UUID;
 
 @Service
 public class BookCoverStorage {
+    private static final Logger log = LoggerFactory.getLogger(BookCoverStorage.class);
     private static final long MAX_BYTES = 5L * 1024 * 1024;
     private static final String PUBLIC_PREFIX = "/api/books/covers/";
     private static final Set<String> ALLOWED_TYPES = Set.of(MediaType.IMAGE_JPEG_VALUE, MediaType.IMAGE_PNG_VALUE, "image/webp");
@@ -94,7 +99,7 @@ public class BookCoverStorage {
     public void deleteIfLocal(String coverUrl) {
         if (!isLocal(coverUrl)) return;
         try { Files.deleteIfExists(resolve(coverUrl.substring(PUBLIC_PREFIX.length()))); }
-        catch (IOException ignored) { }
+        catch (IOException exception) { log.warn("Could not delete book cover '{}'", coverUrl, exception); }
     }
 
     private String storeBytes(byte[] bytes, String declaredType) throws IOException {
@@ -104,7 +109,17 @@ public class BookCoverStorage {
         String extension = type.equals(MediaType.IMAGE_PNG_VALUE) ? ".png" : type.equals("image/webp") ? ".webp" : ".jpg";
         String filename = UUID.randomUUID() + extension;
         Files.write(resolve(filename), bytes, StandardOpenOption.CREATE_NEW);
-        return PUBLIC_PREFIX + filename;
+        String coverUrl = PUBLIC_PREFIX + filename;
+        if (TransactionSynchronizationManager.isActualTransactionActive()
+                && TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status == STATUS_ROLLED_BACK) deleteIfLocal(coverUrl);
+                }
+            });
+        }
+        return coverUrl;
     }
 
     private byte[] readLimited(InputStream input) throws IOException {
@@ -141,6 +156,6 @@ public class BookCoverStorage {
         return result;
     }
 
-    private boolean isLocal(String value) { return value != null && value.startsWith(PUBLIC_PREFIX); }
+    boolean isLocal(String value) { return value != null && value.startsWith(PUBLIC_PREFIX); }
     private String normalize(String value) { return value == null || value.isBlank() ? null : value.trim(); }
 }

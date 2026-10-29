@@ -21,13 +21,16 @@ public class BookService {
     private final UserContentRepository library;
     private final ContentService contentService;
     private final BookCoverStorage covers;
+    private final BookCoverCleanup coverCleanup;
     private final long userId;
 
     public BookService(BookRepository books, BookProgressRepository progress, ReadingSessionRepository sessions,
-            ContentItemRepository contentItems, UserContentRepository library, ContentService contentService, BookCoverStorage covers,
+            ContentItemRepository contentItems, UserContentRepository library, ContentService contentService,
+            BookCoverStorage covers, BookCoverCleanup coverCleanup,
             @Value("${app.default-user-id}") long userId) {
         this.books=books; this.progress=progress; this.sessions=sessions; this.contentItems=contentItems;
-        this.library=library; this.contentService=contentService; this.covers=covers; this.userId=userId;
+        this.library=library; this.contentService=contentService; this.covers=covers;
+        this.coverCleanup=coverCleanup; this.userId=userId;
     }
 
     public List<BookResponse> getAll() {
@@ -60,10 +63,10 @@ public class BookService {
         validateBook(request); Book book=find(id);String previous=book.getContent().getCoverUrl();
         BookRequest localized=withCover(request,covers.localize(request.coverUrl()));
         contentService.update(book.getContent().getId(),contentRequest(localized)); apply(book,localized);
-        if(!Objects.equals(previous,localized.coverUrl()))covers.deleteIfLocal(previous);
+        if(!Objects.equals(previous,localized.coverUrl()))coverCleanup.deleteAfterCommit(previous);
         return response(book);
     }
-    @Transactional public void delete(Long id) { Book book=find(id);String cover=book.getContent().getCoverUrl();contentService.delete(book.getContent().getId());covers.deleteIfLocal(cover); }
+    @Transactional public void delete(Long id) { Book book=find(id);String cover=book.getContent().getCoverUrl();contentService.delete(book.getContent().getId());coverCleanup.deleteAfterCommit(cover); }
     @Transactional public BookResponse putLibrary(Long id,LibraryEntryRequest request) {
         Book book=find(id); contentService.putInLibrary(book.getContent().getId(),request);
         if(request.status()==UserContentStatus.COMPLETED) completeProgress(book,findLibrary(book));
