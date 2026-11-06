@@ -67,6 +67,7 @@ import {
 import type { LibraryInput, LibraryStatus } from "../api/movies";
 import { ErrorState, LoadingState } from "../components/AsyncState";
 import { useToast } from "../components/ToastContext";
+import { useLatestRequest } from "../hooks/useLatestRequest";
 
 const statusLabels: Record<LibraryStatus, string> = {
   NOT_STARTED: "Не начато",
@@ -2282,13 +2283,24 @@ export function GameForm({
     SteamGridDbCoverCandidate[]
   >([]);
   const [artworkSearching, setArtworkSearching] = useState(false);
+  const catalogRequests = useLatestRequest();
+  const artworkRequests = useLatestRequest();
+  const cancelCatalog = () => { catalogRequests.invalidate(); setSearching(false); setCandidates([]); setSearchCompleted(false); };
+  const cancelArtwork = () => { artworkRequests.invalidate(); setArtworkSearching(false); setArtworkGames([]); setArtworkCovers([]); };
+  const changeCatalogQuery = (value: string) => { cancelCatalog(); setCatalogQuery(value); };
+  const changeArtworkQuery = (value: string) => { cancelArtwork(); setArtworkQuery(value); };
+  const closeForm = () => { catalogRequests.dispose(); artworkRequests.dispose(); onClose(); };
   useEffect(() => {
     setXboxProgress(progress ?? emptyProgress);
   }, [progress]);
   const setItemValue = <K extends keyof GameInput>(
     key: K,
     value: GameInput[K],
-  ) => setItem((current) => ({ ...current, [key]: value }));
+  ) => {
+    if (key !== "coverUrl" && key !== "xboxPlayAnywhere" && key !== "steamGridDbGameId" && key !== "steamGridDbGridId") cancelCatalog();
+    if (key === "coverUrl") { artworkRequests.invalidate(); setArtworkSearching(false); }
+    setItem((current) => ({ ...current, [key]: value }));
+  };
   const setEntryValue = <K extends keyof GameLibraryInput>(
     key: K,
     value: GameLibraryInput[K],
@@ -2330,21 +2342,16 @@ export function GameForm({
   const searchRawg = async () => {
     const value = catalogQuery.trim();
     if (value.length < 2) return;
-    setSearching(true);
-    setSearchCompleted(false);
-    setError(null);
-    try {
-      setCandidates(await searchRawgGames(value));
-      setSearchCompleted(true);
-    } catch (reason) {
-      setError(
+    await catalogRequests.run(() => searchRawgGames(value), {
+      onStart: () => { setSearching(true); setSearchCompleted(false); setError(null); setCandidates([]); },
+      onSuccess: (results) => { setCandidates(results); setSearchCompleted(true); },
+      onError: (reason) => setError(
         reason instanceof Error
           ? reason.message
           : "Не удалось выполнить поиск в RAWG",
-      );
-    } finally {
-      setSearching(false);
-    }
+      ),
+      onFinish: () => setSearching(false),
+    });
   };
   const selectRawgCandidate = async (candidate: RawgGameCandidate) => {
     if (
@@ -2352,77 +2359,71 @@ export function GameForm({
       candidate.existingContentId !== game?.id
     )
       return;
-    setSearching(true);
-    setError(null);
-    try {
-      const details = await previewRawgGame(candidate.rawgId);
-      if (details.existingContentId && details.existingContentId !== game?.id) {
-        setError("Эта игра RAWG уже связана с другой записью каталога");
-        return;
-      }
-      setItem((current) => ({
-        ...current,
-        title: details.title,
-        originalTitle: details.originalTitle,
-        releaseYear: details.releaseYear,
-        description: details.description,
-        backgroundUrl: details.backgroundUrl,
-        releaseStatus: details.releaseStatus,
-        genre: details.genre,
-        developer: details.developer,
-        releaseDate: details.releaseDate,
-      }));
-      setArtworkQuery(details.originalTitle ?? details.title);
-      setSelectedRawgId(details.rawgId);
-      setCandidates([]);
-    } catch (reason) {
-      setError(
+    await catalogRequests.run(() => previewRawgGame(candidate.rawgId), {
+      onStart: () => { setSearching(true); setError(null); cancelArtwork(); },
+      onSuccess: (details) => {
+        if (details.existingContentId && details.existingContentId !== game?.id) {
+          setError("Эта игра RAWG уже связана с другой записью каталога");
+          return;
+        }
+        setItem((current) => ({
+          ...current,
+          title: details.title,
+          originalTitle: details.originalTitle,
+          releaseYear: details.releaseYear,
+          description: details.description,
+          backgroundUrl: details.backgroundUrl,
+          releaseStatus: details.releaseStatus,
+          genre: details.genre,
+          developer: details.developer,
+          releaseDate: details.releaseDate,
+        }));
+        changeArtworkQuery(details.originalTitle ?? details.title);
+        setSelectedRawgId(details.rawgId);
+        setCandidates([]);
+      },
+      onError: (reason) => setError(
         reason instanceof Error
           ? reason.message
           : "Не удалось загрузить карточку RAWG",
-      );
-    } finally {
-      setSearching(false);
-    }
+      ),
+      onFinish: () => setSearching(false),
+    });
   };
   const searchArtwork = async () => {
     const value = artworkQuery.trim();
     if (value.length < 2) return;
-    setArtworkSearching(true);
-    setError(null);
-    setArtworkCovers([]);
-    try {
-      setArtworkGames(await searchSteamGridDbGames(value));
-    } catch (reason) {
-      setError(
+    await artworkRequests.run(() => searchSteamGridDbGames(value), {
+      onStart: () => { setArtworkSearching(true); setError(null); setArtworkCovers([]); setArtworkGames([]); },
+      onSuccess: setArtworkGames,
+      onError: (reason) => setError(
         reason instanceof Error
           ? reason.message
           : "Не удалось выполнить поиск в SteamGridDB",
-      );
-    } finally {
-      setArtworkSearching(false);
-    }
+      ),
+      onFinish: () => setArtworkSearching(false),
+    });
   };
   const selectArtworkGame = async (candidate: SteamGridDbGameCandidate) => {
-    setArtworkSearching(true);
-    setError(null);
-    try {
-      const covers = await getSteamGridDbCovers(candidate.steamGridDbId);
-      setArtworkCovers(covers);
-      setArtworkGames([]);
-      if (covers.length === 0)
-        setError("Для этой игры нет вертикальных обложек 600×900");
-    } catch (reason) {
-      setError(
+    await artworkRequests.run(() => getSteamGridDbCovers(candidate.steamGridDbId), {
+      onStart: () => { setArtworkSearching(true); setError(null); setArtworkCovers([]); },
+      onSuccess: (covers) => {
+        setArtworkCovers(covers);
+        setArtworkGames([]);
+        if (covers.length === 0)
+          setError("Для этой игры нет вертикальных обложек 600×900");
+      },
+      onError: (reason) => setError(
         reason instanceof Error
           ? reason.message
           : "Не удалось загрузить обложки SteamGridDB",
-      );
-    } finally {
-      setArtworkSearching(false);
-    }
+      ),
+      onFinish: () => setArtworkSearching(false),
+    });
   };
   const selectArtworkCover = (cover: SteamGridDbCoverCandidate) => {
+    artworkRequests.invalidate();
+    setArtworkSearching(false);
     setItem((current) => ({
       ...current,
       coverUrl: cover.imageUrl,
@@ -2432,6 +2433,7 @@ export function GameForm({
   };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (saving || searching || artworkSearching) return;
     setSaving(true);
     setError(null);
     try {
@@ -2490,7 +2492,7 @@ export function GameForm({
             <p className="eyebrow">Игры</p>
             <h2>{game ? "Редактирование" : "Новая игра"}</h2>
           </div>
-          <button type="button" onClick={onClose}>
+          <button type="button" onClick={closeForm}>
             ×
           </button>
         </div>
@@ -2499,7 +2501,7 @@ export function GameForm({
           <div>
             <input
               value={catalogQuery}
-              onChange={(event) => setCatalogQuery(event.target.value)}
+              onChange={(event) => changeCatalogQuery(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   event.preventDefault();
@@ -2580,7 +2582,7 @@ export function GameForm({
           <div>
             <input
               value={artworkQuery}
-              onChange={(event) => setArtworkQuery(event.target.value)}
+              onChange={(event) => changeArtworkQuery(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   event.preventDefault();
@@ -3000,10 +3002,10 @@ export function GameForm({
               Удалить
             </button>
           )}
-          <button className="secondary-button" type="button" onClick={onClose}>
+          <button className="secondary-button" type="button" onClick={closeForm}>
             Отмена
           </button>
-          <button className="primary-button" disabled={saving}>
+          <button className="primary-button" disabled={saving || searching || artworkSearching}>
             {saving ? "Сохраняем…" : "Сохранить"}
           </button>
         </div>

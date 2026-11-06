@@ -33,6 +33,7 @@ import { bookFormatLabels, bookStatusLabels, progressText } from "./bookUi";
 import { ErrorState, LoadingState } from "../components/AsyncState";
 import { useToast } from "../components/ToastContext";
 import { saveLibraryForm } from "./libraryForm";
+import { useLatestRequest } from "../hooks/useLatestRequest";
 
 const emptyBook: BookInput = {
   title: "",
@@ -382,8 +383,30 @@ export function BookForm({
   const [searching, setSearching] = useState(false);
   const [searchCompleted, setSearchCompleted] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
-  const set = <K extends keyof BookInput>(key: K, value: BookInput[K]) =>
+  const catalogRequests = useLatestRequest();
+  const uploadRequests = useLatestRequest();
+  const cancelCatalog = () => {
+    catalogRequests.invalidate();
+    setSearching(false);
+    setCandidates([]);
+    setSearchCompleted(false);
+  };
+  const changeCatalogQuery = (value: string) => {
+    cancelCatalog();
+    setCatalogQuery(value);
+  };
+  const closeForm = () => {
+    catalogRequests.dispose();
+    uploadRequests.dispose();
+    onClose();
+  };
+  const set = <K extends keyof BookInput>(key: K, value: BookInput[K]) => {
+    if (key === "coverUrl") {
+      uploadRequests.invalidate();
+      setUploadingCover(false);
+    }
     setItem((current) => ({ ...current, [key]: value }));
+  };
   const setLib = <K extends keyof BookLibraryInput>(
     key: K,
     value: BookLibraryInput[K],
@@ -398,24 +421,22 @@ export function BookForm({
   const searchCatalog = async () => {
     const value = catalogQuery.trim();
     if (value.length < 2) return;
-    setSearching(true);
-    setSearchCompleted(false);
-    setError(null);
-    try {
-      setCandidates(await searchGoogleBooks(value));
-      setSearchCompleted(true);
-    } catch (reason) {
-      setError(
+    await catalogRequests.run(() => searchGoogleBooks(value), {
+      onStart: () => { setSearching(true); setSearchCompleted(false); setError(null); setCandidates([]); },
+      onSuccess: (results) => { setCandidates(results); setSearchCompleted(true); },
+      onError: (reason) => setError(
         reason instanceof Error
           ? reason.message
           : "Не удалось выполнить поиск в Google Books",
-      );
-    } finally {
-      setSearching(false);
-    }
+      ),
+      onFinish: () => setSearching(false),
+    });
   };
   const selectCandidate = (candidate: GoogleBookCandidate) => {
     if (candidate.existingBookId) return;
+    cancelCatalog();
+    uploadRequests.invalidate();
+    setUploadingCover(false);
     setItem({
       ...emptyBook,
       title: candidate.title,
@@ -432,19 +453,16 @@ export function BookForm({
   };
   const uploadCover = async (file?: File) => {
     if (!file) return;
-    setUploadingCover(true);
-    setError(null);
-    try {
-      const uploaded = await uploadBookCover(file);
-      set("coverUrl", uploaded.coverUrl);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Не удалось загрузить обложку");
-    } finally {
-      setUploadingCover(false);
-    }
+    await uploadRequests.run(() => uploadBookCover(file), {
+      onStart: () => { setUploadingCover(true); setError(null); },
+      onSuccess: (uploaded) => setItem((current) => ({ ...current, coverUrl: uploaded.coverUrl })),
+      onError: (reason) => setError(reason instanceof Error ? reason.message : "Не удалось загрузить обложку"),
+      onFinish: () => setUploadingCover(false),
+    });
   };
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (saving || searching || uploadingCover) return;
     setSaving(true);
     setError(null);
     try {
@@ -487,7 +505,7 @@ export function BookForm({
             <p className="eyebrow">Книги</p>
             <h2>{book ? "Редактирование" : "Новая книга"}</h2>
           </div>
-          <button type="button" onClick={onClose}>
+          <button type="button" onClick={closeForm}>
             ×
           </button>
         </div>
@@ -497,7 +515,7 @@ export function BookForm({
             <div>
               <input
                 value={catalogQuery}
-                onChange={(e) => setCatalogQuery(e.target.value)}
+                onChange={(e) => changeCatalogQuery(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -766,7 +784,7 @@ export function BookForm({
               Удалить
             </button>
           )}
-          <button className="secondary-button" type="button" onClick={onClose}>
+          <button className="secondary-button" type="button" onClick={closeForm}>
             Отмена
           </button>
           <button className="primary-button" disabled={saving || searching || uploadingCover}>
