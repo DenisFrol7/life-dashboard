@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router'
 import {
   BarChart3, BookOpen, CalendarDays, Clapperboard, Clock3, Film, Footprints,
@@ -5,29 +6,32 @@ import {
   Tv, UserRound,
   type LucideIcon,
 } from 'lucide-react'
-import { DashboardPage } from './pages/DashboardPage'
-import { HabitsPage } from './pages/HabitsPage'
-import { ActivityPage } from './pages/ActivityPage'
-import { SleepPage } from './pages/SleepPage'
-import { CalendarPage } from './pages/CalendarPage'
-import { BlogPage } from './pages/JournalPage'
-import { TimelinePage } from './pages/TimelinePage'
-import { MoviesPage } from './pages/MoviesPage'
-import { MovieDetailsPage } from './pages/MovieDetailsPage'
-import { SeriesPage } from './pages/SeriesPage'
-import { SeriesDetailsPage } from './pages/SeriesDetailsPage'
-import { AnimePage } from './pages/AnimePage'
-import { AnimeDetailsPage } from './pages/AnimeDetailsPage'
-import { GamesPage } from './pages/GamesPage'
-import { GameDetailsPage } from './pages/GameDetailsPage'
-import { BooksPage } from './pages/BooksPage'
-import { BookDetailsPage } from './pages/BookDetailsPage'
-import { SettingsPage } from './pages/SettingsPage'
-import { AnalyticsPage } from './pages/AnalyticsPage'
-import { PlaceholderPage } from './pages/PlaceholderPage'
 import { useTheme } from './components/ThemeContext'
 import { BackendStatus } from './components/BackendStatus'
+import { LoadingState } from './components/AsyncState'
+import { PageErrorBoundary } from './components/PageErrorBoundary'
 import './App.css'
+
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then(module => ({ default: module.DashboardPage })))
+const HabitsPage = lazy(() => import('./pages/HabitsPage').then(module => ({ default: module.HabitsPage })))
+const ActivityPage = lazy(() => import('./pages/ActivityPage').then(module => ({ default: module.ActivityPage })))
+const SleepPage = lazy(() => import('./pages/SleepPage').then(module => ({ default: module.SleepPage })))
+const CalendarPage = lazy(() => import('./pages/CalendarPage').then(module => ({ default: module.CalendarPage })))
+const BlogPage = lazy(() => import('./pages/JournalPage').then(module => ({ default: module.BlogPage })))
+const TimelinePage = lazy(() => import('./pages/TimelinePage').then(module => ({ default: module.TimelinePage })))
+const MoviesPage = lazy(() => import('./pages/MoviesPage').then(module => ({ default: module.MoviesPage })))
+const MovieDetailsPage = lazy(() => import('./pages/MovieDetailsPage').then(module => ({ default: module.MovieDetailsPage })))
+const SeriesPage = lazy(() => import('./pages/SeriesPage').then(module => ({ default: module.SeriesPage })))
+const SeriesDetailsPage = lazy(() => import('./pages/SeriesDetailsPage').then(module => ({ default: module.SeriesDetailsPage })))
+const AnimePage = lazy(() => import('./pages/AnimePage').then(module => ({ default: module.AnimePage })))
+const AnimeDetailsPage = lazy(() => import('./pages/AnimeDetailsPage').then(module => ({ default: module.AnimeDetailsPage })))
+const GamesPage = lazy(() => import('./pages/GamesPage').then(module => ({ default: module.GamesPage })))
+const GameDetailsPage = lazy(() => import('./pages/GameDetailsPage').then(module => ({ default: module.GameDetailsPage })))
+const BooksPage = lazy(() => import('./pages/BooksPage').then(module => ({ default: module.BooksPage })))
+const BookDetailsPage = lazy(() => import('./pages/BookDetailsPage').then(module => ({ default: module.BookDetailsPage })))
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then(module => ({ default: module.SettingsPage })))
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then(module => ({ default: module.AnalyticsPage })))
+const PlaceholderPage = lazy(() => import('./pages/PlaceholderPage').then(module => ({ default: module.PlaceholderPage })))
 
 type NavItem = { path: string; label: string; short: string; description: string }
 
@@ -118,35 +122,39 @@ function App() {
           </div>
         </header>
 
-        <Routes>
-          <Route index element={<DashboardPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/habits" element={<HabitsPage />} />
-          <Route path="/activity" element={<ActivityPage />} />
-          <Route path="/sleep" element={<SleepPage />} />
-          <Route path="/calendar" element={<CalendarPage />} />
-          <Route path="/journal" element={<TimelinePage />} />
-          <Route path="/blog" element={<BlogPage />} />
-          <Route path="/movies" element={<MoviesPage />} />
-          <Route path="/movies/:id" element={<MovieDetailsPage />} />
-          <Route path="/series" element={<SeriesPage />} />
-          <Route path="/series/:id" element={<SeriesDetailsPage />} />
-          <Route path="/anime" element={<AnimePage />} />
-          <Route path="/anime/:id" element={<AnimeDetailsPage />} />
-          <Route path="/games" element={<GamesPage />} />
-          <Route path="/games/:id" element={<GameDetailsPage />} />
-          <Route path="/books" element={<BooksPage />} />
-          <Route path="/books/:id" element={<BookDetailsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          {navigation.slice(1).filter((item) => !['/analytics', '/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies', '/series', '/anime', '/games', '/books', '/settings'].includes(item.path)).map((item) => (
-            <Route
-              key={item.path}
-              path={item.path}
-              element={<PlaceholderPage title={item.label} description={item.description} />}
-            />
-          ))}
-          <Route path="*" element={<Navigate replace to="/" />} />
-        </Routes>
+        <PageErrorBoundary key={pathname}>
+          <Suspense fallback={<LoadingState message="Загружаем страницу…" />}>
+            <Routes>
+              <Route index element={<DashboardPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/habits" element={<HabitsPage />} />
+              <Route path="/activity" element={<ActivityPage />} />
+              <Route path="/sleep" element={<SleepPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/journal" element={<TimelinePage />} />
+              <Route path="/blog" element={<BlogPage />} />
+              <Route path="/movies" element={<MoviesPage />} />
+              <Route path="/movies/:id" element={<MovieDetailsPage />} />
+              <Route path="/series" element={<SeriesPage />} />
+              <Route path="/series/:id" element={<SeriesDetailsPage />} />
+              <Route path="/anime" element={<AnimePage />} />
+              <Route path="/anime/:id" element={<AnimeDetailsPage />} />
+              <Route path="/games" element={<GamesPage />} />
+              <Route path="/games/:id" element={<GameDetailsPage />} />
+              <Route path="/books" element={<BooksPage />} />
+              <Route path="/books/:id" element={<BookDetailsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              {navigation.slice(1).filter((item) => !['/analytics', '/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies', '/series', '/anime', '/games', '/books', '/settings'].includes(item.path)).map((item) => (
+                <Route
+                  key={item.path}
+                  path={item.path}
+                  element={<PlaceholderPage title={item.label} description={item.description} />}
+                />
+              ))}
+              <Route path="*" element={<Navigate replace to="/" />} />
+            </Routes>
+          </Suspense>
+        </PageErrorBoundary>
       </main>
     </div>
   )
