@@ -21,7 +21,10 @@
 .sidebar-theme-toggle:hover { color: #fff; background: #30485b; }
 .sidebar-theme-toggle span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; color: #fff; background: #6e63d9; }
 .sidebar-theme-toggle svg { width: 14px; height: 14px; }
-.status-dot { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #83b4d6; box-shadow: 0 0 0 4px #83b4d618; }
+.backend-status { --status-color: #d8b56b; }
+.backend-status--connected { --status-color: #83c6a0; }
+.backend-status--unavailable { --status-color: #ed9696; }
+.status-dot { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: var(--status-color); box-shadow: 0 0 0 4px color-mix(in srgb, var(--status-color) 10%, transparent); }
 
 .main-content { min-height: 100vh; margin-left: 244px; padding: 30px clamp(22px, 4vw, 58px) 56px; }
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; max-width: 1280px; margin: 0 auto 28px; }

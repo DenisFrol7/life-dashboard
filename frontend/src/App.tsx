@@ -26,6 +26,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { useTheme } from './components/ThemeContext'
+import { BackendStatus } from './components/BackendStatus'
 import './App.css'
 
 type NavItem = { path: string; label: string; short: string; description: string }
@@ -101,7 +102,7 @@ function App() {
             <span>{resolvedTheme === 'dark' ? <Sun /> : <Moon />}</span>
             {resolvedTheme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
           </button>
-          <div><span className="status-dot" /> Backend подключён</div>
+          <BackendStatus />
         </div>
       </aside>
 
