@@ -91,13 +91,18 @@ Set-Location backend
 .\mvnw.cmd test
 ```
 
-Frontend:
+Frontend — линтер, тесты, строгая проверка TypeScript и сборка одной командой:
 
 ```powershell
 Set-Location frontend
-npm run lint
-npm test
-npm run build
+npm run check
+```
+
+Отдельные проверки доступны через `npm run lint`, `npm test` и `npm run build`. Сборка проверяет в строгом режиме TypeScript как код приложения, так и конфигурацию Vite. Общая команда останавливается при первой ошибке.
+
+Проверка уязвимостей зависимостей выполняется отдельно:
+
+```powershell
 npm audit
 ```
 
