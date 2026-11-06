@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import {
   createHabit, deleteHabit, deleteHabitEntry, getHabitEntriesForDate, getHabits, putHabitEntry, updateHabit,
   type Habit, type HabitEntry, type HabitInput, type HabitStatus,
@@ -6,6 +6,8 @@ import {
 import { useToast } from '../components/ToastContext'
 import { useToday } from '../hooks/useToday'
 import { useLatestRequest } from '../hooks/useLatestRequest'
+import { useFormMutation } from '../hooks/useFormMutation'
+import { usePageMutation } from '../hooks/usePageMutation'
 import { localDate } from '../utils/localDay'
 import { Check, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react'
 
@@ -31,7 +33,6 @@ const emptyHabit = (date: string): HabitInput => ({
 export function HabitsPage() {
   const today = useToday()
   const requests = useLatestRequest()
-  const { showToast } = useToast()
   const [status, setStatus] = useState<HabitStatus>('ACTIVE')
   const [habits, setHabits] = useState<Habit[]>([])
   const [entries, setEntries] = useState<Record<number, HabitEntry | undefined>>({})
@@ -53,24 +54,21 @@ export function HabitsPage() {
 
   useEffect(() => { void load(); return () => requests.invalidate() }, [load, requests])
 
-  const toggleBoolean = async (habit: Habit) => {
-    try {
-      if (entries[habit.id]) await deleteHabitEntry(habit.id, today)
-      else await putHabitEntry(habit.id, today, 1)
-      await load()
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить отметку') }
-  }
-
-  const saveValue = async (habit: Habit, value: number) => {
-    try { await putHabitEntry(habit.id, today, value); await load() }
-    catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить значение') }
-  }
-
-  const remove = async (habit: Habit) => {
-    if (!window.confirm(`Удалить привычку «${habit.name}» вместе с историей?`)) return
-    try { await deleteHabit(habit.id); showToast('Привычка удалена'); await load() }
-    catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить привычку') }
-  }
+  const actions = usePageMutation(`${today}:${status}`, load, Boolean(editing) || loading)
+  const toggleBoolean = (habit: Habit) => actions.run('save', async () => {
+    if (entries[habit.id]?.entryDate === today) await deleteHabitEntry(habit.id, today)
+    else await putHabitEntry(habit.id, today, 1)
+    return true
+  }, 'Не удалось сохранить отметку')
+  const saveValue = (habit: Habit, value: number) => actions.run('save', async () => {
+    await putHabitEntry(habit.id, today, value)
+    return true
+  }, 'Не удалось сохранить значение')
+  const remove = (habit: Habit) => actions.run('delete', async () => {
+    if (!window.confirm(`Удалить привычку «${habit.name}» вместе с историей?`)) return false
+    await deleteHabit(habit.id)
+    return true
+  }, 'Не удалось удалить привычку', 'Привычка удалена')
 
   return (
     <div className="habits-page">
@@ -79,45 +77,54 @@ export function HabitsPage() {
           {(Object.keys(statusLabels) as HabitStatus[]).map((value) =>
             <button className={status === value ? 'active' : ''} key={value} onClick={() => setStatus(value)}>{statusLabels[value]}</button>)}
         </div>
-        <button className="primary-button icon-button" onClick={() => setEditing('new')}><Plus />Новая привычка</button>
+        <button disabled={actions.disabled} className="primary-button icon-button" onClick={() => setEditing('new')}><Plus />Новая привычка</button>
       </section>
 
-      {error && <div className="notice error habit-error"><strong>Ошибка</strong><span>{error}</span></div>}
-      {loading ? <div className="loading"><span />Загружаем привычки…</div> : habits.length === 0 ? (
+      {actions.pending && <p className="muted" role="status">Обновляем данные…</p>}{(error || actions.error) && <div className="notice error habit-error" role="alert"><strong>Ошибка</strong><span>{error ?? actions.error}</span></div>}
+      {loading && habits.length === 0 ? <div className="loading"><span />Загружаем привычки…</div> : habits.length === 0 ? (
         <section className="habits-empty"><span><Check /></span><h2>Здесь пока пусто</h2><p>Создайте первую привычку и начните отмечать прогресс.</p></section>
       ) : (
         <section className="habit-list">
-          {habits.map((habit) => <HabitCard key={habit.id} habit={habit} entry={entries[habit.id]}
-            onToggle={() => void toggleBoolean(habit)} onValue={(value) => void saveValue(habit, value)}
+          {habits.map((habit) => <HabitCard key={`${habit.id}:${today}`} habit={habit} entry={entries[habit.id]?.entryDate === today ? entries[habit.id] : undefined} disabled={actions.disabled}
+            onToggle={() => void toggleBoolean(habit)} onValue={(value) => saveValue(habit, value)}
             onEdit={() => setEditing(habit)} onDelete={() => void remove(habit)} />)}
         </section>
       )}
 
-      {editing && <HabitForm habit={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void load() }} />}
+      {editing && <HabitForm habit={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void actions.refresh() }} />}
     </div>
   )
 }
 
-function HabitCard({ habit, entry, onToggle, onValue, onEdit, onDelete }: {
-  habit: Habit; entry?: HabitEntry; onToggle: () => void; onValue: (value: number) => void; onEdit: () => void; onDelete: () => void
+function HabitCard({ habit, entry, disabled, onToggle, onValue, onEdit, onDelete }: {
+  habit: Habit; entry?: HabitEntry; disabled: boolean; onToggle: () => void; onValue: (value: number) => Promise<boolean>; onEdit: () => void; onDelete: () => void
 }) {
   const [value, setValue] = useState(entry?.value?.toString() ?? '')
-  useEffect(() => setValue(entry?.value?.toString() ?? ''), [entry])
+  const dirty = useRef(false)
+  const revision = useRef(0)
+  useEffect(() => { if (!dirty.current) setValue(entry?.value?.toString() ?? '') }, [entry])
+  const submitValue = async (event: FormEvent) => {
+    event.preventDefault()
+    if (disabled || value === '') return
+    const submittedRevision = revision.current
+    const saved = await onValue(Number(value))
+    if (saved && revision.current === submittedRevision) dirty.current = false
+  }
   const schedule = habit.scheduleType === 'DAILY' ? 'Каждый день' : habit.scheduleDays.map((day) => weekdays[day - 1]).join(', ')
   const automated = habit.dataSource !== 'MANUAL'
   return (
     <article className={entry && !entry.skipped ? 'habit-card completed' : 'habit-card'}>
       <div className="habit-card-main">
         {habit.trackingType === 'BOOLEAN' && !automated ?
-          <button className="habit-check" aria-label="Отметить выполнение" onClick={onToggle}>{entry && <Check />}</button> :
+          <button className="habit-check" aria-label="Отметить выполнение" disabled={disabled} onClick={onToggle}>{entry && <Check />}</button> :
           <span className="habit-source-icon">{automated ? <RefreshCw /> : '#'}</span>}
         <div className="habit-copy"><h3>{habit.name}</h3>{habit.description && <p>{habit.description}</p>}
           <div className="habit-meta"><span>{schedule}</span><span>{sourceLabels[habit.dataSource]}</span></div></div>
-        <div className="habit-actions"><button onClick={onEdit} aria-label="Редактировать" title="Редактировать"><Pencil /></button><button onClick={onDelete} aria-label="Удалить" title="Удалить"><Trash2 /></button></div>
+        <div className="habit-actions"><button disabled={disabled} onClick={onEdit} aria-label="Редактировать" title="Редактировать"><Pencil /></button><button disabled={disabled} onClick={onDelete} aria-label="Удалить" title="Удалить"><Trash2 /></button></div>
       </div>
-      {habit.trackingType !== 'BOOLEAN' && !automated && <form className="value-form" onSubmit={(event) => { event.preventDefault(); if (value !== '') onValue(Number(value)) }}>
-        <input type="number" min="0" step="0.01" value={value} onChange={(event) => setValue(event.target.value)} placeholder="0" />
-        <span>{habit.unit ?? (habit.trackingType === 'DURATION' ? 'мин' : '')}</span><button>Сохранить</button>
+      {habit.trackingType !== 'BOOLEAN' && !automated && <form className="value-form" onSubmit={(event) => void submitValue(event)}>
+        <input type="number" min="0" step="0.01" value={value} onChange={(event) => { dirty.current = true; revision.current++; setValue(event.target.value) }} placeholder="0" />
+        <span>{habit.unit ?? (habit.trackingType === 'DURATION' ? 'мин' : '')}</span><button disabled={disabled}>Сохранить</button>
         {habit.targetValue != null && <small>Цель: {habit.targetValue} {habit.unit}</small>}
       </form>}
       {automated && <div className="automated-value">Сегодня: <strong>{formatAutomatedValue(habit, entry)}</strong></div>}
@@ -128,20 +135,25 @@ function HabitCard({ habit, entry, onToggle, onValue, onEdit, onDelete }: {
 function HabitForm({ habit, onClose, onSaved }: { habit?: Habit; onClose: () => void; onSaved: () => void }) {
   const { showToast } = useToast()
   const [form, setForm] = useState<HabitInput>(() => habit ? { ...habit } : emptyHabit(localDate()))
-  const [saving, setSaving] = useState(false)
+  const mutations = useFormMutation()
+  const { saving, pending } = mutations
   const [error, setError] = useState<string | null>(null)
+  const closeForm = () => { mutations.dispose(); onClose() }
   const set = <K extends keyof HabitInput>(key: K, value: HabitInput[K]) => setForm((current) => ({ ...current, [key]: value }))
   const submit = async (event: FormEvent) => {
-    event.preventDefault(); setSaving(true); setError(null)
+    event.preventDefault()
+    if (pending) return
+    setError(null)
     const input = { ...form, description: form.description || null, unit: form.unit || null, endDate: form.endDate || null,
       scheduleDays: form.scheduleType === 'DAILY' ? [] : form.scheduleDays }
-    try { if (habit) await updateHabit(habit.id, input); else await createHabit(input); showToast(habit ? 'Привычка обновлена' : 'Привычка добавлена'); onSaved() }
-    catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить привычку') }
-    finally { setSaving(false) }
+    await mutations.run('save', () => habit ? updateHabit(habit.id, input) : createHabit(input), {
+      onSuccess: () => { showToast(habit ? 'Привычка обновлена' : 'Привычка добавлена'); onSaved() },
+      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось сохранить привычку'),
+    })
   }
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeForm() }}>
     <form className="habit-form habits-form" onSubmit={(event) => void submit(event)}>
-      <div className="form-heading"><div><p className="eyebrow">Привычки</p><h2>{habit ? 'Редактирование' : 'Новая привычка'}</h2></div><button type="button" aria-label="Закрыть" onClick={onClose}><X /></button></div>
+      <div className="form-heading"><div><p className="eyebrow">Привычки</p><h2>{habit ? 'Редактирование' : 'Новая привычка'}</h2></div><button type="button" aria-label="Закрыть" onClick={closeForm}><X /></button></div>
       {error && <div className="form-error">{error}</div>}
       <label>Название<input required maxLength={200} value={form.name} onChange={(event) => set('name', event.target.value)} /></label>
       <label>Описание<textarea rows={2} value={form.description ?? ''} onChange={(event) => set('description', event.target.value)} /></label>
@@ -156,7 +168,7 @@ function HabitForm({ habit, onClose, onSaved }: { habit?: Habit; onClose: () => 
         <label>Статус<select value={form.status} onChange={(event) => set('status', event.target.value as HabitStatus)}>{Object.entries(statusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
       </div>
       {form.scheduleType === 'SELECTED_DAYS' && <fieldset className="weekday-picker"><legend>Дни недели</legend>{weekdays.map((day, index) => <label key={day}><input type="checkbox" checked={form.scheduleDays.includes(index + 1)} onChange={() => set('scheduleDays', form.scheduleDays.includes(index + 1) ? form.scheduleDays.filter((item) => item !== index + 1) : [...form.scheduleDays, index + 1])} />{day}</label>)}</fieldset>}
-      <div className="form-buttons"><button type="button" className="secondary-button" onClick={onClose}>Отмена</button><button className="primary-button" disabled={saving}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
+      <div className="form-buttons"><button type="button" className="secondary-button" onClick={closeForm}>Отмена</button><button className="primary-button" disabled={pending}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
     </form>
   </div>
 }

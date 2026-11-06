@@ -3,6 +3,8 @@ import { completeOccurrence, createCalendarEvent, deleteCalendarEvent, deleteOcc
 import { useToast } from '../components/ToastContext'
 import { useDateSelection } from '../hooks/useDateSelection'
 import { useLatestRequest } from '../hooks/useLatestRequest'
+import { useFormMutation } from '../hooks/useFormMutation'
+import { usePageMutation } from '../hooks/usePageMutation'
 import { localDate as iso } from '../utils/localDay'
 import { CalendarPlus, Check, ChevronLeft, ChevronRight, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react'
 
@@ -28,7 +30,6 @@ const monthCells = (month: Date) => {
 }
 
 export function CalendarPage() {
-  const { showToast } = useToast()
   const { today, date: selectedDate, setDate: setSelectedDate, selectToday } = useDateSelection()
   const requests = useLatestRequest()
   const [browsedMonth, setMonth] = useState<Date | null>(null)
@@ -62,12 +63,21 @@ export function CalendarPage() {
   const selectDate = (date: string) => { setMonth(month); setSelectedDate(date) }
   const showToday = () => { setMonth(null); selectToday() }
   const changeMonth = (delta: number) => { const next = new Date(month); next.setMonth(next.getMonth() + delta); setMonth(next); setSelectedDate(iso(new Date(next.getFullYear(), next.getMonth(), 1, 12))) }
-  const toggleTask = async (event: CalendarEvent) => { try { if (occurrenceFor(event, selectedDate)) await deleteOccurrence(event.id, selectedDate); else await completeOccurrence(event.id, selectedDate); await load() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось изменить задачу') } }
-  const remove = async (event: CalendarEvent) => { if (!window.confirm(`Удалить «${event.title}»${event.scheduleType === 'ONCE' ? '' : ' и все повторения'}?`)) return; try { await deleteCalendarEvent(event.id); showToast('Запись календаря удалена'); await load() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить запись') } }
+  const actions = usePageMutation(`${iso(month)}:${selectedDate}`, load, Boolean(editing) || loading)
+  const toggleTask = (event: CalendarEvent) => actions.run('save', async () => {
+    if (occurrenceFor(event, selectedDate)) await deleteOccurrence(event.id, selectedDate)
+    else await completeOccurrence(event.id, selectedDate)
+    return true
+  }, 'Не удалось изменить задачу')
+  const remove = (event: CalendarEvent) => actions.run('delete', async () => {
+    if (!window.confirm(`Удалить «${event.title}»${event.scheduleType === 'ONCE' ? '' : ' и все повторения'}?`)) return false
+    await deleteCalendarEvent(event.id)
+    return true
+  }, 'Не удалось удалить запись', 'Запись календаря удалена')
 
   return <div className="calendar-page">
-    <section className="calendar-toolbar"><div><button aria-label="Предыдущий месяц" onClick={() => changeMonth(-1)}><ChevronLeft /></button><h2>{new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(month)}</h2><button aria-label="Следующий месяц" onClick={() => changeMonth(1)}><ChevronRight /></button><button className="today-button" onClick={showToday}>Сегодня</button></div><button className="primary-button icon-button" onClick={() => setEditing('new')}><Plus />Добавить</button></section>
-    {error && <div className="notice error calendar-error"><strong>Ошибка</strong><span>{error}</span></div>}
+    <section className="calendar-toolbar"><div><button aria-label="Предыдущий месяц" onClick={() => changeMonth(-1)}><ChevronLeft /></button><h2>{new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(month)}</h2><button aria-label="Следующий месяц" onClick={() => changeMonth(1)}><ChevronRight /></button><button className="today-button" onClick={showToday}>Сегодня</button></div><button disabled={actions.disabled} className="primary-button icon-button" onClick={() => setEditing('new')}><Plus />Добавить</button></section>
+    {actions.pending && <p className="muted" role="status">Обновляем данные…</p>}{(error || actions.error) && <div className="notice error calendar-error" role="alert"><strong>Ошибка</strong><span>{error ?? actions.error}</span></div>}
     <section className="calendar-layout">
       <article className="month-calendar">
         <div className="weekday-row">{weekdays.map((day) => <span key={day}>{day}</span>)}</div>
@@ -75,32 +85,43 @@ export function CalendarPage() {
       </article>
       <aside className="day-agenda">
         <div className="agenda-heading"><p className="eyebrow">Выбранный день</p><h3>{new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', weekday: 'long' }).format(dateFromIso(selectedDate))}</h3><span>{selectedEvents.length} записей</span></div>
-        {loading ? <div className="loading"><span /></div> : selectedEvents.length === 0 ? <div className="agenda-empty"><span><CalendarPlus /></span><p>На этот день ничего не запланировано.</p><button className="icon-button" onClick={() => setEditing('new')}><Plus />Добавить запись</button></div> : <div className="agenda-list">{selectedEvents.sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')).map((event) => { const occurrence = occurrenceFor(event, selectedDate); return <article className={`${event.eventType.toLowerCase()} ${occurrence?.status === 'COMPLETED' ? 'completed' : ''}`} key={event.id}>
-          {event.eventType === 'TASK' ? <button className="agenda-check" onClick={() => void toggleTask(event)}>{occurrence?.status === 'COMPLETED' && <Check />}</button> : <span className="agenda-type-dot" />}
+        {loading ? <div className="loading"><span /></div> : selectedEvents.length === 0 ? <div className="agenda-empty"><span><CalendarPlus /></span><p>На этот день ничего не запланировано.</p><button disabled={actions.disabled} className="icon-button" onClick={() => setEditing('new')}><Plus />Добавить запись</button></div> : <div className="agenda-list">{selectedEvents.sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')).map((event) => { const occurrence = occurrenceFor(event, selectedDate); return <article className={`${event.eventType.toLowerCase()} ${occurrence?.status === 'COMPLETED' ? 'completed' : ''}`} key={event.id}>
+          {event.eventType === 'TASK' ? <button disabled={actions.disabled} className="agenda-check" onClick={() => void toggleTask(event)}>{occurrence?.status === 'COMPLETED' && <Check />}</button> : <span className="agenda-type-dot" />}
           <div><small>{event.allDay ? 'Весь день' : event.startTime?.slice(0, 5) ?? 'Без времени'} · {eventLabels[event.eventType]}</small><strong>{event.title}</strong>{event.location && <p><MapPin />{event.location}</p>}</div>
-          <div className="agenda-actions"><button aria-label="Редактировать" onClick={() => setEditing(event)}><Pencil /></button><button aria-label="Удалить" onClick={() => void remove(event)}><Trash2 /></button></div>
+          <div className="agenda-actions"><button disabled={actions.disabled} aria-label="Редактировать" onClick={() => setEditing(event)}><Pencil /></button><button disabled={actions.disabled} aria-label="Удалить" onClick={() => void remove(event)}><Trash2 /></button></div>
         </article>})}</div>}
       </aside>
     </section>
-    {editing && <CalendarForm event={editing === 'new' ? undefined : editing} initialDate={selectedDate} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void load() }} />}
+    {editing && <CalendarForm event={editing === 'new' ? undefined : editing} initialDate={selectedDate} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void actions.refresh() }} />}
   </div>
 }
 
 function CalendarForm({ event, initialDate, onClose, onSaved }: { event?: CalendarEvent; initialDate: string; onClose: () => void; onSaved: () => void }) {
   const { showToast } = useToast()
   const [form, setForm] = useState<CalendarEventInput>(event ? { ...event } : emptyEvent(initialDate))
-  const [saving, setSaving] = useState(false)
+  const mutations = useFormMutation()
+  const { saving, pending } = mutations
   const [error, setError] = useState<string | null>(null)
+  const closeForm = () => { mutations.dispose(); onClose() }
   const set = <K extends keyof CalendarEventInput>(key: K, value: CalendarEventInput[K]) => setForm((current) => ({ ...current, [key]: value }))
-  const submit = async (submitEvent: FormEvent) => { submitEvent.preventDefault(); setSaving(true); setError(null); const input = { ...form, description: form.description || null, location: form.location || null, repeatUntil: form.scheduleType === 'ONCE' ? null : form.repeatUntil || null, startTime: form.allDay ? null : form.startTime || null, endTime: form.allDay ? null : form.endTime || null, scheduleDays: form.scheduleType === 'SELECTED_DAYS' ? form.scheduleDays : [] }; try { if (event) await updateCalendarEvent(event.id, input); else await createCalendarEvent(input); showToast(event ? 'Запись календаря обновлена' : 'Запись календаря добавлена'); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить запись') } finally { setSaving(false) } }
-  return <div className="modal-backdrop" onMouseDown={(mouseEvent) => { if (mouseEvent.target === mouseEvent.currentTarget) onClose() }}><form className="habit-form calendar-form" onSubmit={(submitEvent) => void submit(submitEvent)}>
-    <div className="form-heading"><div><p className="eyebrow">Календарь</p><h2>{event ? 'Редактирование' : 'Новая запись'}</h2></div><button type="button" aria-label="Закрыть" onClick={onClose}><X /></button></div>{error && <div className="form-error">{error}</div>}
+  const submit = async (submitEvent: FormEvent) => {
+    submitEvent.preventDefault()
+    if (pending) return
+    setError(null)
+    const input = { ...form, description: form.description || null, location: form.location || null, repeatUntil: form.scheduleType === 'ONCE' ? null : form.repeatUntil || null, startTime: form.allDay ? null : form.startTime || null, endTime: form.allDay ? null : form.endTime || null, scheduleDays: form.scheduleType === 'SELECTED_DAYS' ? form.scheduleDays : [] }
+    await mutations.run('save', () => event ? updateCalendarEvent(event.id, input) : createCalendarEvent(input), {
+      onSuccess: () => { showToast(event ? 'Запись календаря обновлена' : 'Запись календаря добавлена'); onSaved() },
+      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось сохранить запись'),
+    })
+  }
+  return <div className="modal-backdrop" onMouseDown={(mouseEvent) => { if (mouseEvent.target === mouseEvent.currentTarget) closeForm() }}><form className="habit-form calendar-form" onSubmit={(submitEvent) => void submit(submitEvent)}>
+    <div className="form-heading"><div><p className="eyebrow">Календарь</p><h2>{event ? 'Редактирование' : 'Новая запись'}</h2></div><button type="button" aria-label="Закрыть" onClick={closeForm}><X /></button></div>{error && <div className="form-error">{error}</div>}
     <label>Название<input required maxLength={300} value={form.title} onChange={(inputEvent) => set('title', inputEvent.target.value)} /></label>
     <div className="form-grid"><label>Тип<select value={form.eventType} onChange={(inputEvent) => set('eventType', inputEvent.target.value as EventType)}>{Object.entries(eventLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label>Повторение<select value={form.scheduleType} onChange={(inputEvent) => set('scheduleType', inputEvent.target.value as CalendarEventInput['scheduleType'])}>{Object.entries(scheduleLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label>Начало<input required type="date" value={form.startDate} onChange={(inputEvent) => set('startDate', inputEvent.target.value)} /></label>{form.scheduleType !== 'ONCE' && <label>Повторять до<input type="date" min={form.startDate} value={form.repeatUntil ?? ''} onChange={(inputEvent) => set('repeatUntil', inputEvent.target.value || null)} /></label>}</div>
     {form.scheduleType === 'SELECTED_DAYS' && <fieldset className="weekday-picker"><legend>Дни недели</legend>{weekdays.map((day, index) => <label key={day}><input type="checkbox" checked={form.scheduleDays.includes(index + 1)} onChange={() => set('scheduleDays', form.scheduleDays.includes(index + 1) ? form.scheduleDays.filter((item) => item !== index + 1) : [...form.scheduleDays, index + 1])} />{day}</label>)}</fieldset>}
     <label className="all-day-check"><input type="checkbox" checked={form.allDay} onChange={(inputEvent) => set('allDay', inputEvent.target.checked)} />Весь день</label>
     {!form.allDay && <div className="form-grid"><label>Начало<input type="time" value={form.startTime?.slice(0, 5) ?? ''} onChange={(inputEvent) => set('startTime', inputEvent.target.value || null)} /></label><label>Окончание<input type="time" value={form.endTime?.slice(0, 5) ?? ''} onChange={(inputEvent) => set('endTime', inputEvent.target.value || null)} /></label></div>}
     <label>Место<input maxLength={500} value={form.location ?? ''} onChange={(inputEvent) => set('location', inputEvent.target.value)} /></label><label>Описание<textarea rows={3} value={form.description ?? ''} onChange={(inputEvent) => set('description', inputEvent.target.value)} /></label>
-    <div className="form-buttons"><button className="secondary-button" type="button" onClick={onClose}>Отмена</button><button className="primary-button" disabled={saving}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
+    <div className="form-buttons"><button className="secondary-button" type="button" onClick={closeForm}>Отмена</button><button className="primary-button" disabled={pending}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
   </form></div>
 }

@@ -3,6 +3,8 @@ import { createSleepSession, deleteSleepSession, getSleepSessions, updateSleepSe
 import { useToast } from '../components/ToastContext'
 import { useToday } from '../hooks/useToday'
 import { useLatestRequest } from '../hooks/useLatestRequest'
+import { useFormMutation } from '../hooks/useFormMutation'
+import { usePageMutation } from '../hooks/usePageMutation'
 import { localDate as dateOnly } from '../utils/localDay'
 import { Pencil, Plus, Trash2, X } from 'lucide-react'
 
@@ -18,7 +20,6 @@ const formatDate = (value: string) => new Intl.DateTimeFormat('ru-RU', { day: 'n
 export function SleepPage() {
   const today = useToday()
   const requests = useLatestRequest()
-  const { showToast } = useToast()
   const [period, setPeriod] = useState<7 | 30>(7)
   const [sessions, setSessions] = useState<SleepSession[]>([])
   const [editing, setEditing] = useState<SleepSession | 'new' | null>(null)
@@ -51,20 +52,21 @@ export function SleepPage() {
     return { key, label, minutes: daily.reduce((sum, session) => sum + sleepMinutes(session), 0) }
   }), [sessions, period, today])
 
-  const remove = async (session: SleepSession) => {
-    if (!window.confirm(`Удалить сессию сна за ${formatDate(session.endedAt)}?`)) return
-    try { await deleteSleepSession(session.id); showToast('Сессия сна удалена'); await load() }
-    catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить сессию') }
-  }
+  const actions = usePageMutation(`${today}:${period}`, load, Boolean(editing) || loading)
+  const remove = (session: SleepSession) => actions.run('delete', async () => {
+    if (!window.confirm(`Удалить сессию сна за ${formatDate(session.endedAt)}?`)) return false
+    await deleteSleepSession(session.id)
+    return true
+  }, 'Не удалось удалить сессию', 'Сессия сна удалена')
 
   return <div className="sleep-page">
     <section className="sleep-hero">
       <div><p className="eyebrow">Последняя ночь</p><strong>{formatDuration(todayMinutes)}</strong><span>цель — {formatDuration(sleepGoalMinutes)}</span></div>
       <div className="sleep-goal-ring" style={{ '--sleep-progress': `${Math.min(360, todayMinutes / sleepGoalMinutes * 360)}deg` } as React.CSSProperties}><span>{Math.round(todayMinutes / sleepGoalMinutes * 100)}%</span></div>
       <dl><div><dt>Средняя длительность</dt><dd>{formatDuration(averageDuration)}</dd></div><div><dt>Средняя оценка</dt><dd>{averageQuality ? `${averageQuality.toFixed(1)} из 5` : '—'}</dd></div><div><dt>Сессий за {period} дней</dt><dd>{sessions.length}</dd></div></dl>
-      <button className="primary-button icon-button" onClick={() => setEditing('new')}><Plus />Добавить сон</button>
+      <button disabled={actions.disabled} className="primary-button icon-button" onClick={() => setEditing('new')}><Plus />Добавить сон</button>
     </section>
-    {error && <div className="notice error sleep-error"><strong>Ошибка</strong><span>{error}</span></div>}
+    {actions.pending && <p className="muted" role="status">Обновляем данные…</p>}{(error || actions.error) && <div className="notice error sleep-error" role="alert"><strong>Ошибка</strong><span>{error ?? actions.error}</span></div>}
     <section className="sleep-grid">
       <article className="sleep-panel sleep-chart-panel">
         <div className="panel-heading"><div><p className="eyebrow">Период</p><h3>Продолжительность сна</h3></div><div className="period-switch"><button className={period === 7 ? 'active' : ''} onClick={() => setPeriod(7)}>7 дней</button><button className={period === 30 ? 'active' : ''} onClick={() => setPeriod(30)}>30 дней</button></div></div>
@@ -90,11 +92,11 @@ export function SleepPage() {
     <section className="sleep-panel sleep-history">
       <div className="panel-heading"><div><p className="eyebrow">История</p><h3>Сессии сна</h3></div></div>
       <div className="sleep-table"><div className="sleep-table-head"><span>Пробуждение</span><span>Период</span><span>Сон</span><span>Качество</span><span>Заметка</span><span /></div>
-        {[...sessions].reverse().map((session) => <div key={session.id}><span>{formatDate(session.endedAt)}</span><span>{formatTime(session.startedAt)} — {formatTime(session.endedAt)}</span><strong>{formatDuration(sleepMinutes(session))}</strong><span className="quality-stars">{'●'.repeat(session.qualityRating ?? 0)}{'○'.repeat(5 - (session.qualityRating ?? 0))}</span><span>{session.note ?? '—'}</span><span><button onClick={() => setEditing(session)} aria-label="Редактировать" title="Редактировать"><Pencil /></button><button onClick={() => void remove(session)} aria-label="Удалить" title="Удалить"><Trash2 /></button></span></div>)}
+        {[...sessions].reverse().map((session) => <div key={session.id}><span>{formatDate(session.endedAt)}</span><span>{formatTime(session.startedAt)} — {formatTime(session.endedAt)}</span><strong>{formatDuration(sleepMinutes(session))}</strong><span className="quality-stars">{'●'.repeat(session.qualityRating ?? 0)}{'○'.repeat(5 - (session.qualityRating ?? 0))}</span><span>{session.note ?? '—'}</span><span><button disabled={actions.disabled} onClick={() => setEditing(session)} aria-label="Редактировать" title="Редактировать"><Pencil /></button><button disabled={actions.disabled} onClick={() => void remove(session)} aria-label="Удалить" title="Удалить"><Trash2 /></button></span></div>)}
         {!loading && sessions.length === 0 && <p className="table-empty">Сессий сна пока нет.</p>}
       </div>
     </section>
-    {editing && <SleepForm session={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void load() }} />}
+    {editing && <SleepForm session={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void actions.refresh() }} />}
   </div>
 }
 
@@ -119,16 +121,29 @@ function SleepForm({ session, onClose, onSaved }: { session?: SleepSession; onCl
   const [awake, setAwake] = useState(session?.awakeMinutes?.toString() ?? '')
   const [quality, setQuality] = useState(session?.qualityRating?.toString() ?? '')
   const [note, setNote] = useState(session?.note ?? '')
-  const [saving, setSaving] = useState(false)
+  const mutations = useFormMutation()
+  const { saving, pending } = mutations
   const [error, setError] = useState<string | null>(null)
+  const closeForm = () => { mutations.dispose(); onClose() }
   const numberOrNull = (value: string) => value === '' ? null : Number(value)
-  const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); setError(null); const input: SleepSessionInput = { startedAt: new Date(start).toISOString(), endedAt: new Date(end).toISOString(), deepSleepMinutes: numberOrNull(deep), lightSleepMinutes: numberOrNull(light), remSleepMinutes: numberOrNull(rem), awakeMinutes: numberOrNull(awake), qualityRating: numberOrNull(quality), note: note || null }; try { if (session) await updateSleepSession(session.id, input); else await createSleepSession(input); showToast(session ? 'Сессия сна обновлена' : 'Сессия сна добавлена'); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить сессию') } finally { setSaving(false) } }
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><form className="habit-form sleep-form" onSubmit={(event) => void submit(event)}>
-    <div className="form-heading"><div><p className="eyebrow">Сон</p><h2>{session ? 'Редактирование' : 'Новая сессия'}</h2></div><button type="button" aria-label="Закрыть" onClick={onClose}><X /></button></div>
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    if (pending) return
+    setError(null)
+    await mutations.run('save', () => {
+      const input: SleepSessionInput = { startedAt: new Date(start).toISOString(), endedAt: new Date(end).toISOString(), deepSleepMinutes: numberOrNull(deep), lightSleepMinutes: numberOrNull(light), remSleepMinutes: numberOrNull(rem), awakeMinutes: numberOrNull(awake), qualityRating: numberOrNull(quality), note: note || null }
+      return session ? updateSleepSession(session.id, input) : createSleepSession(input)
+    }, {
+      onSuccess: () => { showToast(session ? 'Сессия сна обновлена' : 'Сессия сна добавлена'); onSaved() },
+      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось сохранить сессию'),
+    })
+  }
+  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeForm() }}><form className="habit-form sleep-form" onSubmit={(event) => void submit(event)}>
+    <div className="form-heading"><div><p className="eyebrow">Сон</p><h2>{session ? 'Редактирование' : 'Новая сессия'}</h2></div><button type="button" aria-label="Закрыть" onClick={closeForm}><X /></button></div>
     {error && <div className="form-error">{error}</div>}
     <div className="form-grid"><label>Заснул<input required type="datetime-local" value={start} onChange={(event) => setStart(event.target.value)} /></label><label>Проснулся<input required type="datetime-local" value={end} onChange={(event) => setEnd(event.target.value)} /></label><label>Глубокий сон, мин<input min="0" type="number" value={deep} onChange={(event) => setDeep(event.target.value)} /></label><label>Лёгкий сон, мин<input min="0" type="number" value={light} onChange={(event) => setLight(event.target.value)} /></label><label>REM, мин<input min="0" type="number" value={rem} onChange={(event) => setRem(event.target.value)} /></label><label>Бодрствование, мин<input min="0" type="number" value={awake} onChange={(event) => setAwake(event.target.value)} /></label></div>
     <label>Качество сна<select value={quality} onChange={(event) => setQuality(event.target.value)}><option value="">Без оценки</option>{[1, 2, 3, 4, 5].map((value) => <option key={value} value={value}>{value} из 5</option>)}</select></label>
     <label>Заметка<textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} /></label>
-    <div className="form-buttons"><button className="secondary-button" type="button" onClick={onClose}>Отмена</button><button className="primary-button" disabled={saving}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
+    <div className="form-buttons"><button className="secondary-button" type="button" onClick={closeForm}>Отмена</button><button className="primary-button" disabled={pending}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
   </form></div>
 }
