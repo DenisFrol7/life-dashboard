@@ -7,6 +7,8 @@ import {
 import { getDashboard, type Dashboard } from '../api/dashboard'
 import { getApiErrorMessage } from '../api/client'
 import { ErrorState, LoadingState } from '../components/AsyncState'
+import { useToday } from '../hooks/useToday'
+import { useLatestRequest } from '../hooks/useLatestRequest'
 
 const formatDistance = (meters: number | null) => meters == null ? 'Нет данных' : `${(meters / 1000).toFixed(1)} км`
 const formatDuration = (minutes: number) => minutes > 0 ? `${Math.floor(minutes / 60)} ч ${minutes % 60} мин` : 'Нет данных'
@@ -18,17 +20,21 @@ const getGreeting = (hour: number) => {
 }
 
 export function DashboardPage() {
+  const today = useToday()
+  const requests = useLatestRequest()
   const [data, setData] = useState<Dashboard | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null)
-    try { setData(await getDashboard()) }
-    catch (reason) { setError(getApiErrorMessage(reason, 'Не удалось загрузить обзор.')) }
-    finally { setLoading(false) }
-  }, [])
-  useEffect(() => { void load() }, [load])
+    await requests.run(() => getDashboard(), {
+      onStart: () => { setLoading(true); setError(null) },
+      onSuccess: setData,
+      onError: (reason) => setError(getApiErrorMessage(reason, 'Не удалось загрузить обзор.')),
+      onFinish: () => setLoading(false),
+    })
+  }, [requests])
+  useEffect(() => { void load(); return () => requests.invalidate() }, [load, requests, today])
 
   if (loading && !data) return <LoadingState message="Загружаем сводку дня…" />
   if (error || !data) return <ErrorState title="Не удалось загрузить обзор" message={error ?? 'Данные не получены.'} onRetry={() => void load()} />

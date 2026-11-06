@@ -1,19 +1,23 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { createSleepSession, deleteSleepSession, getSleepSessions, updateSleepSession, type SleepSession, type SleepSessionInput } from '../api/sleep'
 import { useToast } from '../components/ToastContext'
+import { useToday } from '../hooks/useToday'
+import { useLatestRequest } from '../hooks/useLatestRequest'
+import { localDate as dateOnly } from '../utils/localDay'
 import { Pencil, Plus, Trash2, X } from 'lucide-react'
 
 const sleepGoalMinutes = 8 * 60
 const sleepChartMaximumMinutes = 10 * 60
 const sleepChartTicks = [10 * 60, 8 * 60, 6 * 60, 4 * 60, 2 * 60, 0]
-const localDate = (value: string | Date) => new Date(value).toLocaleDateString('en-CA')
-const today = localDate(new Date())
+const localDate = (value: string | Date) => dateOnly(new Date(value))
 const formatDuration = (minutes: number) => `${Math.floor(minutes / 60)} ч ${minutes % 60} мин`
 const sleepMinutes = (session: SleepSession) => Math.max(0, Math.round((new Date(session.endedAt).getTime() - new Date(session.startedAt).getTime()) / 60_000) - (session.awakeMinutes ?? 0))
 const formatTime = (value: string) => new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 const formatDate = (value: string) => new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', weekday: 'short' }).format(new Date(value))
 
 export function SleepPage() {
+  const today = useToday()
+  const requests = useLatestRequest()
   const { showToast } = useToast()
   const [period, setPeriod] = useState<7 | 30>(7)
   const [sessions, setSessions] = useState<SleepSession[]>([])
@@ -22,14 +26,16 @@ export function SleepPage() {
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null)
-    const from = new Date(); from.setDate(from.getDate() - (period - 1)); from.setHours(0, 0, 0, 0)
-    const to = new Date(); to.setDate(to.getDate() + 1); to.setHours(0, 0, 0, 0)
-    try { setSessions(await getSleepSessions(from.toISOString(), to.toISOString())) }
-    catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить данные сна') }
-    finally { setLoading(false) }
-  }, [period])
-  useEffect(() => { void load() }, [load])
+    const from = new Date(`${today}T00:00:00`); from.setDate(from.getDate() - (period - 1))
+    const to = new Date(`${today}T00:00:00`); to.setDate(to.getDate() + 1)
+    await requests.run(() => getSleepSessions(from.toISOString(), to.toISOString()), {
+      onStart: () => { setLoading(true); setError(null) },
+      onSuccess: setSessions,
+      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось загрузить данные сна'),
+      onFinish: () => setLoading(false),
+    })
+  }, [period, today, requests])
+  useEffect(() => { void load(); return () => requests.invalidate() }, [load, requests])
 
   const todaySessions = sessions.filter((session) => localDate(session.endedAt) === today)
   const todayMinutes = todaySessions.reduce((sum, session) => sum + sleepMinutes(session), 0)
@@ -38,12 +44,12 @@ export function SleepPage() {
   const averageDuration = sessions.length ? Math.round(sessions.reduce((sum, session) => sum + sleepMinutes(session), 0) / sessions.length) : 0
 
   const chartData = useMemo(() => Array.from({ length: period }, (_, index) => {
-    const date = new Date(); date.setDate(date.getDate() + index - period + 1)
+    const date = new Date(`${today}T12:00:00`); date.setDate(date.getDate() + index - period + 1)
     const key = localDate(date)
     const daily = sessions.filter((session) => localDate(session.endedAt) === key)
     const label = period === 7 ? new Intl.DateTimeFormat('ru-RU', { weekday: 'short' }).format(date) : date.getDate().toString()
     return { key, label, minutes: daily.reduce((sum, session) => sum + sleepMinutes(session), 0) }
-  }), [sessions, period])
+  }), [sessions, period, today])
 
   const remove = async (session: SleepSession) => {
     if (!window.confirm(`Удалить сессию сна за ${formatDate(session.endedAt)}?`)) return

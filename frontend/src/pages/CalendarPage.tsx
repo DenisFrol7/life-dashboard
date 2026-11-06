@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { completeOccurrence, createCalendarEvent, deleteCalendarEvent, deleteOccurrence, getCalendarEvents, getOccurrencesForRange, updateCalendarEvent, type CalendarEvent, type CalendarEventInput, type EventType, type Occurrence } from '../api/calendar'
 import { useToast } from '../components/ToastContext'
+import { useDateSelection } from '../hooks/useDateSelection'
+import { useLatestRequest } from '../hooks/useLatestRequest'
+import { localDate as iso } from '../utils/localDay'
 import { CalendarPlus, Check, ChevronLeft, ChevronRight, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react'
 
-const iso = (date: Date) => date.toLocaleDateString('en-CA')
-const today = iso(new Date())
 const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const eventLabels: Record<EventType, string> = { EVENT: 'Событие', TASK: 'Задача', REMINDER: 'Напоминание' }
 const scheduleLabels = { ONCE: 'Один раз', DAILY: 'Каждый день', WEEKLY: 'Каждую неделю', SELECTED_DAYS: 'Выбранные дни' }
@@ -28,8 +29,11 @@ const monthCells = (month: Date) => {
 
 export function CalendarPage() {
   const { showToast } = useToast()
-  const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1, 12))
-  const [selectedDate, setSelectedDate] = useState(today)
+  const { today, date: selectedDate, setDate: setSelectedDate, selectToday } = useDateSelection()
+  const requests = useLatestRequest()
+  const [browsedMonth, setMonth] = useState<Date | null>(null)
+  const selectedMonth = selectedDate.slice(0, 7)
+  const month = useMemo(() => browsedMonth ?? new Date(`${selectedMonth}-01T12:00:00`), [browsedMonth, selectedMonth])
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [occurrences, setOccurrences] = useState<Record<number, Occurrence[]>>({})
   const [editing, setEditing] = useState<CalendarEvent | 'new' | null>(null)
@@ -37,27 +41,37 @@ export function CalendarPage() {
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null)
-    try { const cells = monthCells(month); const [result, rangeOccurrences] = await Promise.all([getCalendarEvents(), getOccurrencesForRange(iso(cells[0]), iso(cells.at(-1)!))]); setEvents(result); const grouped: Record<number, Occurrence[]> = {}; for (const item of rangeOccurrences) (grouped[item.eventId] ??= []).push(item.occurrence); setOccurrences(grouped) }
-    catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить календарь') }
-    finally { setLoading(false) }
-  }, [month])
-  useEffect(() => { void load() }, [load])
+    const cells = monthCells(month)
+    await requests.run(() => Promise.all([getCalendarEvents(), getOccurrencesForRange(iso(cells[0]), iso(cells.at(-1)!))]), {
+      onStart: () => { setLoading(true); setError(null) },
+      onSuccess: ([result, rangeOccurrences]) => {
+        setEvents(result)
+        const grouped: Record<number, Occurrence[]> = {}
+        for (const item of rangeOccurrences) (grouped[item.eventId] ??= []).push(item.occurrence)
+        setOccurrences(grouped)
+      },
+      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось загрузить календарь'),
+      onFinish: () => setLoading(false),
+    })
+  }, [month, requests])
+  useEffect(() => { void load(); return () => requests.invalidate() }, [load, requests, today])
 
   const cells = useMemo(() => monthCells(month), [month])
   const selectedEvents = events.filter((event) => occursOn(event, selectedDate))
   const occurrenceFor = (event: CalendarEvent, date: string) => occurrences[event.id]?.find((item) => item.occurrenceDate === date)
+  const selectDate = (date: string) => { setMonth(month); setSelectedDate(date) }
+  const showToday = () => { setMonth(null); selectToday() }
   const changeMonth = (delta: number) => { const next = new Date(month); next.setMonth(next.getMonth() + delta); setMonth(next); setSelectedDate(iso(new Date(next.getFullYear(), next.getMonth(), 1, 12))) }
   const toggleTask = async (event: CalendarEvent) => { try { if (occurrenceFor(event, selectedDate)) await deleteOccurrence(event.id, selectedDate); else await completeOccurrence(event.id, selectedDate); await load() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось изменить задачу') } }
   const remove = async (event: CalendarEvent) => { if (!window.confirm(`Удалить «${event.title}»${event.scheduleType === 'ONCE' ? '' : ' и все повторения'}?`)) return; try { await deleteCalendarEvent(event.id); showToast('Запись календаря удалена'); await load() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить запись') } }
 
   return <div className="calendar-page">
-    <section className="calendar-toolbar"><div><button aria-label="Предыдущий месяц" onClick={() => changeMonth(-1)}><ChevronLeft /></button><h2>{new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(month)}</h2><button aria-label="Следующий месяц" onClick={() => changeMonth(1)}><ChevronRight /></button><button className="today-button" onClick={() => { const now = new Date(); setMonth(new Date(now.getFullYear(), now.getMonth(), 1, 12)); setSelectedDate(today) }}>Сегодня</button></div><button className="primary-button icon-button" onClick={() => setEditing('new')}><Plus />Добавить</button></section>
+    <section className="calendar-toolbar"><div><button aria-label="Предыдущий месяц" onClick={() => changeMonth(-1)}><ChevronLeft /></button><h2>{new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(month)}</h2><button aria-label="Следующий месяц" onClick={() => changeMonth(1)}><ChevronRight /></button><button className="today-button" onClick={showToday}>Сегодня</button></div><button className="primary-button icon-button" onClick={() => setEditing('new')}><Plus />Добавить</button></section>
     {error && <div className="notice error calendar-error"><strong>Ошибка</strong><span>{error}</span></div>}
     <section className="calendar-layout">
       <article className="month-calendar">
         <div className="weekday-row">{weekdays.map((day) => <span key={day}>{day}</span>)}</div>
-        <div className="month-grid">{cells.map((date) => { const key = iso(date); const daily = events.filter((event) => occursOn(event, key)); return <button className={`${date.getMonth() === month.getMonth() ? '' : 'outside'} ${key === today ? 'today' : ''} ${key === selectedDate ? 'selected' : ''}`} key={key} onClick={() => setSelectedDate(key)}><span>{date.getDate()}</span><div>{daily.slice(0, 3).map((event) => <i className={event.eventType.toLowerCase()} key={event.id} title={event.title}>{event.title}</i>)}{daily.length > 3 && <small>+{daily.length - 3}</small>}</div></button> })}</div>
+        <div className="month-grid">{cells.map((date) => { const key = iso(date); const daily = events.filter((event) => occursOn(event, key)); return <button className={`${date.getMonth() === month.getMonth() ? '' : 'outside'} ${key === today ? 'today' : ''} ${key === selectedDate ? 'selected' : ''}`} key={key} onClick={() => selectDate(key)}><span>{date.getDate()}</span><div>{daily.slice(0, 3).map((event) => <i className={event.eventType.toLowerCase()} key={event.id} title={event.title}>{event.title}</i>)}{daily.length > 3 && <small>+{daily.length - 3}</small>}</div></button> })}</div>
       </article>
       <aside className="day-agenda">
         <div className="agenda-heading"><p className="eyebrow">Выбранный день</p><h3>{new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', weekday: 'long' }).format(dateFromIso(selectedDate))}</h3><span>{selectedEvents.length} записей</span></div>

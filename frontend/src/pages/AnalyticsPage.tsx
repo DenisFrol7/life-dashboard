@@ -1,35 +1,46 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getAnalytics, type Analytics, type AnalyticsDailyPoint, type AnalyticsOverview } from '../api/analytics'
 import { getApiErrorMessage } from '../api/client'
+import { useToday } from '../hooks/useToday'
+import { useLatestRequest } from '../hooks/useLatestRequest'
+import { localDate } from '../utils/localDay'
 
 type Period = 7 | 30 | 365
 type ChartPoint = { key: string; label: string; tooltipLabel: string; steps: number; sleepMinutes: number; gameMinutes: number }
-const localDate = (date: Date) => date.toLocaleDateString('en-CA')
 const dateLabel = (date: string) => new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(new Date(`${date}T12:00:00`))
 const dayLabel = (date: string) => new Intl.DateTimeFormat('ru-RU', { day: 'numeric' }).format(new Date(`${date}T12:00:00`))
 const duration = (minutes: number) => `${Math.floor(minutes / 60)} ч ${minutes % 60} мин`
 const number = (value: number) => value.toLocaleString('ru-RU')
 
-function periodDates(days: Period) { const end = new Date(); const start = new Date(); start.setDate(end.getDate() - days + 1); return { from: localDate(start), to: localDate(end) } }
+function periodDates(days: Period, today: string) { const start = new Date(`${today}T12:00:00`); start.setDate(start.getDate() - days + 1); return { from: localDate(start), to: today } }
 function delta(current: number, previous: number) { if (previous === 0) return current === 0 ? null : 100; return Math.round((current - previous) / previous * 100) }
 
 export function AnalyticsPage() {
-  const initial = periodDates(30)
+  const today = useToday()
+  const requests = useLatestRequest()
   const [period, setPeriod] = useState<Period | 'custom' | 'all'>(30)
-  const [from, setFrom] = useState(initial.from)
-  const [to, setTo] = useState(initial.to)
+  const [custom, setCustom] = useState(() => periodDates(30, today))
+  const range = typeof period === 'number' ? periodDates(period, today) : period === 'all' ? { from: custom.from, to: today } : custom
+  const { from, to } = range
   const [analytics, setAnalytics] = useState<Analytics | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async () => { setLoading(true); setError(null); try { setAnalytics(await getAnalytics(from, to, period === 'all')) } catch (reason) { setError(getApiErrorMessage(reason, 'Не удалось загрузить статистику')) } finally { setLoading(false) } }, [from, to, period])
-  useEffect(() => { void load() }, [load])
-  const choosePeriod = (value: Period) => { const dates = periodDates(value); setPeriod(value); setFrom(dates.from); setTo(dates.to) }
-  const chooseAllTime = () => { setPeriod('all'); setTo(localDate(new Date())) }
+  const load = useCallback(async () => requests.run(() => getAnalytics(from, to, period === 'all'), {
+    onStart: () => { setLoading(true); setError(null) },
+    onSuccess: setAnalytics,
+    onError: (reason) => setError(getApiErrorMessage(reason, 'Не удалось загрузить статистику')),
+    onFinish: () => setLoading(false),
+  }), [from, to, period, requests])
+  useEffect(() => { void load(); return () => requests.invalidate() }, [load, requests])
+  const choosePeriod = (value: Period) => setPeriod(value)
+  const chooseAllTime = () => setPeriod('all')
+  const chooseFrom = (value: string) => { setCustom({ from: value, to: period === 'all' && analytics ? analytics.to : to }); setPeriod('custom') }
+  const chooseTo = (value: string) => { setCustom({ from: period === 'all' && analytics ? analytics.from : from, to: value }); setPeriod('custom') }
   const chart = useMemo(() => analytics ? chartPoints(analytics.daily) : [], [analytics])
 
   return <div className="analytics-page">
-    <section className="analytics-toolbar"><div className="filter-tabs" aria-label="Период статистики">{([7, 30, 365] as Period[]).map(value => <button key={value} className={period === value ? 'active' : ''} onClick={() => choosePeriod(value)}>{value === 7 ? '7 дней' : value === 30 ? '30 дней' : 'Год'}</button>)}<button className={period === 'all' ? 'active' : ''} onClick={chooseAllTime}>Всё время</button></div><div className="analytics-dates"><label>С<input type="date" value={period === 'all' && analytics ? analytics.from : from} max={to} onChange={event => { setPeriod('custom'); setFrom(event.target.value) }} /></label><label>По<input type="date" value={period === 'all' && analytics ? analytics.to : to} min={period === 'all' && analytics ? analytics.from : from} onChange={event => { if (period === 'all' && analytics) setFrom(analytics.from); setPeriod('custom'); setTo(event.target.value) }} /></label></div></section>
+    <section className="analytics-toolbar"><div className="filter-tabs" aria-label="Период статистики">{([7, 30, 365] as Period[]).map(value => <button key={value} className={period === value ? 'active' : ''} onClick={() => choosePeriod(value)}>{value === 7 ? '7 дней' : value === 30 ? '30 дней' : 'Год'}</button>)}<button className={period === 'all' ? 'active' : ''} onClick={chooseAllTime}>Всё время</button></div><div className="analytics-dates"><label>С<input type="date" value={period === 'all' && analytics ? analytics.from : from} max={to} onChange={event => chooseFrom(event.target.value)} /></label><label>По<input type="date" value={period === 'all' && analytics ? analytics.to : to} min={period === 'all' && analytics ? analytics.from : from} onChange={event => chooseTo(event.target.value)} /></label></div></section>
     {error && <div className="notice error"><strong>Ошибка</strong><span>{error}</span></div>}
     {loading ? <div className="loading"><span />Собираем статистику…</div> : analytics && <>
       <section className="analytics-summary">

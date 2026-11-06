@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { deleteActivity, getActivityRange, putActivity, type DailyActivity } from '../api/activity'
 import { useToast } from '../components/ToastContext'
+import { useDateSelection } from '../hooks/useDateSelection'
+import { useLatestRequest } from '../hooks/useLatestRequest'
+import { localDate as isoDate } from '../utils/localDay'
 
 const stepGoal = 7_000
 const chartMaximum = 12_000
 const chartTicks = [12_000, 9_000, 7_000, 5_000, 3_000, 1_000, 0]
 const activeDayThreshold = 1_000
-const isoDate = (date: Date) => date.toLocaleDateString('en-CA')
-const today = isoDate(new Date())
 const shiftDate = (date: string, days: number) => {
   const value = new Date(`${date}T12:00:00`)
   value.setDate(value.getDate() + days)
@@ -17,20 +18,23 @@ const formatDate = (date: string, options?: Intl.DateTimeFormatOptions) =>
   new Intl.DateTimeFormat('ru-RU', options ?? { day: 'numeric', month: 'short' }).format(new Date(`${date}T12:00:00`))
 
 export function ActivityPage() {
+  const { today, date: selectedDate, setDate: setSelectedDate, selectToday } = useDateSelection()
+  const requests = useLatestRequest()
   const [period, setPeriod] = useState<7 | 30>(7)
-  const [selectedDate, setSelectedDate] = useState(today)
   const [items, setItems] = useState<DailyActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null)
-    try { setItems(await getActivityRange(shiftDate(today, -(period - 1)), today)) }
-    catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить активность') }
-    finally { setLoading(false) }
-  }, [period])
+    await requests.run(() => getActivityRange(shiftDate(today, -(period - 1)), today), {
+      onStart: () => { setLoading(true); setError(null) },
+      onSuccess: setItems,
+      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось загрузить активность'),
+      onFinish: () => setLoading(false),
+    })
+  }, [period, today, requests])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => { void load(); return () => requests.invalidate() }, [load, requests])
   const selected = items.find((item) => item.activityDate === selectedDate)
   const current = items.find((item) => item.activityDate === today)
   const totalSteps = items.reduce((sum, item) => sum + (item.steps ?? 0), 0)
@@ -41,7 +45,7 @@ export function ActivityPage() {
   const chartData = useMemo(() => Array.from({ length: period }, (_, index) => {
     const date = shiftDate(today, index - period + 1)
     return { date, steps: items.find((item) => item.activityDate === date)?.steps ?? 0 }
-  }), [items, period])
+  }), [items, period, today])
   return <div className="activity-page">
     <section className="activity-summary">
       <div><p className="eyebrow">Сегодня</p><strong>{(current?.steps ?? 0).toLocaleString('ru-RU')}</strong><span>шагов из {stepGoal.toLocaleString('ru-RU')}</span></div>
@@ -73,7 +77,7 @@ export function ActivityPage() {
         <div className="chart-goal"><span />Цель — {stepGoal.toLocaleString('ru-RU')} шагов в день</div>
       </article>
 
-      <ActivityForm date={selectedDate} activity={selected} onDate={setSelectedDate} onSaved={() => void load()} onDeleted={() => { setSelectedDate(today); void load() }} />
+      <ActivityForm today={today} date={selectedDate} activity={selected} onDate={setSelectedDate} onEdited={() => setSelectedDate(selectedDate)} onSaved={() => void load()} onDeleted={() => { selectToday(); void load() }} />
     </section>
 
     <section className="activity-panel history-panel">
@@ -86,22 +90,29 @@ export function ActivityPage() {
   </div>
 }
 
-function ActivityForm({ date, activity, onDate, onSaved, onDeleted }: { date: string; activity?: DailyActivity; onDate: (date: string) => void; onSaved: () => void; onDeleted: () => void }) {
+function ActivityForm({ today, date, activity, onDate, onEdited, onSaved, onDeleted }: { today: string; date: string; activity?: DailyActivity; onDate: (date: string) => void; onEdited: () => void; onSaved: () => void; onDeleted: () => void }) {
   const { showToast } = useToast()
   const [steps, setSteps] = useState('')
   const [distance, setDistance] = useState('')
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  useEffect(() => { setSteps(activity?.steps?.toString() ?? ''); setDistance(activity?.distanceMeters == null ? '' : (activity.distanceMeters / 1000).toString()); setNote(activity?.note ?? ''); setError(null) }, [activity, date])
-  const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); setError(null); try { await putActivity(date, { steps: steps === '' ? null : Number(steps), distanceMeters: distance === '' ? null : Math.round(Number(distance) * 1000), note: note || null }); showToast('Активность сохранена'); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить запись') } finally { setSaving(false) } }
+  const dirty = useRef(false)
+  const loadedDate = useRef(date)
+  const markEdited = () => { dirty.current = true; onEdited() }
+  useEffect(() => {
+    if (loadedDate.current !== date) { loadedDate.current = date; dirty.current = false }
+    if (dirty.current) return
+    setSteps(activity?.steps?.toString() ?? ''); setDistance(activity?.distanceMeters == null ? '' : (activity.distanceMeters / 1000).toString()); setNote(activity?.note ?? ''); setError(null)
+  }, [activity, date])
+  const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); setError(null); try { await putActivity(date, { steps: steps === '' ? null : Number(steps), distanceMeters: distance === '' ? null : Math.round(Number(distance) * 1000), note: note || null }); dirty.current = false; showToast('Активность сохранена'); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить запись') } finally { setSaving(false) } }
   const remove = async () => { if (!activity || !window.confirm(`Удалить активность за ${formatDate(date)}?`)) return; try { await deleteActivity(date); showToast('Запись активности удалена'); onDeleted() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить запись') } }
   return <form className="activity-panel activity-form" onSubmit={(event) => void submit(event)}>
     <div className="panel-heading"><div><p className="eyebrow">Данные за день</p><h3>{date === today ? 'Сегодня' : formatDate(date, { day: 'numeric', month: 'long' })}</h3></div><input aria-label="Дата активности" max={today} type="date" value={date} onClick={(event) => event.currentTarget.showPicker?.()} onChange={(event) => onDate(event.target.value)} /></div>
     {error && <div className="form-error">{error}</div>}
-    <label>Шаги<div className="input-with-unit"><input min="0" step="1" type="number" value={steps} onChange={(event) => setSteps(event.target.value)} placeholder="0" /><span>шагов</span></div></label>
-    <label>Дистанция<div className="input-with-unit"><input min="0" step="0.01" type="number" value={distance} onChange={(event) => setDistance(event.target.value)} placeholder="0.00" /><span>км</span></div></label>
-    <label>Заметка<textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Например, вечерняя прогулка" /></label>
+    <label>Шаги<div className="input-with-unit"><input min="0" step="1" type="number" value={steps} onChange={(event) => { markEdited(); setSteps(event.target.value) }} placeholder="0" /><span>шагов</span></div></label>
+    <label>Дистанция<div className="input-with-unit"><input min="0" step="0.01" type="number" value={distance} onChange={(event) => { markEdited(); setDistance(event.target.value) }} placeholder="0.00" /><span>км</span></div></label>
+    <label>Заметка<textarea rows={3} value={note} onChange={(event) => { markEdited(); setNote(event.target.value) }} placeholder="Например, вечерняя прогулка" /></label>
     <div className="activity-form-actions">{activity && <button className="danger-button" type="button" onClick={() => void remove()}>Удалить</button>}<button className="primary-button" disabled={saving}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
   </form>
 }

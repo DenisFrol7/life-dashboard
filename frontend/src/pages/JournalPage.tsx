@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { addJournalTag, createJournalEntry, createTag, deleteJournalEntry, getJournalEntries, getTags, removeJournalTag, updateJournalEntry, type JournalEntry, type JournalEntryInput, type Tag } from '../api/journal'
 import { useToast } from '../components/ToastContext'
+import { localDate } from '../utils/localDay'
 import { NotebookPen, Pencil, Pin, Plus, Search, Trash2, X } from 'lucide-react'
 
-const today = new Date().toLocaleDateString('en-CA')
 const formatDate = (date: string) => new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${date}T12:00:00`))
 const excerpt = (text: string, length = 180) => text.length > length ? `${text.slice(0, length).trim()}…` : text
 
@@ -46,7 +46,7 @@ export function BlogPage() {
 
 function JournalForm({ entry, tags: initialTags, onClose, onSaved }: { entry?: JournalEntry; tags: Tag[]; onClose: () => void; onSaved: () => void }) {
   const { showToast } = useToast()
-  const [date, setDate] = useState(entry?.entryDate ?? today)
+  const [date, setDate] = useState(() => entry?.entryDate ?? localDate())
   const [title, setTitle] = useState(entry?.title ?? '')
   const [content, setContent] = useState(entry?.content ?? '')
   const [pinned, setPinned] = useState(entry?.pinned ?? false)

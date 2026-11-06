@@ -4,9 +4,11 @@ import {
   type Habit, type HabitEntry, type HabitInput, type HabitStatus,
 } from '../api/habits'
 import { useToast } from '../components/ToastContext'
+import { useToday } from '../hooks/useToday'
+import { useLatestRequest } from '../hooks/useLatestRequest'
+import { localDate } from '../utils/localDay'
 import { Check, Pencil, Plus, RefreshCw, Trash2, X } from 'lucide-react'
 
-const today = new Date().toLocaleDateString('en-CA')
 const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 const statusLabels: Record<HabitStatus, string> = { ACTIVE: 'Активные', PAUSED: 'На паузе', ARCHIVED: 'Архив' }
 const sourceLabels = { MANUAL: 'Вручную', DAILY_ACTIVITY_STEPS: 'Из активности: шаги', DAILY_ACTIVITY_DISTANCE: 'Из активности: дистанция', SLEEP_DURATION: 'Из сна' }
@@ -21,12 +23,14 @@ const formatAutomatedValue = (habit: Habit, entry?: HabitEntry) => {
   return `${entry.value} ${habit.unit ?? ''}`.trim()
 }
 
-const emptyHabit: HabitInput = {
+const emptyHabit = (date: string): HabitInput => ({
   name: '', description: null, trackingType: 'BOOLEAN', dataSource: 'MANUAL', targetValue: 1,
-  unit: null, scheduleType: 'DAILY', startDate: today, endDate: null, status: 'ACTIVE', scheduleDays: [],
-}
+  unit: null, scheduleType: 'DAILY', startDate: date, endDate: null, status: 'ACTIVE', scheduleDays: [],
+})
 
 export function HabitsPage() {
+  const today = useToday()
+  const requests = useLatestRequest()
   const { showToast } = useToast()
   const [status, setStatus] = useState<HabitStatus>('ACTIVE')
   const [habits, setHabits] = useState<Habit[]>([])
@@ -36,17 +40,18 @@ export function HabitsPage() {
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    setLoading(true); setError(null)
-    try {
-      const [result, datedEntries] = await Promise.all([getHabits(status), getHabitEntriesForDate(today)])
-      setHabits(result)
-      setEntries(Object.fromEntries(datedEntries.map((item) => [item.habitId, item.entry])))
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Не удалось загрузить привычки')
-    } finally { setLoading(false) }
-  }, [status])
+    await requests.run(() => Promise.all([getHabits(status), getHabitEntriesForDate(today)]), {
+      onStart: () => { setLoading(true); setError(null) },
+      onSuccess: ([result, datedEntries]) => {
+        setHabits(result)
+        setEntries(Object.fromEntries(datedEntries.map((item) => [item.habitId, item.entry])))
+      },
+      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось загрузить привычки'),
+      onFinish: () => setLoading(false),
+    })
+  }, [status, today, requests])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => { void load(); return () => requests.invalidate() }, [load, requests])
 
   const toggleBoolean = async (habit: Habit) => {
     try {
@@ -122,7 +127,7 @@ function HabitCard({ habit, entry, onToggle, onValue, onEdit, onDelete }: {
 
 function HabitForm({ habit, onClose, onSaved }: { habit?: Habit; onClose: () => void; onSaved: () => void }) {
   const { showToast } = useToast()
-  const [form, setForm] = useState<HabitInput>(habit ? { ...habit } : emptyHabit)
+  const [form, setForm] = useState<HabitInput>(() => habit ? { ...habit } : emptyHabit(localDate()))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const set = <K extends keyof HabitInput>(key: K, value: HabitInput[K]) => setForm((current) => ({ ...current, [key]: value }))
