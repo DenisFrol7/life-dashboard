@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { deleteActivity, getActivityRange, putActivity, type DailyActivity } from '../api/activity'
 import { useToast } from '../components/ToastContext'
 import { useDateSelection } from '../hooks/useDateSelection'
 import { useLatestRequest } from '../hooks/useLatestRequest'
+import { useFormMutation } from '../hooks/useFormMutation'
+import { createActivityDraft } from '../utils/activityDraft'
 import { localDate as isoDate } from '../utils/localDay'
 
 const stepGoal = 7_000
@@ -95,24 +97,61 @@ function ActivityForm({ today, date, activity, onDate, onEdited, onSaved, onDele
   const [steps, setSteps] = useState('')
   const [distance, setDistance] = useState('')
   const [note, setNote] = useState('')
-  const [saving, setSaving] = useState(false)
+  const mutations = useFormMutation()
+  const { saving, deleting, pending } = mutations
   const [error, setError] = useState<string | null>(null)
-  const dirty = useRef(false)
-  const loadedDate = useRef(date)
-  const markEdited = () => { dirty.current = true; onEdited() }
-  useEffect(() => {
-    if (loadedDate.current !== date) { loadedDate.current = date; dirty.current = false }
-    if (dirty.current) return
+  const [draft] = useState(() => createActivityDraft(date))
+  const callbacks = useRef({ onSaved, onDeleted })
+  useLayoutEffect(() => { callbacks.current = { onSaved, onDeleted } }, [onSaved, onDeleted])
+  const markEdited = () => { draft.edit(); onEdited() }
+  useLayoutEffect(() => {
+    draft.selectDate(date)
+    if (draft.hasChanges) return
     setSteps(activity?.steps?.toString() ?? ''); setDistance(activity?.distanceMeters == null ? '' : (activity.distanceMeters / 1000).toString()); setNote(activity?.note ?? ''); setError(null)
-  }, [activity, date])
-  const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); setError(null); try { await putActivity(date, { steps: steps === '' ? null : Number(steps), distanceMeters: distance === '' ? null : Math.round(Number(distance) * 1000), note: note || null }); dirty.current = false; showToast('Активность сохранена'); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить запись') } finally { setSaving(false) } }
-  const remove = async () => { if (!activity || !window.confirm(`Удалить активность за ${formatDate(date)}?`)) return; try { await deleteActivity(date); showToast('Запись активности удалена'); onDeleted() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить запись') } }
+  }, [activity, date, draft])
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    if (pending) return
+    const snapshot = draft.snapshot()
+    const input = { steps: steps === '' ? null : Number(steps), distanceMeters: distance === '' ? null : Math.round(Number(distance) * 1000), note: note || null }
+    setError(null)
+    await mutations.run('save', () => putActivity(snapshot.date, input), {
+      onSuccess: () => {
+        if (draft.accept(snapshot)) showToast('Активность сохранена')
+        callbacks.current.onSaved()
+      },
+      onError: (reason) => {
+        if (draft.isCurrent(snapshot)) setError(reason instanceof Error ? reason.message : 'Не удалось сохранить запись')
+      },
+    })
+  }
+  const remove = async () => {
+    if (!activity || pending) return
+    const snapshot = draft.snapshot()
+    setError(null)
+    await mutations.run('delete', async () => {
+      if (!window.confirm(`Удалить активность за ${formatDate(snapshot.date)}?`)) return false
+      await deleteActivity(snapshot.date)
+      return true
+    }, {
+      onSuccess: (deleted) => {
+        if (!deleted) return
+        if (draft.accept(snapshot)) {
+          showToast('Запись активности удалена')
+          callbacks.current.onDeleted()
+        } else callbacks.current.onSaved()
+      },
+      onError: (reason) => {
+        if (draft.isCurrent(snapshot)) setError(reason instanceof Error ? reason.message : 'Не удалось удалить запись')
+      },
+    })
+  }
   return <form className="activity-panel activity-form" onSubmit={(event) => void submit(event)}>
     <div className="panel-heading"><div><p className="eyebrow">Данные за день</p><h3>{date === today ? 'Сегодня' : formatDate(date, { day: 'numeric', month: 'long' })}</h3></div><input aria-label="Дата активности" max={today} type="date" value={date} onClick={(event) => event.currentTarget.showPicker?.()} onChange={(event) => onDate(event.target.value)} /></div>
     {error && <div className="form-error">{error}</div>}
     <label>Шаги<div className="input-with-unit"><input min="0" step="1" type="number" value={steps} onChange={(event) => { markEdited(); setSteps(event.target.value) }} placeholder="0" /><span>шагов</span></div></label>
     <label>Дистанция<div className="input-with-unit"><input min="0" step="0.01" type="number" value={distance} onChange={(event) => { markEdited(); setDistance(event.target.value) }} placeholder="0.00" /><span>км</span></div></label>
     <label>Заметка<textarea rows={3} value={note} onChange={(event) => { markEdited(); setNote(event.target.value) }} placeholder="Например, вечерняя прогулка" /></label>
-    <div className="activity-form-actions">{activity && <button className="danger-button" type="button" onClick={() => void remove()}>Удалить</button>}<button className="primary-button" disabled={saving}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
+    <div className="activity-form-actions">{activity && <button className="danger-button" type="button" disabled={pending} onClick={() => void remove()}>{deleting ? 'Удаляем…' : 'Удалить'}</button>}<button className="primary-button" disabled={pending}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div>
   </form>
 }
