@@ -816,23 +816,26 @@ export function ProgressForm({
   const [value, setValue] = useState(
     audio ? (book.currentMinute ?? 0) : (book.currentPage ?? 0),
   );
+  const mutations = useFormMutation();
+  const { saving, pending } = mutations;
   const [error, setError] = useState<string | null>(null);
+  const closeForm = () => { mutations.dispose(); onClose(); };
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    try {
-      await putBookProgress(
-        book.id,
-        audio ? null : value,
-        audio ? value : null,
-      );
-      onSaved();
-    } catch (reason) {
-      setError(
+    if (pending) return;
+    setError(null);
+    await mutations.run('save', () => putBookProgress(
+      book.id,
+      audio ? null : value,
+      audio ? value : null,
+    ), {
+      onSuccess: onSaved,
+      onError: (reason) => setError(
         reason instanceof Error
           ? reason.message
           : "Не удалось обновить прогресс",
-      );
-    }
+      ),
+    });
   };
   return (
     <div className="modal-backdrop">
@@ -845,7 +848,7 @@ export function ProgressForm({
             <p className="eyebrow">Прогресс</p>
             <h2>{book.title}</h2>
           </div>
-          <button type="button" onClick={onClose}>
+          <button type="button" onClick={closeForm}>
             ×
           </button>
         </div>
@@ -862,10 +865,10 @@ export function ProgressForm({
           />
         </label>
         <div className="form-buttons">
-          <button className="secondary-button" type="button" onClick={onClose}>
+          <button className="secondary-button" type="button" onClick={closeForm}>
             Отмена
           </button>
-          <button className="primary-button">Сохранить</button>
+          <button className="primary-button" disabled={pending}>{saving ? "Сохраняем…" : "Сохранить"}</button>
         </div>
       </form>
     </div>
@@ -902,28 +905,36 @@ export function SessionForm({
         },
   );
   const [error, setError] = useState<string | null>(null);
+  const mutations = useFormMutation();
+  const { saving, deleting, pending } = mutations;
+  const closeForm = () => { mutations.dispose(); onClose(); };
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    try {
+    if (pending) return;
+    setError(null);
+    await mutations.run('save', async () => {
       if (session) await updateReadingSession(session.id, input);
       else await createReadingSession(book.id, input);
-      onSaved();
-    } catch (reason) {
-      setError(
+    }, {
+      onSuccess: onSaved,
+      onError: (reason) => setError(
         reason instanceof Error ? reason.message : "Не удалось сохранить сеанс",
-      );
-    }
+      ),
+    });
   };
   const remove = async () => {
-    if (!session || !confirm("Удалить сеанс чтения?")) return;
-    try {
+    if (!session || pending) return;
+    setError(null);
+    await mutations.run('delete', async () => {
+      if (!window.confirm("Удалить сеанс чтения?")) return false;
       await deleteReadingSession(session.id);
-      onSaved();
-    } catch (reason) {
-      setError(
+      return true;
+    }, {
+      onSuccess: (deleted) => { if (deleted) onSaved(); },
+      onError: (reason) => setError(
         reason instanceof Error ? reason.message : "Не удалось удалить сеанс",
-      );
-    }
+      ),
+    });
   };
   return (
     <div className="modal-backdrop">
@@ -936,7 +947,7 @@ export function SessionForm({
             <p className="eyebrow">Сеанс чтения</p>
             <h2>{book.title}</h2>
           </div>
-          <button type="button" onClick={onClose}>
+          <button type="button" onClick={closeForm}>
             ×
           </button>
         </div>
@@ -1019,18 +1030,12 @@ export function SessionForm({
         </p>
         <div className="form-buttons">
           {session && (
-            <button
-              className="danger-button"
-              type="button"
-              onClick={() => void remove()}
-            >
-              Удалить
-            </button>
+            <button className="danger-button" type="button" disabled={pending} onClick={() => void remove()}>{deleting ? "Удаляем…" : "Удалить"}</button>
           )}
-          <button className="secondary-button" type="button" onClick={onClose}>
+          <button className="secondary-button" type="button" onClick={closeForm}>
             Отмена
           </button>
-          <button className="primary-button">Сохранить</button>
+          <button className="primary-button" disabled={pending}>{saving ? "Сохраняем…" : "Сохранить"}</button>
         </div>
       </form>
     </div>

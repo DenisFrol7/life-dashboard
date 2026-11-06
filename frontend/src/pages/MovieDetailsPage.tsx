@@ -14,6 +14,7 @@ import {
   type Watch,
 } from '../api/movies'
 import { MovieForm } from './MoviesPage'
+import { useFormMutation } from '../hooks/useFormMutation'
 
 const statusLabels: Record<LibraryStatus, string> = {
   NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю',
@@ -66,9 +67,30 @@ export function MovieDetailsPage() {
 
 function MovieWatchForm({ movie, watch, onClose, onSaved }: { movie: Movie; watch?: Watch; onClose: () => void; onSaved: () => void }) {
   const [watchedAt, setWatchedAt] = useState(watch?.watchedAt ?? new Date().toISOString())
-  const [saving, setSaving] = useState(false)
+  const mutations = useFormMutation()
+  const { saving, deleting, pending } = mutations
   const [error, setError] = useState<string | null>(null)
-  const submit = async (event: FormEvent) => { event.preventDefault(); setSaving(true); setError(null); try { if (watch) await updateMovieWatch(watch.id, watchedAt); else await watchMovie(movie.id, watchedAt); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить просмотр') } finally { setSaving(false) } }
-  const remove = async () => { if (!watch || !window.confirm(`Удалить просмотр №${watch.watchNumber}?`)) return; setSaving(true); try { await deleteMovieWatch(watch.id); onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить просмотр'); setSaving(false) } }
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><form className="habit-form compact-book-form" onSubmit={(event) => void submit(event)}><div className="form-heading"><div><p className="eyebrow">История просмотров</p><h2>{watch ? `Просмотр №${watch.watchNumber}` : 'Новый просмотр'}</h2></div><button type="button" onClick={onClose}>×</button></div>{error && <div className="form-error">{error}</div>}<label>Дата и время<input required type="datetime-local" value={localDateTime(watchedAt)} onChange={(event) => setWatchedAt(new Date(event.target.value).toISOString())} /></label><div className="form-buttons">{watch && <button className="danger-button" type="button" disabled={saving} onClick={() => void remove()}>Удалить</button>}<button className="secondary-button" type="button" onClick={onClose}>Отмена</button><button className="primary-button" disabled={saving}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div></form></div>
+  const closeForm = () => { mutations.dispose(); onClose() }
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    if (pending) return
+    setError(null)
+    await mutations.run('save', () => watch ? updateMovieWatch(watch.id, watchedAt) : watchMovie(movie.id, watchedAt), {
+      onSuccess: onSaved,
+      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось сохранить просмотр'),
+    })
+  }
+  const remove = async () => {
+    if (!watch || pending) return
+    setError(null)
+    await mutations.run('delete', async () => {
+      if (!window.confirm(`Удалить просмотр №${watch.watchNumber}?`)) return false
+      await deleteMovieWatch(watch.id)
+      return true
+    }, {
+      onSuccess: (deleted) => { if (deleted) onSaved() },
+      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось удалить просмотр'),
+    })
+  }
+  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeForm() }}><form className="habit-form compact-book-form" onSubmit={(event) => void submit(event)}><div className="form-heading"><div><p className="eyebrow">История просмотров</p><h2>{watch ? `Просмотр №${watch.watchNumber}` : 'Новый просмотр'}</h2></div><button type="button" onClick={closeForm}>×</button></div>{error && <div className="form-error">{error}</div>}<label>Дата и время<input required type="datetime-local" value={localDateTime(watchedAt)} onChange={(event) => setWatchedAt(new Date(event.target.value).toISOString())} /></label><div className="form-buttons">{watch && <button className="danger-button" type="button" disabled={pending} onClick={() => void remove()}>{deleting ? "Удаляем…" : "Удалить"}</button>}<button className="secondary-button" type="button" onClick={closeForm}>Отмена</button><button className="primary-button" disabled={pending}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div></form></div>
 }

@@ -3051,14 +3051,18 @@ export function GameSessionForm({
   });
   const [groups, setGroups] = useState<XboxAchievementGroup[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const mutations = useFormMutation();
+  const { saving, deleting, pending } = mutations;
   const [error, setError] = useState<string | null>(null);
+  const closeForm = () => { mutations.dispose(); onClose(); };
   const selectedEntry = library.find((entry) => entry.id === libraryId);
   const achievementsEnabled = selectedEntry
     ? supportsXboxProgress(selectedEntry)
     : false;
   const achievementValuesEntered =
     input.unlockedAchievements > 0 || input.earnedGamerscore > 0;
+  const cannotSave = pending || loadingGroups ||
+    (achievementValuesEntered && input.achievementGroupId == null);
   useEffect(() => {
     let active = true;
     if (!achievementsEnabled) {
@@ -3104,42 +3108,46 @@ export function GameSessionForm({
   }, [achievementsEnabled, libraryId, selectedEntry?.xboxTitleId]);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    setSaving(true);
+    if (cannotSave) return;
     setError(null);
-    try {
+    await mutations.run('save', async () => {
       const normalizedInput =
         input.unlockedAchievements === 0 && input.earnedGamerscore === 0
           ? { ...input, achievementGroupId: null }
           : input;
       if (session) await updateGameSession(session.id, normalizedInput);
       else await createGameSession(libraryId, normalizedInput);
-      showToast(
-        session ? "Игровая сессия обновлена" : "Игровая сессия добавлена",
-      );
-      onSaved();
-    } catch (reason) {
-      setError(
+    }, {
+      onSuccess: () => {
+        showToast(session ? "Игровая сессия обновлена" : "Игровая сессия добавлена");
+        onSaved();
+      },
+      onError: (reason) => setError(
         reason instanceof Error
           ? reason.message
           : "Не удалось сохранить игровую сессию",
-      );
-    } finally {
-      setSaving(false);
-    }
+      ),
+    });
   };
   const remove = async () => {
-    if (!session || !window.confirm("Удалить игровую сессию?")) return;
-    try {
+    if (!session || pending) return;
+    setError(null);
+    await mutations.run('delete', async () => {
+      if (!window.confirm("Удалить игровую сессию?")) return false;
       await deleteGameSession(session.id);
-      showToast("Игровая сессия удалена");
-      onSaved();
-    } catch (reason) {
-      setError(
+      return true;
+    }, {
+      onSuccess: (deleted) => {
+        if (!deleted) return;
+        showToast("Игровая сессия удалена");
+        onSaved();
+      },
+      onError: (reason) => setError(
         reason instanceof Error
           ? reason.message
           : "Не удалось удалить игровую сессию",
-      );
-    }
+      ),
+    });
   };
   return (
     <div className="modal-backdrop">
@@ -3152,7 +3160,7 @@ export function GameSessionForm({
             <p className="eyebrow">Игровое время</p>
             <h2>{session ? "Редактирование сессии" : "Новая сессия"}</h2>
           </div>
-          <button type="button" onClick={onClose}>
+          <button type="button" onClick={closeForm}>
             ×
           </button>
         </div>
@@ -3279,24 +3287,14 @@ export function GameSessionForm({
         </label>
         <div className="form-buttons">
           {session && (
-            <button
-              className="danger-button"
-              type="button"
-              onClick={() => void remove()}
-            >
-              Удалить
-            </button>
+            <button className="danger-button" type="button" disabled={pending} onClick={() => void remove()}>{deleting ? "Удаляем…" : "Удалить"}</button>
           )}
-          <button className="secondary-button" type="button" onClick={onClose}>
+          <button className="secondary-button" type="button" onClick={closeForm}>
             Отмена
           </button>
           <button
             className="primary-button"
-            disabled={
-              saving ||
-              loadingGroups ||
-              (achievementValuesEntered && input.achievementGroupId == null)
-            }
+            disabled={cannotSave}
           >
             {saving ? "Сохраняем…" : "Сохранить"}
           </button>
