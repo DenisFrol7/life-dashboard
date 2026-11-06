@@ -1,5 +1,6 @@
 package com.lifedashboard.game.rawg;
 
+import com.lifedashboard.common.cache.PreviewCacheFactory;
 import com.lifedashboard.common.error.InvalidRequestException;
 import com.lifedashboard.content.ContentItem;
 import com.lifedashboard.content.ContentItemRepository;
@@ -71,7 +72,7 @@ class RawgCatalogServiceTests {
         verify(items).save(any(ContentItem.class));
     }
 
-    private RawgCatalogService service() { return new RawgCatalogService(rawg, items); }
+    private RawgCatalogService service() { return new RawgCatalogService(rawg, items, new PreviewCacheFactory()); }
 
     private RawgClient.GameData gameData() {
         return new RawgClient.GameData(2870L, "deus-ex-human-revolution",

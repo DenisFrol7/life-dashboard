@@ -1,5 +1,7 @@
 package com.lifedashboard.game.rawg;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.lifedashboard.common.cache.PreviewCacheFactory;
 import com.lifedashboard.common.error.DuplicateResourceException;
 import com.lifedashboard.common.error.InvalidRequestException;
 import com.lifedashboard.common.error.ResourceNotFoundException;
@@ -16,19 +18,18 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 @Service
 @Transactional(readOnly = true)
 public class RawgCatalogService {
     private final RawgClient rawg;
     private final ContentItemRepository items;
-    private final ConcurrentMap<Long, RawgClient.GameData> previewCache = new ConcurrentHashMap<>();
+    private final Cache<Long, RawgClient.GameData> previewCache;
 
-    public RawgCatalogService(RawgClient rawg, ContentItemRepository items) {
+    public RawgCatalogService(RawgClient rawg, ContentItemRepository items, PreviewCacheFactory caches) {
         this.rawg = rawg;
         this.items = items;
+        this.previewCache = caches.create(100);
     }
 
     public List<RawgGameCandidate> search(String query) {
@@ -76,7 +77,7 @@ public class RawgCatalogService {
     }
 
     private RawgClient.GameData cachedOrLoad(long rawgId) {
-        return Optional.ofNullable(previewCache.remove(rawgId)).orElseGet(() -> rawg.getGame(rawgId));
+        return Optional.ofNullable(previewCache.asMap().remove(rawgId)).orElseGet(() -> rawg.getGame(rawgId));
     }
 
     private void validateGame(ContentItemRequest request) {

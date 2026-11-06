@@ -1,5 +1,6 @@
 package com.lifedashboard.content;
 
+import com.lifedashboard.common.cache.PreviewCacheFactory;
 import com.lifedashboard.common.error.InvalidRequestException;
 import com.lifedashboard.content.myshows.KinopoiskCatalogClient;
 import com.lifedashboard.content.myshows.KinopoiskCatalogData;
@@ -47,7 +48,7 @@ class KinopoiskEnrichmentIntegrationTests {
         kinopoisk = mock(KinopoiskCatalogClient.class);
         DataTransferService backups = mock(DataTransferService.class);
         when(backups.createAutomaticBackup()).thenReturn(Path.of("test-backup.json"));
-        movies = new MovieCatalogService(items, kinopoisk, contentService, backups, 1L);
+        movies = new MovieCatalogService(items, kinopoisk, contentService, backups, new PreviewCacheFactory(), 1L);
         series = new MyShowsImportService(items, kinopoisk, library, seasons, episodes, watches,
                 users, backups, 1L);
     }

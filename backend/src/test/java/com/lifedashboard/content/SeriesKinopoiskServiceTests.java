@@ -1,5 +1,6 @@
 package com.lifedashboard.content;
 
+import com.lifedashboard.common.cache.PreviewCacheFactory;
 import com.lifedashboard.common.error.DuplicateResourceException;
 import com.lifedashboard.content.dto.ContentItemRequest;
 import com.lifedashboard.content.myshows.KinopoiskCatalogClient;
@@ -76,6 +77,6 @@ class SeriesKinopoiskServiceTests {
     }
 
     private SeriesKinopoiskService service() {
-        return new SeriesKinopoiskService(items, seasons, episodes, kinopoisk);
+        return new SeriesKinopoiskService(items, seasons, episodes, kinopoisk, new PreviewCacheFactory());
     }
 }

@@ -1,5 +1,6 @@
 package com.lifedashboard.content;
 
+import com.lifedashboard.common.cache.PreviewCacheFactory;
 import com.lifedashboard.common.error.DuplicateResourceException;
 import com.lifedashboard.common.error.ExternalApiTimeoutException;
 import com.lifedashboard.content.myshows.KinopoiskCatalogClient;
@@ -103,5 +104,5 @@ class MovieCatalogServiceTests {
         verify(items, never()).save(any());
     }
 
-    private MovieCatalogService service() { return new MovieCatalogService(items, kinopoisk, contentService, dataTransfer, 1L); }
+    private MovieCatalogService service() { return new MovieCatalogService(items, kinopoisk, contentService, dataTransfer, new PreviewCacheFactory(), 1L); }
 }

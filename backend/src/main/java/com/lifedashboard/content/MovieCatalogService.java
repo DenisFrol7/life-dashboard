@@ -1,5 +1,7 @@
 package com.lifedashboard.content;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.lifedashboard.common.cache.PreviewCacheFactory;
 import com.lifedashboard.content.dto.MovieCatalogResponse;
 import com.lifedashboard.content.dto.ContentItemResponse;
 import com.lifedashboard.content.dto.ContentItemRequest;
@@ -20,20 +22,19 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 @Service
 @Transactional(readOnly = true)
 public class MovieCatalogService {
     private final ContentItemRepository items; private final KinopoiskCatalogClient kinopoisk;
     private final ContentService contentService; private final DataTransferService dataTransfer; private final long userId;
-    private final ConcurrentMap<String, KinopoiskRatingsPreview> ratingsCache = new ConcurrentHashMap<>();
+    private final Cache<String, KinopoiskRatingsPreview> ratingsCache;
     public MovieCatalogService(ContentItemRepository items, KinopoiskCatalogClient kinopoisk, ContentService contentService,
-            DataTransferService dataTransfer,
+            DataTransferService dataTransfer, PreviewCacheFactory caches,
             @Value("${app.default-user-id}") long userId) {
         this.items = items; this.kinopoisk = kinopoisk; this.contentService = contentService;
         this.dataTransfer = dataTransfer; this.userId = userId;
+        this.ratingsCache = caches.create(10);
     }
     public List<MovieCatalogResponse> getAll() {
         return items.findMovieCatalog(userId).stream().map(this::response).toList();
@@ -105,9 +106,9 @@ public class MovieCatalogService {
 
     @Transactional
     public KinopoiskRatingsImportResult importRatings(String profileId) {
-        KinopoiskRatingsPreview preview = ratingsCache.get(profileId);
+        KinopoiskRatingsPreview preview = ratingsCache.getIfPresent(profileId);
         if (preview == null)
-            throw new InvalidRequestException("Перед подтверждением импорта загрузите предварительный просмотр оценок Кинопоиска");
+            throw new InvalidRequestException("Предварительный просмотр оценок Кинопоиска устарел или не загружен. Обновите его перед подтверждением импорта");
         String backupFile = dataTransfer.createAutomaticBackup().toString();
         int created = 0;
         int updated = 0;
@@ -130,7 +131,7 @@ public class MovieCatalogService {
             contentService.importMovieRating(item.getId(), rating);
             if (isNew) created++; else updated++;
         }
-        ratingsCache.remove(profileId);
+        ratingsCache.asMap().remove(profileId, preview);
         return new KinopoiskRatingsImportResult(preview.movieCount(), created, updated, skipped, backupFile);
     }
 

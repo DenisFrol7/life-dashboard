@@ -1,5 +1,7 @@
 package com.lifedashboard.content;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.lifedashboard.common.cache.PreviewCacheFactory;
 import com.lifedashboard.common.error.DuplicateResourceException;
 import com.lifedashboard.common.error.InvalidRequestException;
 import com.lifedashboard.content.dto.*;
@@ -9,8 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 @Service
 @Transactional(readOnly = true)
@@ -19,11 +19,12 @@ public class SeriesKinopoiskService {
     private final ContentSeasonRepository seasons;
     private final ContentEpisodeRepository episodes;
     private final KinopoiskCatalogClient kinopoisk;
-    private final ConcurrentMap<Long, KinopoiskCatalogData> previewCache = new ConcurrentHashMap<>();
+    private final Cache<Long, KinopoiskCatalogData> previewCache;
 
     public SeriesKinopoiskService(ContentItemRepository items, ContentSeasonRepository seasons,
-            ContentEpisodeRepository episodes, KinopoiskCatalogClient kinopoisk) {
+            ContentEpisodeRepository episodes, KinopoiskCatalogClient kinopoisk, PreviewCacheFactory caches) {
         this.items = items; this.seasons = seasons; this.episodes = episodes; this.kinopoisk = kinopoisk;
+        this.previewCache = caches.create(100);
     }
 
     public List<KinopoiskSeriesCandidate> search(String query) {
@@ -49,7 +50,7 @@ public class SeriesKinopoiskService {
         items.findByKinopoiskFilmId(filmId).ifPresent(existing -> {
             throw new DuplicateResourceException("Сериал Кинопоиска уже есть в каталоге с идентификатором " + existing.getId());
         });
-        KinopoiskCatalogData catalog = Optional.ofNullable(previewCache.remove(filmId))
+        KinopoiskCatalogData catalog = Optional.ofNullable(previewCache.asMap().remove(filmId))
                 .orElseGet(() -> kinopoisk.getCatalog(filmId));
         ContentItem item = findLegacy(catalog).orElseGet(() -> new ContentItem(request.title().trim()));
         item.update(request.title().trim(), normalize(request.originalTitle()), ContentType.SERIES,

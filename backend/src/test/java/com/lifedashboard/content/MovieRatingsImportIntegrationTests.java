@@ -1,5 +1,6 @@
 package com.lifedashboard.content;
 
+import com.lifedashboard.common.cache.PreviewCacheFactory;
 import com.lifedashboard.content.dto.ContentItemRequest;
 import com.lifedashboard.content.dto.KinopoiskRatingsImportResult;
 import com.lifedashboard.content.dto.LibraryEntryRequest;
@@ -44,7 +45,7 @@ class MovieRatingsImportIntegrationTests {
         kinopoisk = mock(KinopoiskCatalogClient.class);
         DataTransferService backups = mock(DataTransferService.class);
         when(backups.createAutomaticBackup()).thenReturn(Path.of("test-backup.json"));
-        service = new MovieCatalogService(items, kinopoisk, contentService, backups, 1L);
+        service = new MovieCatalogService(items, kinopoisk, contentService, backups, new PreviewCacheFactory(), 1L);
     }
 
     @ParameterizedTest
