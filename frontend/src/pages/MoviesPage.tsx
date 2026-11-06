@@ -6,6 +6,7 @@ import { ErrorState, LoadingState } from '../components/AsyncState'
 import { useToast } from '../components/ToastContext'
 import { saveLibraryForm } from './libraryForm'
 import { useLatestRequest } from '../hooks/useLatestRequest'
+import { useFormMutation } from '../hooks/useFormMutation'
 
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
 const movieStatuses: LibraryStatus[] = ['PLANNED', 'COMPLETED']
@@ -77,7 +78,8 @@ export function MovieForm({ movie, library, existingMovieIds = [], onClose, onSa
   const [film, setFilm] = useState<MovieInput>(movie ? { ...movie } : emptyMovie)
   const [entry, setEntry] = useState<LibraryInput>(library ? { status: library.status === 'COMPLETED' ? 'COMPLETED' : 'PLANNED', rating: library.rating, favorite: library.favorite, startedAt: library.startedAt, completedAt: library.completedAt, personalNote: library.personalNote } : emptyLibrary)
   const [inLibrary, setInLibrary] = useState(Boolean(library) || !movie)
-  const [saving, setSaving] = useState(false)
+  const mutations = useFormMutation()
+  const { saving, deleting, pending } = mutations
   const [searchQuery, setSearchQuery] = useState('')
   const [searching, setSearching] = useState(false)
   const [candidates, setCandidates] = useState<KinopoiskMovieCandidate[]>([])
@@ -86,7 +88,7 @@ export function MovieForm({ movie, library, existingMovieIds = [], onClose, onSa
   const catalogRequests = useLatestRequest()
   const cancelCatalog = () => { catalogRequests.invalidate(); setSearching(false); setCandidates([]) }
   const changeSearchQuery = (value: string) => { cancelCatalog(); setSearchQuery(value) }
-  const closeForm = () => { catalogRequests.dispose(); onClose() }
+  const closeForm = () => { mutations.dispose(); catalogRequests.dispose(); onClose() }
   const setFilmValue = <K extends keyof MovieInput>(key: K, value: MovieInput[K]) => { cancelCatalog(); setFilm((current) => ({ ...current, [key]: value })) }
   const setEntryValue = <K extends keyof LibraryInput>(key: K, value: LibraryInput[K]) => setEntry((current) => ({ ...current, [key]: value }))
   const searchCatalog = async () => {
@@ -113,20 +115,33 @@ export function MovieForm({ movie, library, existingMovieIds = [], onClose, onSa
     })
   }
   const submit = async (event: FormEvent) => {
-    event.preventDefault(); if (saving || searching) return; setSaving(true); setError(null)
-    try {
-      const saved = await saveLibraryForm({
-        title: movie?.title ?? film.title, inLibrary, wasInLibrary: Boolean(library),
-        saveItem: () => movie ? updateMovie(movie.id, film) : selectedFilmId ? createKinopoiskMovie(selectedFilmId, film) : createMovie(film),
-        putLibrary: (id) => putInLibrary(id, entry), removeLibrary: removeFromLibrary,
-      })
-      if (!saved) return
-      showToast(movie || existingMovieIds.includes(saved.id) ? 'Данные фильма обновлены' : 'Фильм добавлен'); onSaved()
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось сохранить фильм') }
-    finally { setSaving(false) }
+    event.preventDefault(); if (pending || searching) return
+    setError(null)
+    await mutations.run('save', () => saveLibraryForm({
+      title: movie?.title ?? film.title, inLibrary, wasInLibrary: Boolean(library),
+      saveItem: () => movie ? updateMovie(movie.id, film) : selectedFilmId ? createKinopoiskMovie(selectedFilmId, film) : createMovie(film),
+      putLibrary: (id) => putInLibrary(id, entry), removeLibrary: removeFromLibrary,
+    }), {
+      onSuccess: (saved) => {
+        if (!saved) return
+        showToast(movie || existingMovieIds.includes(saved.id) ? 'Данные фильма обновлены' : 'Фильм добавлен'); onSaved()
+      },
+      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось сохранить фильм'),
+    })
   }
-  const removeCatalog = async () => { if (!movie || !window.confirm(`Удалить «${movie.title}» из общего каталога вместе со всей историей?`)) return; try { await deleteMovie(movie.id); showToast('Фильм удалён'); (onDeleted ?? onSaved)() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось удалить фильм') } }
+  const removeCatalog = async () => {
+    if (!movie || pending || searching) return
+    setError(null)
+    await mutations.run('delete', async () => {
+      if (!window.confirm(`Удалить «${movie.title}» из общего каталога вместе со всей историей?`)) return false
+      await deleteMovie(movie.id)
+      return true
+    }, {
+      onSuccess: (deleted) => { if (deleted) { showToast('Фильм удалён'); (onDeleted ?? onSaved)() } },
+      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось удалить фильм'),
+    })
+  }
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeForm() }}><form className="habit-form movie-form" onSubmit={(event) => void submit(event)}><div className="form-heading"><div><p className="eyebrow">Фильмы</p><h2>{movie ? 'Редактирование' : 'Новый фильм'}</h2></div><button type="button" onClick={closeForm}>×</button></div>{error && <div className="form-error">{error}</div>}{!movie && <section className="kinopoisk-movie-search"><div><input value={searchQuery} onChange={(event) => changeSearchQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void searchCatalog() } }} placeholder="Введите название фильма" /><button className="secondary-button" type="button" disabled={searching || searchQuery.trim().length < 2} onClick={() => void searchCatalog()}>{searching ? 'Ищем…' : 'Найти в Кинопоиске'}</button></div>{selectedFilmId && <p>Данные фильма загружены. Проверьте их и укажите личный статус и оценку.</p>}{candidates.length > 0 && <div className="kinopoisk-movie-results">{candidates.map((candidate) => <button type="button" key={candidate.filmId} disabled={Boolean(candidate.existingContentId)} onClick={() => void selectCandidate(candidate)}>{candidate.posterUrlPreview ? <img src={candidate.posterUrlPreview} alt="" /> : <span>🎬</span>}<span><strong>{candidate.nameRu || candidate.nameOriginal || `Фильм ${candidate.filmId}`}</strong><small>{candidate.nameOriginal && candidate.nameOriginal !== candidate.nameRu ? `${candidate.nameOriginal} · ` : ''}{candidate.year ?? 'Год неизвестен'}{candidate.existingContentId ? ' · Уже в каталоге' : ''}</small></span></button>)}</div>}</section>}<label>Название<input required maxLength={300} value={film.title} onChange={(event) => setFilmValue('title', event.target.value)} /></label><label>Оригинальное название<input maxLength={300} value={film.originalTitle ?? ''} onChange={(event) => setFilmValue('originalTitle', event.target.value || null)} /></label><div className="movie-details-grid"><label>Формат<select value={film.format} onChange={(event) => setFilmValue('format', event.target.value as ContentFormat)}><option value="LIVE_ACTION">Фильм</option><option value="ANIMATION">Мультфильм</option></select></label><label>Год<input min="1888" type="number" value={film.releaseYear ?? ''} onChange={(event) => setFilmValue('releaseYear', event.target.value ? Number(event.target.value) : null)} /></label><label>Длительность, мин<input min="1" type="number" value={film.durationMinutes ?? ''} onChange={(event) => setFilmValue('durationMinutes', event.target.value ? Number(event.target.value) : null)} /></label><label>Жанр<input maxLength={100} value={film.genre ?? ''} onChange={(event) => setFilmValue('genre', event.target.value || null)} /></label></div><label>URL обложки<input type="url" value={film.coverUrl ?? ''} onChange={(event) => setFilmValue('coverUrl', event.target.value || null)} /></label><label>Описание<textarea rows={3} value={film.description ?? ''} onChange={(event) => setFilmValue('description', event.target.value || null)} /></label>
     <fieldset className="library-fields"><legend>Моя библиотека</legend><label className="all-day-check"><input type="checkbox" checked={inLibrary} onChange={(event) => setInLibrary(event.target.checked)} />Добавить в библиотеку</label>{inLibrary && <><div className="form-grid"><label>Статус<select value={entry.status} onChange={(event) => setEntryValue('status', event.target.value as LibraryStatus)}>{movieStatuses.map((value) => <option key={value} value={value}>{statusLabels[value]}</option>)}</select></label><label>Оценка<select value={entry.rating ?? ''} onChange={(event) => setEntryValue('rating', event.target.value ? Number(event.target.value) : null)}><option value="">Без оценки</option>{Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <option key={value}>{value}</option>)}</select></label></div><label className="favorite-check"><input type="checkbox" checked={entry.favorite} onChange={(event) => setEntryValue('favorite', event.target.checked)} />В избранном</label><label>Личная заметка<textarea rows={2} value={entry.personalNote ?? ''} onChange={(event) => setEntryValue('personalNote', event.target.value || null)} /></label></>}</fieldset>
-    <div className="form-buttons">{movie && <button className="danger-button" type="button" onClick={() => void removeCatalog()}>Удалить из каталога</button>}<button className="secondary-button" type="button" onClick={closeForm}>Отмена</button><button className="primary-button" disabled={saving}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div></form></div>
+    <div className="form-buttons">{movie && <button className="danger-button" type="button" disabled={pending || searching} onClick={() => void removeCatalog()}>{deleting ? 'Удаляем…' : 'Удалить из каталога'}</button>}<button className="secondary-button" type="button" onClick={closeForm}>Отмена</button><button className="primary-button" disabled={pending || searching}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div></form></div>
 }

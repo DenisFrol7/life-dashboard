@@ -68,6 +68,7 @@ import type { LibraryInput, LibraryStatus } from "../api/movies";
 import { ErrorState, LoadingState } from "../components/AsyncState";
 import { useToast } from "../components/ToastContext";
 import { useLatestRequest } from "../hooks/useLatestRequest";
+import { useFormMutation } from "../hooks/useFormMutation";
 
 const statusLabels: Record<LibraryStatus, string> = {
   NOT_STARTED: "Не начато",
@@ -2264,7 +2265,8 @@ export function GameForm({
     progress ?? emptyProgress,
   );
   const [inLibrary, setInLibrary] = useState(Boolean(library) || !game);
-  const [saving, setSaving] = useState(false);
+  const mutations = useFormMutation();
+  const { saving, deleting, pending } = mutations;
   const [error, setError] = useState<string | null>(null);
   const [catalogQuery, setCatalogQuery] = useState("");
   const [candidates, setCandidates] = useState<RawgGameCandidate[]>([]);
@@ -2289,7 +2291,7 @@ export function GameForm({
   const cancelArtwork = () => { artworkRequests.invalidate(); setArtworkSearching(false); setArtworkGames([]); setArtworkCovers([]); };
   const changeCatalogQuery = (value: string) => { cancelCatalog(); setCatalogQuery(value); };
   const changeArtworkQuery = (value: string) => { cancelArtwork(); setArtworkQuery(value); };
-  const closeForm = () => { catalogRequests.dispose(); artworkRequests.dispose(); onClose(); };
+  const closeForm = () => { mutations.dispose(); catalogRequests.dispose(); artworkRequests.dispose(); onClose(); };
   useEffect(() => {
     setXboxProgress(progress ?? emptyProgress);
   }, [progress]);
@@ -2433,10 +2435,9 @@ export function GameForm({
   };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (saving || searching || artworkSearching) return;
-    setSaving(true);
+    if (pending || searching || artworkSearching) return;
     setError(null);
-    try {
+    await mutations.run('save', async () => {
       const savedGame = game
         ? selectedRawgId && selectedRawgId !== game.rawgId
           ? await updateRawgGame(game.id, selectedRawgId, item)
@@ -2457,29 +2458,33 @@ export function GameForm({
         await putGameProfile(savedGame.id, profile);
         if (xboxEnabled) await putXboxProgress(savedEntry.id, xboxProgress);
       }
-      showToast(game ? "Игра обновлена" : "Игра добавлена");
-      onSaved();
-    } catch (reason) {
-      setError(
+    }, {
+      onSuccess: () => {
+        showToast(game ? "Игра обновлена" : "Игра добавлена");
+        onSaved();
+      },
+      onError: (reason) => setError(
         reason instanceof Error ? reason.message : "Не удалось сохранить игру",
-      );
-    } finally {
-      setSaving(false);
-    }
+      ),
+    });
   };
   const remove = async () => {
-    if (!game || !window.confirm(`Удалить «${game.title}» из общего каталога?`))
-      return;
-    try {
+    if (!game || pending || searching || artworkSearching) return;
+    setError(null);
+    await mutations.run('delete', async () => {
+      if (!window.confirm(`Удалить «${game.title}» из общего каталога?`)) return false;
       await deleteGame(game.id);
-      showToast("Игра удалена");
-      if (onDeleted) onDeleted();
-      else onSaved();
-    } catch (reason) {
-      setError(
+      return true;
+    }, {
+      onSuccess: (deleted) => {
+        if (!deleted) return;
+        showToast("Игра удалена");
+        (onDeleted ?? onSaved)();
+      },
+      onError: (reason) => setError(
         reason instanceof Error ? reason.message : "Не удалось удалить игру",
-      );
-    }
+      ),
+    });
   };
   return (
     <div className="modal-backdrop">
@@ -2997,15 +3002,16 @@ export function GameForm({
             <button
               className="danger-button"
               type="button"
+              disabled={pending || searching || artworkSearching}
               onClick={() => void remove()}
             >
-              Удалить
+              {deleting ? "Удаляем…" : "Удалить"}
             </button>
           )}
           <button className="secondary-button" type="button" onClick={closeForm}>
             Отмена
           </button>
-          <button className="primary-button" disabled={saving || searching || artworkSearching}>
+          <button className="primary-button" disabled={pending || searching || artworkSearching}>
             {saving ? "Сохраняем…" : "Сохранить"}
           </button>
         </div>

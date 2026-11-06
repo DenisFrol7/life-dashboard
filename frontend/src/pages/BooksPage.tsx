@@ -34,6 +34,7 @@ import { ErrorState, LoadingState } from "../components/AsyncState";
 import { useToast } from "../components/ToastContext";
 import { saveLibraryForm } from "./libraryForm";
 import { useLatestRequest } from "../hooks/useLatestRequest";
+import { useFormMutation } from "../hooks/useFormMutation";
 
 const emptyBook: BookInput = {
   title: "",
@@ -376,7 +377,8 @@ export function BookForm({
     completedAt: book?.completedAt ?? null,
     personalNote: book?.personalNote ?? null,
   });
-  const [saving, setSaving] = useState(false);
+  const mutations = useFormMutation();
+  const { saving, deleting, pending } = mutations;
   const [error, setError] = useState<string | null>(null);
   const [catalogQuery, setCatalogQuery] = useState("");
   const [candidates, setCandidates] = useState<GoogleBookCandidate[]>([]);
@@ -396,6 +398,7 @@ export function BookForm({
     setCatalogQuery(value);
   };
   const closeForm = () => {
+    mutations.dispose();
     catalogRequests.dispose();
     uploadRequests.dispose();
     onClose();
@@ -462,40 +465,43 @@ export function BookForm({
   };
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (saving || searching || uploadingCover) return;
-    setSaving(true);
+    if (pending || searching || uploadingCover) return;
     setError(null);
-    try {
-      const saved = await saveLibraryForm({
-        title: book?.title ?? item.title,
-        inLibrary,
-        wasInLibrary: Boolean(book?.libraryEntryId),
-        saveItem: () => book ? updateBook(book.id, item) : createBook(item),
-        putLibrary: (id) => putBookLibrary(id, library),
-        removeLibrary: removeBookLibrary,
-      });
-      if (!saved) return;
-      showToast(book ? "Книга обновлена" : "Книга добавлена");
-      onSaved();
-    } catch (reason) {
-      setError(
+    await mutations.run('save', () => saveLibraryForm({
+      title: book?.title ?? item.title,
+      inLibrary,
+      wasInLibrary: Boolean(book?.libraryEntryId),
+      saveItem: () => book ? updateBook(book.id, item) : createBook(item),
+      putLibrary: (id) => putBookLibrary(id, library),
+      removeLibrary: removeBookLibrary,
+    }), {
+      onSuccess: (saved) => {
+        if (!saved) return;
+        showToast(book ? "Книга обновлена" : "Книга добавлена");
+        onSaved();
+      },
+      onError: (reason) => setError(
         reason instanceof Error ? reason.message : "Не удалось сохранить книгу",
-      );
-    } finally {
-      setSaving(false);
-    }
+      ),
+    });
   };
   const remove = async () => {
-    if (!book || !confirm(`Удалить «${book.title}» из каталога вместе с прогрессом и всей историей чтения?`)) return;
-    try {
+    if (!book || pending || searching || uploadingCover) return;
+    setError(null);
+    await mutations.run('delete', async () => {
+      if (!window.confirm(`Удалить «${book.title}» из каталога вместе с прогрессом и всей историей чтения?`)) return false;
       await deleteBook(book.id);
-      showToast("Книга удалена");
-      (onDeleted ?? onSaved)();
-    } catch (reason) {
-      setError(
+      return true;
+    }, {
+      onSuccess: (deleted) => {
+        if (!deleted) return;
+        showToast("Книга удалена");
+        (onDeleted ?? onSaved)();
+      },
+      onError: (reason) => setError(
         reason instanceof Error ? reason.message : "Не удалось удалить книгу",
-      );
-    }
+      ),
+    });
   };
   return (
     <div className="modal-backdrop">
@@ -779,15 +785,16 @@ export function BookForm({
             <button
               className="danger-button"
               type="button"
+              disabled={pending || searching || uploadingCover}
               onClick={() => void remove()}
             >
-              Удалить
+              {deleting ? "Удаляем…" : "Удалить"}
             </button>
           )}
           <button className="secondary-button" type="button" onClick={closeForm}>
             Отмена
           </button>
-          <button className="primary-button" disabled={saving || searching || uploadingCover}>
+          <button className="primary-button" disabled={pending || searching || uploadingCover}>
             {saving ? "Сохраняем…" : "Сохранить"}
           </button>
         </div>
