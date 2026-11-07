@@ -104,21 +104,23 @@ function BarChart({ points, field, label, goal }: {
     <output className="analytics-chart-readout" aria-live="polite" aria-atomic="true">
       <span>{selected.tooltipLabel}</span><strong>{formatValue(selected[field])}</strong>
     </output>
-    <div className="analytics-chart-scroll" ref={viewportRef}>
-      <div className="analytics-bars" data-monthly={points[0]?.key.length === 7}
-        style={{ '--analytics-point-count': points.length } as CSSProperties}>
-        {points.map(point => {
-          const height = Math.max(point[field] ? 4 : 1, point[field] / maximum * 100)
-          const description = `${point.tooltipLabel}: ${formatValue(point[field])}`
-          return <button type="button" key={point.key} title={description} aria-label={description}
-            aria-pressed={selected.key === point.key} onClick={() => setSelectedKey(point.key)}
-            onFocus={() => setSelectedKey(point.key)}>
-            <span className="analytics-bar-track" aria-hidden="true">
-              <i className={goal && point[field] >= goal ? 'goal' : ''} style={{ height: `${height}%` }} />
-            </span>
-            <small aria-hidden="true">{point.label}</small>
-          </button>
-        })}
+    <div className="analytics-chart-plot">
+      <div className="analytics-chart-scroll" ref={viewportRef}>
+        <div className="analytics-bars" data-monthly={points[0]?.key.length === 7}
+          style={{ '--analytics-point-count': points.length } as CSSProperties}>
+          {points.map(point => {
+            const height = point[field] === 0 ? 0 : Math.max(4, point[field] / maximum * 100)
+            const description = `${point.tooltipLabel}: ${formatValue(point[field])}`
+            return <button type="button" key={point.key} title={description} aria-label={description}
+              aria-pressed={selected.key === point.key} onClick={() => setSelectedKey(point.key)}
+              onFocus={() => setSelectedKey(point.key)}>
+              <span className="analytics-bar-track" aria-hidden="true">
+                <i className={goal && point[field] >= goal ? 'goal' : ''} style={{ height: `${height}%` }} />
+              </span>
+              <small aria-hidden="true">{point.label}</small>
+            </button>
+          })}
+        </div>
       </div>
     </div>
     <p className="analytics-chart-hint">{scrollable ? 'Листайте график и выбирайте дату для подробностей.' : 'Выберите дату на графике для подробностей.'}</p>
