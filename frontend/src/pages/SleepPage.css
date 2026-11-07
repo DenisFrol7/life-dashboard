@@ -1,0 +1,137 @@
+.sleep-page { display: grid; gap: 16px; width: 100%; min-width: 0; max-width: 1280px; margin: 0 auto; }
+.sleep-page > *, .sleep-grid > * { min-width: 0; }
+.sleep-hero { display: grid; grid-template-columns: minmax(0, 1fr) 84px auto; align-items: center; gap: 20px; padding: 24px; border: 1px solid #d3d6e5; border-radius: 20px; background: radial-gradient(circle at 20% -20%, #e7e7f5, transparent 45%), linear-gradient(135deg, #f1f2f8, #fffefa); }
+.sleep-today { min-width: 0; }
+.sleep-today > strong { display: block; color: #4c526f; font-family: Georgia, serif; font-size: 33px; line-height: 1.2; overflow-wrap: anywhere; }
+.sleep-today > span { display: block; margin-top: 6px; color: var(--muted); font-size: 13px; }
+.sleep-goal-ring { --sleep-progress: 0deg; display: grid; grid-column: 2; grid-row: 1; place-items: center; width: 76px; height: 76px; border-radius: 50%; background: radial-gradient(circle closest-side, #f7f7fb 72%, transparent 74%), conic-gradient(#747da5 var(--sleep-progress), #daddeb 0); }
+.sleep-goal-ring span { color: #565d7c; font-size: 15px; font-weight: 800; }
+.sleep-hero dl { display: grid; grid-column: 1 / -1; grid-row: 2; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; padding-top: 16px; border-top: 1px solid var(--line); }
+.sleep-hero dl > div { min-width: 0; }
+.sleep-hero dt { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.sleep-hero dd { margin: 6px 0 0; color: #4f566c; font-family: Georgia, serif; font-size: 19px; font-weight: 700; overflow-wrap: anywhere; }
+.sleep-hero > button { grid-column: 3; grid-row: 1; }
+.sleep-page .sleep-error { max-width: none; margin: 0; overflow-wrap: anywhere; }
+.sleep-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, .75fr); gap: 16px; }
+.sleep-panel { min-width: 0; padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); box-shadow: 0 8px 28px #25322708; }
+.sleep-page .panel-heading { flex-wrap: wrap; align-items: flex-start; gap: 12px; }
+.sleep-page .panel-heading > div:first-child { min-width: 0; }
+.sleep-page .panel-heading h3 { margin: 0; font-family: Georgia, serif; font-size: 22px; line-height: 1.3; overflow-wrap: anywhere; }
+.sleep-page .period-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; background: var(--paper-soft); }
+.sleep-page .period-switch button { min-height: 44px; padding: 8px 12px; color: var(--muted); font-size: 12px; }
+.sleep-page .period-switch button.active { color: var(--accent-dark); background: var(--accent-soft); box-shadow: none; }
+.sleep-page .primary-button, .sleep-page .secondary-button { min-height: 44px; font-size: 13px; }
+.sleep-page button:focus-visible, .sleep-form :is(button, input, select, textarea):focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+.sleep-chart-readout { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; min-height: 44px; margin-bottom: 12px; padding: 12px; border-radius: 12px; color: var(--muted); background: var(--paper-soft); font-size: 13px; }
+.sleep-chart-readout strong { color: var(--ink); font-size: 16px; overflow-wrap: anywhere; }
+.sleep-chart-plot { position: relative; display: grid; grid-template-columns: 46px minmax(0, 1fr); min-width: 0; }
+.sleep-chart-scale { position: absolute; top: 16px; right: 0; left: 0; height: 208px; color: var(--muted); font-size: 11px; pointer-events: none; }
+.sleep-chart-scale > span { position: absolute; left: 0; width: 100%; border-top: 1px solid var(--line); }
+.sleep-chart-scale b { position: absolute; top: 0; left: 0; width: 46px; padding: 1px 6px 1px 0; color: inherit; background: var(--paper); font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; transform: translateY(-50%); }
+.sleep-chart-scale .maximum b { transform: none; }
+.sleep-chart-scale .goal { border-color: #6f9b78; }
+.sleep-chart-scale .goal b { color: #5f936d; font-weight: 800; }
+.sleep-chart-scroll { position: relative; grid-column: 2; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--accent) var(--paper-soft); }
+.sleep-chart { --sleep-point-width: 28px; position: relative; display: flex; height: 260px; min-width: calc(var(--sleep-point-count) * var(--sleep-point-width)); padding: 16px 0 36px; }
+.sleep-chart-day { position: relative; display: flex; flex: 1; align-items: center; justify-content: flex-end; flex-direction: column; min-width: 0; padding: 0 3px; border: 0; border-radius: 8px 8px 0 0; color: var(--muted); background: transparent; cursor: pointer; }
+.sleep-chart-day[aria-pressed="true"] { color: var(--accent-dark); background: var(--accent-soft); }
+.sleep-chart-day > i { width: min(38px, 72%); min-height: 3px; border-radius: 7px 7px 2px 2px; background: #aeb4cf; }
+.sleep-chart-day > i.empty { min-height: 0; }
+.sleep-chart-day > i.goal-reached { background: #6f9b78; }
+.sleep-chart-day > small { position: absolute; top: calc(100% + 8px); width: 100%; color: inherit; font-size: 11px; line-height: 1.4; text-align: center; text-transform: capitalize; }
+.sleep-chart-hint { margin: 10px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.sleep-chart-goal { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.sleep-chart-goal span { flex: 0 0 21px; height: 4px; border-radius: 2px; background: #6f9b78; }
+.sleep-empty { display: grid; place-items: center; min-height: 160px; padding: 20px; color: var(--muted); text-align: center; font-size: 13px; line-height: 1.5; }
+.sleep-phase-bar { display: flex; width: 100%; height: 12px; margin: 20px 0; overflow: hidden; border-radius: 999px; background: var(--paper-soft); }
+.sleep-phase-bar i { height: 100%; }
+.sleep-phase-list { display: grid; gap: 16px; }
+.sleep-phase-list > div { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-width: 0; color: var(--muted); font-size: 14px; }
+.sleep-phase-list i { width: 8px; height: 8px; border-radius: 50%; }
+.sleep-phase-list strong { color: var(--ink); font-size: 14px; }
+:is(.sleep-phase-bar, .sleep-phase-list) .deep { background: #4e5c8c; }
+:is(.sleep-phase-bar, .sleep-phase-list) .light { background: #91a3c6; }
+:is(.sleep-phase-bar, .sleep-phase-list) .rem { background: #9b80b3; }
+:is(.sleep-phase-bar, .sleep-phase-list) .awake { background: #d0a66f; }
+.sleep-table-head, .sleep-session-card { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .9fr) minmax(0, .8fr) minmax(0, 1fr) minmax(0, 1.4fr) 96px; align-items: center; gap: 12px; }
+.sleep-table-head { padding: 9px 12px; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.sleep-session-card { min-width: 0; padding: 14px 12px; border-top: 1px solid var(--line); color: var(--ink); font-size: 13px; }
+.sleep-session-card > * { min-width: 0; overflow-wrap: anywhere; }
+.sleep-session-duration { color: var(--accent-dark); font-size: 15px; }
+.sleep-session-label { display: none; }
+.sleep-quality-stars { color: var(--accent-dark); font-size: 13px; letter-spacing: 1px; }
+.sleep-session-note { overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.sleep-session-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.sleep-session-actions button { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 6px; width: 44px; min-height: 44px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--paper-soft); cursor: pointer; }
+.sleep-session-actions button:last-child { color: #a15245; }
+.sleep-session-actions button:disabled { cursor: wait; opacity: .6; }
+.sleep-session-actions svg { width: 16px; height: 16px; flex-shrink: 0; }
+.sleep-session-actions button > span { display: none; }
+.sleep-page .table-empty { border-color: var(--line); line-height: 1.5; }
+.sleep-dialog { width: min(680px, calc(100% - 32px)); max-width: none; max-height: calc(var(--sleep-dialog-height, 100dvh) - 32px); padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 20px; color: var(--ink); background: var(--paper); box-shadow: 0 30px 90px #07111a70; }
+.sleep-dialog::backdrop { background: #15222db8; backdrop-filter: blur(4px); }
+.sleep-form { display: flex; flex-direction: column; max-height: calc(var(--sleep-dialog-height, 100dvh) - 34px); }
+.sleep-form-heading { display: flex; flex: 0 0 auto; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 24px; }
+.sleep-form-heading > div { min-width: 0; }
+.sleep-form-heading h2 { margin: 0; font-family: Georgia, serif; font-size: 28px; line-height: 1.2; overflow-wrap: anywhere; }
+.sleep-form-close { display: grid; flex: 0 0 44px; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 10px; color: var(--muted); background: var(--paper-soft); cursor: pointer; }
+.sleep-form-close svg { width: 20px; height: 20px; }
+.sleep-form-body { flex: 1 1 auto; min-height: 0; padding: 0 24px 20px; overflow-y: auto; overscroll-behavior: contain; }
+.sleep-form-body h3 { margin: 22px 0 6px; font-size: 16px; }
+.sleep-form-hint { margin: 0 0 14px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.sleep-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.sleep-form-body label { display: grid; gap: 7px; min-width: 0; color: var(--muted); font-size: 13px; font-weight: 600; }
+.sleep-form-body > label { margin-top: 16px; }
+.sleep-form :is(input, select, textarea) { width: 100%; min-width: 0; min-height: 48px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: var(--paper-soft); font-size: 16px; font-weight: 400; }
+.sleep-form textarea { resize: vertical; line-height: 1.5; }
+.sleep-form-actions { display: grid; flex: 0 0 auto; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 16px 24px; border-top: 1px solid var(--line); background: var(--paper); }
+.sleep-form-actions button { min-height: 44px; font-size: 14px; }
+
+html[data-theme="dark"] .sleep-hero { border-color: #292c4c; background: radial-gradient(circle at 20% -20%, #292550, transparent 45%), linear-gradient(135deg, #111c2c, #0d1721); }
+html[data-theme="dark"] .sleep-today > strong, html[data-theme="dark"] .sleep-hero dd { color: #c5c0ff; }
+html[data-theme="dark"] .sleep-goal-ring { background: radial-gradient(circle closest-side, #111b28 72%, transparent 74%), conic-gradient(#8b7df5 var(--sleep-progress), #273041 0); }
+html[data-theme="dark"] .sleep-goal-ring span { color: #c5c0ff; }
+html[data-theme="dark"] .sleep-panel { box-shadow: 0 10px 30px #0003; }
+html[data-theme="dark"] .sleep-chart-day > i { background: #9185ff; }
+html[data-theme="dark"] .sleep-chart-day > i.goal-reached { background: #5abb7b; }
+html[data-theme="dark"] .sleep-chart-scale .goal b { color: #8bc9a2; }
+html[data-theme="dark"] .sleep-session-actions button:last-child { color: #efb8b5; }
+html[data-theme="dark"] .sleep-dialog::backdrop { background: #02070dbd; }
+
+@media (max-width: 1100px) {
+  .sleep-grid { grid-template-columns: 1fr; }
+  .sleep-table-head { display: none; }
+  .sleep-session-card { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft); }
+  .sleep-session-date { grid-column: 1 / -1; font-size: 15px; font-weight: 700; }
+  .sleep-session-period { display: grid; grid-column: 1 / -1; gap: 4px; }
+  .sleep-session-duration, .sleep-session-quality { display: grid; gap: 4px; font-size: 17px; }
+  .sleep-session-quality { text-align: right; }
+  .sleep-session-label { display: block; color: var(--muted); font-size: 12px; font-weight: 500; }
+  .sleep-session-note { grid-column: 1 / -1; padding-top: 12px; border-top: 1px solid var(--line); line-height: 1.5; white-space: pre-wrap; }
+  .sleep-session-note[data-empty="true"] { display: none; }
+  .sleep-session-actions { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sleep-session-actions button { width: 100%; font-size: 13px; }
+  .sleep-session-actions button > span { display: inline; }
+}
+
+@media (max-width: 1023px) {
+  .sleep-chart { --sleep-point-width: 44px; }
+}
+
+@media (max-width: 600px) {
+  .sleep-hero, .sleep-panel { padding: 16px; }
+  .sleep-hero { grid-template-columns: minmax(0, 1fr) 76px; gap: 16px; }
+  .sleep-today > strong { font-size: 28px; }
+  .sleep-hero dl { grid-template-columns: 1fr; gap: 12px; }
+  .sleep-hero dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+  .sleep-hero dd { max-width: 55%; margin: 0; font-size: 18px; text-align: right; }
+  .sleep-hero > button { grid-column: 1 / -1; grid-row: 3; }
+  .sleep-page .period-switch { width: 100%; }
+  .sleep-dialog { position: fixed; top: var(--sleep-dialog-offset, 0px); right: 0; bottom: auto; left: 0; width: 100%; height: var(--sleep-dialog-height, 100dvh); max-height: var(--sleep-dialog-height, 100dvh); margin: 0; border: 0; border-radius: 0; }
+  .sleep-form { height: 100%; max-height: 100%; }
+  .sleep-form-heading { padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px)); }
+  .sleep-form-heading h2 { font-size: 24px; }
+  .sleep-form-body { padding: 0 max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px)); }
+  .sleep-form-grid { grid-template-columns: 1fr; }
+  .sleep-form-actions { padding: 12px max(16px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+}
