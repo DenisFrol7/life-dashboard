@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { getAnalytics, type Analytics, type AnalyticsDailyPoint, type AnalyticsOverview } from '../api/analytics'
 import { getApiErrorMessage } from '../api/client'
 import { useToday } from '../hooks/useToday'
 import { useLatestRequest } from '../hooks/useLatestRequest'
 import { localDate } from '../utils/localDay'
+import './AnalyticsPage.css'
 
 type Period = 7 | 30 | 365
 type ChartPoint = { key: string; label: string; tooltipLabel: string; steps: number; sleepMinutes: number; gameMinutes: number }
@@ -40,7 +41,19 @@ export function AnalyticsPage() {
   const chart = useMemo(() => analytics ? chartPoints(analytics.daily) : [], [analytics])
 
   return <div className="analytics-page">
-    <section className="analytics-toolbar"><div className="filter-tabs" aria-label="Период статистики">{([7, 30, 365] as Period[]).map(value => <button key={value} className={period === value ? 'active' : ''} onClick={() => choosePeriod(value)}>{value === 7 ? '7 дней' : value === 30 ? '30 дней' : 'Год'}</button>)}<button className={period === 'all' ? 'active' : ''} onClick={chooseAllTime}>Всё время</button></div><div className="analytics-dates"><label>С<input type="date" value={period === 'all' && analytics ? analytics.from : from} max={to} onChange={event => chooseFrom(event.target.value)} /></label><label>По<input type="date" value={period === 'all' && analytics ? analytics.to : to} min={period === 'all' && analytics ? analytics.from : from} onChange={event => chooseTo(event.target.value)} /></label></div></section>
+    <section className="analytics-toolbar">
+      <div className="filter-tabs" role="group" aria-label="Период статистики">
+        {([7, 30, 365] as Period[]).map(value => <button type="button" key={value}
+          className={period === value ? 'active' : ''} aria-pressed={period === value}
+          onClick={() => choosePeriod(value)}>{value === 7 ? '7 дней' : value === 30 ? '30 дней' : 'Год'}</button>)}
+        <button type="button" className={period === 'all' ? 'active' : ''} aria-pressed={period === 'all'}
+          onClick={chooseAllTime}>Всё время</button>
+      </div>
+      <div className="analytics-dates">
+        <label>С<input type="date" value={period === 'all' && analytics ? analytics.from : from} max={to} onChange={event => chooseFrom(event.target.value)} /></label>
+        <label>По<input type="date" value={period === 'all' && analytics ? analytics.to : to} min={period === 'all' && analytics ? analytics.from : from} onChange={event => chooseTo(event.target.value)} /></label>
+      </div>
+    </section>
     {error && <div className="notice error"><strong>Ошибка</strong><span>{error}</span></div>}
     {loading ? <div className="loading"><span />Собираем статистику…</div> : analytics && <>
       <section className="analytics-summary">
@@ -49,10 +62,10 @@ export function AnalyticsPage() {
         <MetricCard label="Привычки" value={`${analytics.current.habitCompletionPercent}%`} detail={`${analytics.current.completedHabitEntries} из ${analytics.current.trackedHabitEntries} отметок`} change={delta(analytics.current.habitCompletionPercent, analytics.previous.habitCompletionPercent)} />
         <MetricCard label="Игровое время" value={duration(analytics.current.gameMinutes)} detail={`${analytics.current.gameSessions} сессий · +${analytics.current.unlockedAchievements} достиж.`} change={delta(analytics.current.gameMinutes, analytics.previous.gameMinutes)} />
       </section>
-      <section className="analytics-chart-card"><div className="panel-heading"><div><p className="eyebrow">Динамика</p><h2>Шаги</h2></div><span>цель 7 000</span></div><BarChart points={chart} field="steps" goal={7000} /></section>
+      <section className="analytics-chart-card"><div className="panel-heading"><div><p className="eyebrow">Динамика</p><h2>Шаги</h2></div><span>цель 7 000</span></div><BarChart points={chart} field="steps" label="Шаги" goal={7000} /></section>
       <section className="analytics-lower-grid">
-        <article className="analytics-chart-card"><div className="panel-heading"><div><p className="eyebrow">Восстановление</p><h2>Сон</h2></div></div><BarChart points={chart} field="sleepMinutes" goal={480} /></article>
-        <article className="analytics-chart-card"><div className="panel-heading"><div><p className="eyebrow">Досуг</p><h2>Игровое время</h2></div></div><BarChart points={chart} field="gameMinutes" /></article>
+        <article className="analytics-chart-card"><div className="panel-heading"><div><p className="eyebrow">Восстановление</p><h2>Сон</h2></div></div><BarChart points={chart} field="sleepMinutes" label="Сон" goal={480} /></article>
+        <article className="analytics-chart-card"><div className="panel-heading"><div><p className="eyebrow">Досуг</p><h2>Игровое время</h2></div></div><BarChart points={chart} field="gameMinutes" label="Игровое время" /></article>
       </section>
       <section className="analytics-detail-grid"><MediaStats data={analytics.current} /><ReadingStats data={analytics.current} /></section>
     </>}
@@ -60,7 +73,57 @@ export function AnalyticsPage() {
 }
 
 function MetricCard({ label, value, detail, change }: { label: string; value: string; detail: string; change: number | null }) { return <article className="analytics-metric"><span>{label}</span><strong>{value}</strong><small>{detail}</small><em className={change != null && change < 0 ? 'negative' : ''}>{change == null ? 'Нет данных для сравнения' : `${change > 0 ? '+' : ''}${change}% к прошлому периоду`}</em></article> }
-function BarChart({ points, field, goal }: { points: ChartPoint[]; field: keyof Pick<ChartPoint, 'steps' | 'sleepMinutes' | 'gameMinutes'>; goal?: number }) { const maximum = Math.max(goal ?? 0, ...points.map(point => point[field]), 1); return <div className="analytics-bars">{points.map(point => { const height = Math.max(point[field] ? 4 : 1, point[field] / maximum * 100); return <div key={point.key} title={`${point.tooltipLabel}: ${field === 'steps' ? number(point[field]) : duration(point[field])}`}><div className="analytics-bar-track"><span style={{ bottom: `calc(${height}% + 4px)` }}>{field === 'steps' ? (point[field] ? number(point[field]) : '') : (point[field] ? duration(point[field]) : '')}</span><i className={goal && point[field] >= goal ? 'goal' : ''} style={{ height: `${height}%` }} /></div><small>{point.label}</small></div> })}</div> }
+function BarChart({ points, field, label, goal }: {
+  points: ChartPoint[]
+  field: keyof Pick<ChartPoint, 'steps' | 'sleepMinutes' | 'gameMinutes'>
+  label: string
+  goal?: number
+}) {
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [scrollable, setScrollable] = useState(false)
+  const selected = points.find(point => point.key === selectedKey) ?? points.at(-1)
+  const maximum = Math.max(goal ?? 0, ...points.map(point => point[field]), 1)
+  const formatValue = (value: number) => field === 'steps' ? number(value) : duration(value)
+
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (!viewport) return
+    const measure = () => setScrollable(viewport.scrollWidth > viewport.clientWidth + 1)
+    measure()
+    // Start with the latest dates, matching the initially selected value.
+    viewport.scrollLeft = viewport.scrollWidth
+    const observer = new ResizeObserver(measure)
+    observer.observe(viewport)
+    return () => observer.disconnect()
+  }, [points.length])
+
+  if (!selected) return <p className="analytics-chart-empty">За выбранный период нет данных.</p>
+
+  return <div className="analytics-chart" role="group" aria-label={`${label} по датам`}>
+    <output className="analytics-chart-readout" aria-live="polite" aria-atomic="true">
+      <span>{selected.tooltipLabel}</span><strong>{formatValue(selected[field])}</strong>
+    </output>
+    <div className="analytics-chart-scroll" ref={viewportRef}>
+      <div className="analytics-bars" data-monthly={points[0]?.key.length === 7}
+        style={{ '--analytics-point-count': points.length } as CSSProperties}>
+        {points.map(point => {
+          const height = Math.max(point[field] ? 4 : 1, point[field] / maximum * 100)
+          const description = `${point.tooltipLabel}: ${formatValue(point[field])}`
+          return <button type="button" key={point.key} title={description} aria-label={description}
+            aria-pressed={selected.key === point.key} onClick={() => setSelectedKey(point.key)}
+            onFocus={() => setSelectedKey(point.key)}>
+            <span className="analytics-bar-track" aria-hidden="true">
+              <i className={goal && point[field] >= goal ? 'goal' : ''} style={{ height: `${height}%` }} />
+            </span>
+            <small aria-hidden="true">{point.label}</small>
+          </button>
+        })}
+      </div>
+    </div>
+    <p className="analytics-chart-hint">{scrollable ? 'Листайте график и выбирайте дату для подробностей.' : 'Выберите дату на графике для подробностей.'}</p>
+  </div>
+}
 function MediaStats({ data }: { data: AnalyticsOverview }) { return <article className="analytics-detail-card"><p className="eyebrow">Медиатека</p><h2>Просмотрено</h2><dl><div><dt>Фильмы</dt><dd>{data.moviesWatched}</dd></div><div><dt>Эпизоды сериалов</dt><dd>{data.seriesEpisodesWatched}</dd></div><div><dt>Эпизоды аниме</dt><dd>{data.animeEpisodesWatched}</dd></div></dl></article> }
 function ReadingStats({ data }: { data: AnalyticsOverview }) { return <article className="analytics-detail-card"><p className="eyebrow">Книги</p><h2>Чтение</h2><dl><div><dt>Прочитано страниц</dt><dd>{number(data.pagesRead)}</dd></div><div><dt>Время чтения</dt><dd>{duration(data.readingMinutes)}</dd></div></dl></article> }
 
