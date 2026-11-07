@@ -10,6 +10,7 @@ import { useTheme } from './components/ThemeContext'
 import { BackendStatus } from './components/BackendStatus'
 import { LoadingState } from './components/AsyncState'
 import { PageErrorBoundary } from './components/PageErrorBoundary'
+import { MobileNavigation } from './components/MobileNavigation'
 import './App.css'
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(module => ({ default: module.DashboardPage })))
@@ -122,40 +123,43 @@ function App() {
           </div>
         </header>
 
-        <PageErrorBoundary key={pathname}>
-          <Suspense fallback={<LoadingState message="Загружаем страницу…" />}>
-            <Routes>
-              <Route index element={<DashboardPage />} />
-              <Route path="/analytics" element={<AnalyticsPage />} />
-              <Route path="/habits" element={<HabitsPage />} />
-              <Route path="/activity" element={<ActivityPage />} />
-              <Route path="/sleep" element={<SleepPage />} />
-              <Route path="/calendar" element={<CalendarPage />} />
-              <Route path="/journal" element={<TimelinePage />} />
-              <Route path="/blog" element={<BlogPage />} />
-              <Route path="/movies" element={<MoviesPage />} />
-              <Route path="/movies/:id" element={<MovieDetailsPage />} />
-              <Route path="/series" element={<SeriesPage />} />
-              <Route path="/series/:id" element={<SeriesDetailsPage />} />
-              <Route path="/anime" element={<AnimePage />} />
-              <Route path="/anime/:id" element={<AnimeDetailsPage />} />
-              <Route path="/games" element={<GamesPage />} />
-              <Route path="/games/:id" element={<GameDetailsPage />} />
-              <Route path="/books" element={<BooksPage />} />
-              <Route path="/books/:id" element={<BookDetailsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              {navigation.slice(1).filter((item) => !['/analytics', '/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies', '/series', '/anime', '/games', '/books', '/settings'].includes(item.path)).map((item) => (
-                <Route
-                  key={item.path}
-                  path={item.path}
-                  element={<PlaceholderPage title={item.label} description={item.description} />}
-                />
-              ))}
-              <Route path="*" element={<Navigate replace to="/" />} />
-            </Routes>
-          </Suspense>
-        </PageErrorBoundary>
+        <div className="page-content">
+          <PageErrorBoundary key={pathname}>
+            <Suspense fallback={<LoadingState message="Загружаем страницу…" />}>
+              <Routes>
+                <Route index element={<DashboardPage />} />
+                <Route path="/analytics" element={<AnalyticsPage />} />
+                <Route path="/habits" element={<HabitsPage />} />
+                <Route path="/activity" element={<ActivityPage />} />
+                <Route path="/sleep" element={<SleepPage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/journal" element={<TimelinePage />} />
+                <Route path="/blog" element={<BlogPage />} />
+                <Route path="/movies" element={<MoviesPage />} />
+                <Route path="/movies/:id" element={<MovieDetailsPage />} />
+                <Route path="/series" element={<SeriesPage />} />
+                <Route path="/series/:id" element={<SeriesDetailsPage />} />
+                <Route path="/anime" element={<AnimePage />} />
+                <Route path="/anime/:id" element={<AnimeDetailsPage />} />
+                <Route path="/games" element={<GamesPage />} />
+                <Route path="/games/:id" element={<GameDetailsPage />} />
+                <Route path="/books" element={<BooksPage />} />
+                <Route path="/books/:id" element={<BookDetailsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                {navigation.slice(1).filter((item) => !['/analytics', '/habits', '/activity', '/sleep', '/calendar', '/journal', '/blog', '/movies', '/series', '/anime', '/games', '/books', '/settings'].includes(item.path)).map((item) => (
+                  <Route
+                    key={item.path}
+                    path={item.path}
+                    element={<PlaceholderPage title={item.label} description={item.description} />}
+                  />
+                ))}
+                <Route path="*" element={<Navigate replace to="/" />} />
+              </Routes>
+            </Suspense>
+          </PageErrorBoundary>
+        </div>
       </main>
+      <MobileNavigation items={navigation} icons={navigationIcons} />
     </div>
   )
 }

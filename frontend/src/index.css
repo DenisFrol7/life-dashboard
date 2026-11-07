@@ -15,6 +15,7 @@
   --accent-strong: #496985;
   --accent-soft: #e4edf4;
   --success: #5b9a67;
+  --mobile-navigation-height: 69px;
 }
 
 :root[data-theme="dark"] {

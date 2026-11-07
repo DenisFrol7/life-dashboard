@@ -1886,3 +1886,22 @@ html[data-theme="dark"] .agenda-list article p,
 html[data-theme="dark"] .agenda-list article small { color: #8f9baa; }
 html[data-theme="dark"] .agenda-actions button:hover { background: #1b2b38; }
 html[data-theme="dark"] .calendar-form .all-day-check { background: #172532; }
+
+/* Shared mobile layout; navigation-specific styles live with MobileNavigation. */
+@media (max-width: 1023px) {
+  html { scroll-padding-bottom: calc(var(--mobile-navigation-height) + env(safe-area-inset-bottom, 0px) + 16px); }
+  html:has(.mobile-menu[open]) { overflow: hidden; }
+  .app-shell .sidebar { display: none; }
+  .app-shell .main-content {
+    margin-left: 0;
+    padding: max(18px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(var(--mobile-navigation-height) + env(safe-area-inset-bottom, 0px) + 24px) max(16px, env(safe-area-inset-left, 0px));
+  }
+  .app-shell .topbar { gap: 12px; min-height: 48px; margin-bottom: 20px; }
+  .app-shell .topbar > div:first-child { min-width: 0; }
+  .app-shell .topbar .eyebrow { font-size: 10px; }
+  .app-shell .topbar h1 { font-size: 28px; line-height: 1.15; overflow-wrap: anywhere; }
+  .app-shell .profile-chip { display: none; }
+  /* Keep wide page layouts scrollable without expanding the mobile viewport. */
+  .app-shell .page-content { min-width: 0; max-width: 100%; overflow-x: auto; }
+  body .toast-viewport { bottom: calc(var(--mobile-navigation-height) + env(safe-area-inset-bottom, 0px) + 12px); right: 16px; }
+}
