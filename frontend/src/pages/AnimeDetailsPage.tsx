@@ -8,7 +8,7 @@ import {
 } from '../api/series'
 import type { LibraryStatus, ReleaseStatus, Watch } from '../api/movies'
 import { AnimeForm } from './AnimePage'
-import { BulkEpisodeForm, EpisodeForm, SeasonCompletionForm, SeasonForm } from './SeriesDetailsPage'
+import { BulkEpisodeForm, EpisodeForm, SeasonCompletionForm, SeasonForm } from '../components/SeriesStructureForms'
 import { useViewingActions } from '../hooks/useViewingActions'
 
 type EpisodeDetails = Episode & { watches: Watch[] }

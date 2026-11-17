@@ -1,21 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { Link } from 'react-router'
 import { ChevronDown, FileSpreadsheet, Heart, Plus, RefreshCw, Search, Tv, Upload, X } from 'lucide-react'
-import { createKinopoiskSeries, createSeries, deleteSeries, getSeriesCatalog, previewKinopoiskSeries, putSeriesLibrary, removeSeriesLibrary, searchKinopoiskSeries, updateSeries, type KinopoiskSeriesCandidate, type Series, type SeriesFormat, type SeriesInput, type SeriesLibraryEntry } from '../api/series'
-import type { LibraryInput, LibraryStatus, ReleaseStatus } from '../api/movies'
+import { getSeriesCatalog, type Series, type SeriesLibraryEntry } from '../api/series'
+import type { LibraryStatus, ReleaseStatus } from '../api/movies'
 import { confirmMyShowsImport, enrichSeriesFromKinopoisk, matchMyShowsWithKinopoisk, previewMyShowsImport, type KinopoiskCandidate, type KinopoiskEnrichmentResult, type KinopoiskMatchPreview, type MyShowsImportChoice, type MyShowsImportPreview, type MyShowsImportResult } from '../api/myShowsImport'
 import { getApiErrorMessage } from '../api/client'
 import { ErrorState, LoadingState } from '../components/AsyncState'
 import { useToast } from '../components/ToastContext'
-import { saveLibraryForm } from './libraryForm'
 import { useLatestRequest } from '../hooks/useLatestRequest'
 import { useFormMutation } from '../hooks/useFormMutation'
+import { SeriesForm } from '../components/SeriesForm'
 import './SeriesPage.css'
 
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
 const releaseLabels: Record<ReleaseStatus, string> = { ANNOUNCED: 'Анонсирован', ONGOING: 'Выходит', RELEASED: 'Вышел', ENDED: 'Завершён', CANCELLED: 'Отменён' }
-const emptySeries: SeriesInput = { title: '', originalTitle: null, itemType: 'SERIES', format: 'LIVE_ACTION', releaseYear: null, description: null, coverUrl: null, durationMinutes: null, releaseStatus: 'ONGOING', genre: null, developer: null, releaseDate: null, xboxPlayAnywhere: false }
-const emptyLibrary: LibraryInput = { status: 'PLANNED', rating: null, favorite: false, startedAt: null, completedAt: null, personalNote: null }
 type Progress = { seasonCount: number; episodeCount: number; watchedEpisodeCount: number; watchedMinutes: number }
 const formatSeasonCount = (count: number) => {
   const lastTwo = count % 100
@@ -144,7 +142,7 @@ export function SeriesPage() {
         ] as const).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{initialized ? value : '—'}</dd></div>)}</dl><button type="button" className="secondary-button icon-button shows-catalog-update" disabled={catalogUpdating || loading} onClick={() => void updateKinopoiskCatalog()}><RefreshCw aria-hidden="true" />{catalogUpdating ? 'Обновляем…' : 'Обновить каталог'}</button></div>
       </aside>
     </section>
-    {editing && <SeriesForm series={editing === 'new' ? undefined : editing} library={editing === 'new' ? undefined : library[editing.id]} onClose={() => finishDialog()} onSaved={() => finishDialog(true)} />}
+    {editing && <SeriesForm returnFocusTo={triggerRef.current} series={editing === 'new' ? undefined : editing} library={editing === 'new' ? undefined : library[editing.id]} onClose={() => finishDialog()} onSaved={() => finishDialog(true)} />}
     {importing && <MyShowsImportDialog onClose={() => finishDialog()} onImported={() => finishDialog(true)} />}
   </div>
 }
@@ -229,77 +227,4 @@ function MyShowsImportDialog({ onClose, onImported }: { onClose: () => void; onI
       </>}
     </section>
   </div>
-}
-
-export function SeriesForm({ series, library, onClose, onSaved, onDeleted }: { series?: Series; library?: SeriesLibraryEntry; onClose: () => void; onSaved: () => void; onDeleted?: () => void }) {
-  const { showToast } = useToast()
-  const [item, setItem] = useState<SeriesInput>(series ? { ...series } : emptySeries)
-  const [entry, setEntry] = useState<LibraryInput>(library ? { status: library.status, rating: library.rating, favorite: library.favorite, startedAt: library.startedAt, completedAt: library.completedAt, personalNote: library.personalNote } : emptyLibrary)
-  const [inLibrary, setInLibrary] = useState(Boolean(library) || !series)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [candidates, setCandidates] = useState<KinopoiskSeriesCandidate[]>([])
-  const [selectedFilmId, setSelectedFilmId] = useState<number | null>(null)
-  const [catalogSummary, setCatalogSummary] = useState<{ seasons: number; episodes: number } | null>(null)
-  const [searching, setSearching] = useState(false)
-  const mutations = useFormMutation()
-  const { saving, deleting, pending } = mutations
-  const [error, setError] = useState<string | null>(null)
-  const catalogRequests = useLatestRequest()
-  const cancelCatalog = () => { catalogRequests.invalidate(); setSearching(false); setCandidates([]) }
-  const changeSearchQuery = (value: string) => { cancelCatalog(); setSearchQuery(value) }
-  const closeForm = () => { mutations.dispose(); catalogRequests.dispose(); onClose() }
-  const setItemValue = <K extends keyof SeriesInput>(key: K, value: SeriesInput[K]) => { cancelCatalog(); setItem((current) => ({ ...current, [key]: value })) }
-  const setEntryValue = <K extends keyof LibraryInput>(key: K, value: LibraryInput[K]) => setEntry((current) => ({ ...current, [key]: value }))
-  const searchCatalog = async () => {
-    const value = searchQuery.trim()
-    if (value.length < 2) return
-    await catalogRequests.run(() => searchKinopoiskSeries(value), {
-      onStart: () => { setSearching(true); setError(null); setCandidates([]) },
-      onSuccess: setCandidates,
-      onError: (reason) => setError(getApiErrorMessage(reason, 'Не удалось выполнить поиск в Кинопоиске')),
-      onFinish: () => setSearching(false),
-    })
-  }
-  const selectCandidate = async (candidate: KinopoiskSeriesCandidate) => {
-    if (candidate.existingContentId) return
-    await catalogRequests.run(() => previewKinopoiskSeries(candidate.filmId), {
-      onStart: () => { setSearching(true); setError(null) },
-      onSuccess: (details) => {
-        setSelectedFilmId(details.filmId)
-        setCatalogSummary({ seasons: details.seasonCount, episodes: details.episodeCount })
-        setItem({ ...emptySeries, title: details.title, originalTitle: details.originalTitle, releaseYear: details.releaseYear, description: details.description, coverUrl: details.coverUrl, releaseStatus: details.releaseStatus, genre: details.genre })
-        setCandidates([])
-      },
-      onError: (reason) => setError(getApiErrorMessage(reason, 'Не удалось загрузить данные сериала')),
-      onFinish: () => setSearching(false),
-    })
-  }
-  const submit = async (event: FormEvent) => {
-    event.preventDefault(); if (pending || searching) return
-    setError(null)
-    await mutations.run('save', () => saveLibraryForm({
-      title: series?.title ?? item.title, inLibrary, wasInLibrary: Boolean(library),
-      saveItem: () => series ? updateSeries(series.id, item) : selectedFilmId ? createKinopoiskSeries(selectedFilmId, item) : createSeries(item),
-      putLibrary: (id) => putSeriesLibrary(id, entry), removeLibrary: removeSeriesLibrary,
-    }), {
-      onSuccess: (saved) => {
-        if (!saved) return
-        showToast(series ? 'Сериал обновлён' : 'Сериал добавлен'); onSaved()
-      },
-      onError: (reason) => setError(getApiErrorMessage(reason, 'Не удалось сохранить сериал')),
-    })
-  }
-  const remove = async () => {
-    if (!series || pending || searching) return
-    setError(null)
-    await mutations.run('delete', async () => {
-      if (!window.confirm(`Удалить «${series.title}» вместе с сезонами и историей?`)) return false
-      await deleteSeries(series.id)
-      return true
-    }, {
-      onSuccess: (deleted) => { if (deleted) { showToast('Сериал удалён'); (onDeleted ?? onSaved)() } },
-      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось удалить сериал'),
-    })
-  }
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeForm() }}><form className="habit-form movie-form" onSubmit={(event) => void submit(event)}><div className="form-heading"><div><p className="eyebrow">Сериалы</p><h2>{series ? 'Редактирование' : 'Новый сериал'}</h2></div><button type="button" onClick={closeForm}>×</button></div>{error && <div className="form-error">{error}</div>}{!series && <section className="kinopoisk-movie-search"><div><input value={searchQuery} onChange={(event) => changeSearchQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void searchCatalog() } }} placeholder="Введите название сериала" /><button className="secondary-button" type="button" disabled={searching || searchQuery.trim().length < 2} onClick={() => void searchCatalog()}>{searching ? 'Ищем…' : 'Найти в Кинопоиске'}</button></div>{selectedFilmId && <p>Данные и структура загружены: {catalogSummary?.seasons ?? 0} сезонов, {catalogSummary?.episodes ?? 0} эпизодов. Проверьте поля и укажите личный статус.</p>}{candidates.length > 0 && <div className="kinopoisk-movie-results">{candidates.map((candidate) => <button type="button" key={candidate.filmId} disabled={Boolean(candidate.existingContentId)} onClick={() => void selectCandidate(candidate)}><span>▤</span><span><strong>{candidate.nameRu || candidate.nameOriginal || `Сериал ${candidate.filmId}`}</strong><small>{candidate.nameOriginal && candidate.nameOriginal !== candidate.nameRu ? `${candidate.nameOriginal} · ` : ''}{candidate.year ?? 'Год неизвестен'}{candidate.existingContentId ? ' · Уже в каталоге' : ''}</small></span></button>)}</div>}</section>}<label>Название<input required value={item.title} onChange={(event) => setItemValue('title', event.target.value)} /></label><label>Оригинальное название<input value={item.originalTitle ?? ''} onChange={(event) => setItemValue('originalTitle', event.target.value || null)} /></label><div className="form-grid"><label>Формат<select value={item.format} onChange={(event) => setItemValue('format', event.target.value as SeriesFormat)}><option value="LIVE_ACTION">Сериал</option><option value="ANIMATION">Мультсериал</option></select></label><label>Статус выпуска<select value={item.releaseStatus} onChange={(event) => setItemValue('releaseStatus', event.target.value as ReleaseStatus)}>{Object.entries(releaseLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label>Год<input min="1900" type="number" value={item.releaseYear ?? ''} onChange={(event) => setItemValue('releaseYear', event.target.value ? Number(event.target.value) : null)} /></label><label>Жанр<input maxLength={100} value={item.genre ?? ''} onChange={(event) => setItemValue('genre', event.target.value || null)} /></label><label>Обложка<input type="url" value={item.coverUrl ?? ''} onChange={(event) => setItemValue('coverUrl', event.target.value || null)} /></label></div><label>Описание<textarea rows={3} value={item.description ?? ''} onChange={(event) => setItemValue('description', event.target.value || null)} /></label><fieldset className="library-fields"><legend>Моя библиотека</legend><label className="all-day-check"><input type="checkbox" checked={inLibrary} onChange={(event) => setInLibrary(event.target.checked)} />Добавить в библиотеку</label>{inLibrary && <><div className="form-grid"><label>Статус<select value={entry.status} onChange={(event) => setEntryValue('status', event.target.value as LibraryStatus)}>{Object.entries(statusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label>Оценка<select value={entry.rating ?? ''} onChange={(event) => setEntryValue('rating', event.target.value ? Number(event.target.value) : null)}><option value="">Без оценки</option>{Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <option key={value}>{value}</option>)}</select></label></div><label className="favorite-check"><input type="checkbox" checked={entry.favorite} onChange={(event) => setEntryValue('favorite', event.target.checked)} />В избранном</label><label>Заметка<textarea rows={2} value={entry.personalNote ?? ''} onChange={(event) => setEntryValue('personalNote', event.target.value || null)} /></label></>}</fieldset><div className="form-buttons">{series && <button className="danger-button" type="button" disabled={pending || searching} onClick={() => void remove()}>{deleting ? 'Удаляем…' : 'Удалить'}</button>}<button className="secondary-button" type="button" onClick={closeForm}>Отмена</button><button className="primary-button" disabled={pending || searching}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div></form></div>
 }

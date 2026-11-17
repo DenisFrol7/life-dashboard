@@ -1,0 +1,11 @@
+.series-form-search { display: grid; gap: 12px; min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft); }
+.series-form-search > div:first-child { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
+.series-form-search button { min-height: 48px; font-size: 14px; }
+.series-form-search p { margin: 0; color: var(--accent-dark); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.series-form-results { display: grid; gap: 8px; min-width: 0; max-height: 320px; padding: 3px; overflow-y: auto; overscroll-behavior: contain; }
+.series-form-results > button { display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--paper); cursor: pointer; text-align: left; }
+.series-form-results button > span:first-child { color: var(--accent-dark); font-size: 24px; text-align: center; }
+.series-form-results button > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.series-form-results strong { display: block; font-size: 14px; line-height: 1.4; }
+.series-form-results small { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+@media (max-width: 600px) { .series-form-search > div:first-child { grid-template-columns: minmax(0, 1fr); } }

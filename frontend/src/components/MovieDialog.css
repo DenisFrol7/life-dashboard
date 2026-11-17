@@ -19,7 +19,7 @@
 .movie-dialog button:disabled { cursor: wait; opacity: .6; }
 .movie-dialog .form-error { margin: 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 html[data-theme="dark"] .movie-dialog::backdrop { background: #02070dbd; }
-html[data-theme="dark"] .movie-dialog-form input[type="datetime-local"] { color-scheme: dark; }
+html[data-theme="dark"] .movie-dialog-form :is(input[type="datetime-local"], input[type="date"]) { color-scheme: dark; }
 html[data-theme="dark"] .movie-dialog-actions > .movie-dialog-delete { border-color: #63383a; color: #efb8b5; background: #281719; }
 
 @media (max-width: 600px) {
