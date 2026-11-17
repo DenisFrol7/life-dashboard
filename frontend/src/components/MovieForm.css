@@ -1,0 +1,19 @@
+.movie-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.movie-form-search { display: grid; gap: 12px; min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft); }
+.movie-form-search > div:first-child { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
+.movie-form-search button { min-height: 48px; font-size: 14px; }
+.movie-form-search p { margin: 0; color: var(--accent-dark); font-size: 13px; line-height: 1.5; }
+.movie-form-results { display: grid; gap: 8px; min-width: 0; max-height: 320px; padding: 3px; overflow-y: auto; overscroll-behavior: contain; }
+.movie-form-results > button { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--paper); cursor: pointer; text-align: left; }
+.movie-form-results img, .movie-form-candidate-cover { width: 44px; height: 64px; border-radius: 5px; object-fit: cover; }
+.movie-form-candidate-cover { display: grid; place-items: center; background: var(--accent-soft); }
+.movie-form-results button > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.movie-form-results strong { display: block; font-size: 14px; line-height: 1.4; }
+.movie-form-results small { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.movie-form-library { display: grid; gap: 16px; min-width: 0; margin: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+.movie-form-library legend { padding: 0 5px; color: var(--muted); font-size: 14px; font-weight: 600; }
+.movie-dialog-body .movie-form-checkbox { display: flex; align-items: center; gap: 10px; min-height: 44px; color: var(--ink); font-size: 14px; cursor: pointer; }
+.movie-form-checkbox input { flex: 0 0 20px; width: 20px; height: 20px; margin: 0; accent-color: var(--accent-strong); }
+@media (max-width: 600px) {
+  .movie-form-grid, .movie-form-search > div:first-child { grid-template-columns: minmax(0, 1fr); }
+}
