@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { ChevronDown, Download, Film, Heart, Plus, Search } from 'lucide-react'
-import { enrichKinopoiskMovies, getMovieCatalogPage, importKinopoiskRatings, previewKinopoiskRatings, type KinopoiskMovieEnrichmentResult, type KinopoiskRatingsImportResult, type KinopoiskRatingsPreview, type LibraryEntry, type LibraryStatus, type Movie, type MovieCatalogStatistics } from '../api/movies'
+import { getMovieCatalogPage, type LibraryEntry, type LibraryStatus, type Movie, type MovieCatalogStatistics } from '../api/movies'
 import { ErrorState, LoadingState } from '../components/AsyncState'
 import { useLatestRequest } from '../hooks/useLatestRequest'
 import { MovieForm } from '../components/MovieForm'
+import { KinopoiskRatingsDialog } from '../components/KinopoiskRatingsDialog'
 import './MoviesPage.css'
 
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
@@ -31,6 +32,7 @@ export function MoviesPage() {
   const appendLockRef = useRef(false)
   const catalogRef = useRef<HTMLDivElement>(null)
   const addButtonRef = useRef<HTMLButtonElement>(null)
+  const importButtonRef = useRef<HTMLButtonElement>(null)
   const formTriggerRef = useRef<HTMLButtonElement | null>(null)
   const formMovieIdRef = useRef<number | null>(null)
   const focusAfterFormRef = useRef(false)
@@ -103,7 +105,7 @@ export function MoviesPage() {
     <section className="movies-catalog-toolbar" aria-label="Управление каталогом фильмов">
       <div className="movies-catalog-status-tabs" role="group" aria-label="Статус фильмов">{([['', 'Все'], ['PLANNED', 'В планах'], ['COMPLETED', 'Просмотрено']] as const).map(([value, label]) => <button type="button" key={value || 'all'} aria-pressed={status === value} onClick={() => changeFilters(query, value)}>{label}</button>)}</div>
       <div className="movies-catalog-search"><Search aria-hidden="true" /><input type="search" aria-label="Найти фильм" value={query} onChange={event => changeFilters(event.target.value, status)} placeholder="Найти фильм" /></div>
-      <div className="movies-catalog-actions"><button type="button" className="secondary-button icon-button" onClick={() => setImporting(true)}><Download aria-hidden="true" />Импорт оценок</button><button type="button" ref={addButtonRef} className="primary-button icon-button" onClick={event => openForm('new', event.currentTarget)}><Plus aria-hidden="true" />Добавить фильм</button></div>
+      <div className="movies-catalog-actions"><button type="button" className="secondary-button icon-button" ref={importButtonRef} onClick={() => setImporting(true)}><Download aria-hidden="true" />Импорт оценок</button><button type="button" ref={addButtonRef} className="primary-button icon-button" onClick={event => openForm('new', event.currentTarget)}><Plus aria-hidden="true" />Добавить фильм</button></div>
     </section>
     <section className="movies-catalog-layout">
       <div className="movies-catalog-main">
@@ -142,31 +144,6 @@ export function MoviesPage() {
       </aside>
     </section>
     {editing && <MovieForm movie={editing === 'new' ? undefined : editing} library={editing === 'new' ? undefined : library[editing.id]} existingMovieIds={movies.map((item) => item.id)} returnFocusTo={formTriggerRef.current} onClose={() => setEditing(null)} onSaved={savedForm} />}
-    {importing && <KinopoiskRatingsDialog onClose={() => setImporting(false)} onImported={() => { setImporting(false); void load() }} />}
-  </div>
-}
-
-function KinopoiskRatingsDialog({ onClose, onImported }: { onClose: () => void; onImported: () => void }) {
-  const [profileId, setProfileId] = useState('')
-  const [preview, setPreview] = useState<KinopoiskRatingsPreview | null>(null)
-  const [result, setResult] = useState<KinopoiskRatingsImportResult | null>(null)
-  const [enrichment, setEnrichment] = useState<KinopoiskMovieEnrichmentResult | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const load = async () => { if (!profileId.trim()) return; setLoading(true); setError(null); try { setPreview(await previewKinopoiskRatings(profileId.trim())) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить оценки Кинопоиска') } finally { setLoading(false) } }
-  const confirm = async () => { if (!preview || !window.confirm(`Добавить ${preview.newCount} новых фильмов и обновить ${preview.existingCount} существующих?`)) return; setLoading(true); setError(null); try { setResult(await importKinopoiskRatings(preview.profileId)) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось импортировать фильмы') } finally { setLoading(false) } }
-  const enrich = async () => { setLoading(true); setError(null); try { setEnrichment(await enrichKinopoiskMovies(350)) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить подробные данные фильмов') } finally { setLoading(false) } }
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !loading) onClose() }}>
-    <div className="habit-form kinopoisk-ratings-dialog">
-      <div className="form-heading"><div><p className="eyebrow">Кинопоиск</p><h2>Импорт оценок</h2></div><button type="button" onClick={onClose}>×</button></div>
-      {error && <div className="form-error">{error}</div>}
-      {enrichment && <div className="notice success"><strong>Подробные данные обновлены</strong><span>Обновлено: {enrichment.updated}. Осталось: {enrichment.remaining}.{enrichment.quotaExhausted ? ' Достигнут лимит запросов Кинопоиска. Продолжите позже.' : ''}</span></div>}
-      {result ? <div className="notice success"><strong>Импорт завершён</strong><span>Добавлено: {result.created}. Обновлено: {result.updated}. Пропущено: {result.skipped}.</span></div> : <>
-        <div className="kinopoisk-profile-input"><label>ID профиля<input value={profileId} placeholder="Например, 1234567" onChange={(event) => setProfileId(event.target.value)} disabled={loading} /></label><button className="primary-button" type="button" disabled={loading || !profileId.trim()} onClick={() => void load()}>{loading && !preview ? 'Загружаем страницы…' : 'Загрузить оценки'}</button></div>
-        {loading && <p className="form-hint">Операция может занять несколько минут. Не закрывайте окно.</p>}
-        {preview && <><div className="myshows-preview-summary kinopoisk-summary"><div><span>Всего оценок</span><strong>{preview.totalRatings}</strong></div><div><span>Фильмы</span><strong>{preview.movieCount}</strong></div><div><span>Уже в каталоге</span><strong>{preview.existingCount}</strong></div><div><span>Новые</span><strong>{preview.newCount}</strong></div></div><p className="form-hint">Сериалов исключено: {preview.seriesCount}. Дата просмотра недоступна и не будет добавлена в статистику дня.</p><div className="kinopoisk-ratings-list">{preview.movies.map((item) => <article key={item.filmId} className={item.existingContentId ? 'existing' : ''}>{item.posterUrlPreview ? <img src={item.posterUrlPreview} alt="" /> : <span>🎬</span>}<div><strong>{item.title}</strong><small>{item.originalTitle && item.originalTitle !== item.title ? `${item.originalTitle} · ` : ''}{item.year ?? 'Год неизвестен'}{item.genre ? ` · ${item.genre}` : ''}</small></div><b>{item.userRating ? `${item.userRating}/10` : 'Без оценки'}</b><em>{item.existingContentId ? 'Обновить' : 'Добавить'}</em></article>)}</div></>}
-      </>}
-      <div className="form-buttons"><button className="secondary-button" type="button" disabled={loading} onClick={result ? onImported : onClose}>{result ? 'Готово' : 'Закрыть'}</button>{!preview && !result && <button className="primary-button" type="button" disabled={loading} onClick={() => void enrich()}>{loading ? 'Обновляем…' : 'Загрузить подробные данные'}</button>}{preview && !result && <button className="primary-button" type="button" disabled={loading} onClick={() => void confirm()}>{loading ? 'Импортируем…' : `Импортировать ${preview.movieCount} фильмов`}</button>}</div>
-    </div>
+    {importing && <KinopoiskRatingsDialog returnFocusTo={importButtonRef.current} onClose={() => setImporting(false)} onImported={() => { void load() }} />}
   </div>
 }

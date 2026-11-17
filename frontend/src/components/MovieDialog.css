@@ -14,6 +14,7 @@
 .movie-dialog-form textarea { resize: vertical; line-height: 1.5; }
 .movie-dialog-actions { display: grid; flex: 0 0 auto; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 16px 24px; border-top: 1px solid var(--line); background: var(--paper); }
 .movie-dialog-actions > button { min-width: 0; min-height: 44px; font-size: 14px; }
+.movie-dialog-actions > button:only-child { grid-column: 1 / -1; }
 .movie-dialog-actions > .movie-dialog-delete { grid-column: 1 / -1; padding: 10px 12px; border: 1px solid #e7c7c1; border-radius: 9px; color: #a15245; background: #f8eae7; cursor: pointer; font-weight: 600; }
 .movie-dialog button:disabled { cursor: wait; opacity: .6; }
 .movie-dialog .form-error { margin: 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
