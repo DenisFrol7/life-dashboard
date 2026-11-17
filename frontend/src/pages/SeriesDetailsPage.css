@@ -1,0 +1,115 @@
+.show-details-page { display: grid; gap: 18px; width: 100%; max-width: 1280px; min-width: 0; margin: 0 auto; }
+.show-details-page :is(button, a, summary):focus-visible { outline: 3px solid var(--accent-strong); outline-offset: 2px; }
+.show-details-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.show-details-toolbar > a { min-height: 44px; color: var(--accent-dark); font-size: 14px; font-weight: 600; text-decoration: none; }
+.show-details-toolbar button { min-height: 44px; font-size: 14px; }
+.show-details-page button:disabled { cursor: wait; opacity: .6; }
+.show-details-hero { display: grid; grid-template-columns: 180px minmax(0, 1fr) minmax(230px, .85fr); align-items: start; gap: 24px; min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); }
+.show-details-poster { position: relative; display: grid; place-items: center; width: 180px; aspect-ratio: 2 / 3; overflow: hidden; border-radius: 12px; color: #d8e4ee; background: linear-gradient(145deg, #324a5c, #182733); }
+.show-details-poster > span { font-family: Georgia, serif; font-size: 64px; font-weight: 700; }
+.show-details-poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.show-details-info { min-width: 0; overflow-wrap: anywhere; }
+.show-details-info h2 { margin: 0; color: var(--ink); font-family: Georgia, serif; font-size: clamp(28px, 3vw, 38px); line-height: 1.2; }
+.show-details-original { margin: 12px 0 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+.show-details-info dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 24px 0 0; }
+.show-details-info dl > div { display: grid; gap: 5px; min-width: 0; }
+.show-details-info dt { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.show-details-info dd { margin: 0; color: var(--ink); font-size: 16px; line-height: 1.5; }
+.show-details-genre { grid-column: 1 / -1; }
+.show-details-personal { display: grid; gap: 20px; min-width: 0; padding-left: 24px; border-left: 1px solid var(--line); overflow-wrap: anywhere; }
+.show-details-personal > div { display: grid; align-content: start; gap: 7px; min-width: 0; }
+.show-details-personal > div > span { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.show-details-status { color: var(--accent-dark); font-size: 20px; line-height: 1.4; }
+.show-details-personal small { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.show-details-rating { color: var(--accent-dark); font-size: 28px; line-height: 1.3; }
+.show-details-note p { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
+.show-details-panel { min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); }
+.show-details-panel h2 { margin: 0 0 18px; color: var(--ink); font-family: Georgia, serif; font-size: 24px; line-height: 1.3; }
+.show-details-description p { margin: 0; color: var(--ink); font-size: 16px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.show-details-summary { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .9fr) minmax(0, 1fr); gap: 18px; min-width: 0; }
+.show-details-progress > div:first-of-type { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 10px; color: var(--ink); }
+.show-details-progress strong { font-size: 16px; line-height: 1.5; }
+.show-details-progress b { color: var(--accent-dark); font-size: 28px; line-height: 1.3; }
+.show-details-progress-bar { height: 8px; margin-top: 18px; overflow: hidden; border-radius: 999px; background: var(--line); }
+.show-details-progress-bar span { display: block; height: 100%; border-radius: inherit; background: var(--accent-strong); }
+.show-details-count dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.show-details-count dl > div { display: grid; align-content: start; gap: 5px; min-width: 0; overflow-wrap: anywhere; }
+.show-details-count dt { color: var(--muted); font-size: 14px; line-height: 1.5; }
+.show-details-count dd { order: -1; margin: 0; color: var(--accent-dark); font-size: 28px; font-weight: 700; line-height: 1.3; }
+.show-details-last-watch { display: grid; align-content: start; gap: 8px; overflow-wrap: anywhere; }
+.show-details-last-watch h2 { margin-bottom: 10px; }
+.show-details-last-watch > strong { color: var(--accent-dark); font-size: 20px; line-height: 1.4; }
+.show-details-last-watch > span { color: var(--ink); font-size: 15px; line-height: 1.5; }
+.show-details-last-watch time { color: var(--muted); font-size: 14px; line-height: 1.5; }
+.show-details-season-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.show-details-season-heading > div { min-width: 0; }
+.show-details-season-heading h2 { margin-bottom: 0; }
+.show-details-add-season { min-height: 48px; font-size: 14px; }
+.show-details-loading, .show-details-empty { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.show-details-seasons > :is(.show-details-loading, .show-details-empty) { margin-top: 16px; }
+.show-details-action-error { margin-top: 16px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--paper-soft); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.show-details-season-list { display: grid; gap: 14px; min-width: 0; margin-top: 20px; }
+.show-details-season-list > details { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft); }
+.show-details-season-list summary { display: grid; grid-template-columns: minmax(0, 1fr) auto 20px; align-items: center; gap: 12px; min-width: 0; min-height: 64px; padding: 16px; cursor: pointer; list-style: none; }
+.show-details-season-list summary::-webkit-details-marker { display: none; }
+.show-details-season-list summary:focus-visible { outline-offset: -3px; }
+.show-details-season-list summary > svg { width: 20px; height: 20px; color: var(--accent-dark); }
+.show-details-season-list details[open] > summary > svg { transform: rotate(180deg); }
+.show-details-season-copy { display: grid; gap: 5px; min-width: 0; overflow-wrap: anywhere; }
+.show-details-season-copy > strong { color: var(--ink); font-size: 17px; line-height: 1.4; }
+.show-details-season-copy p { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.5; }
+.show-details-season-copy small { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.show-details-season-count { color: var(--accent-dark); font-size: 14px; font-weight: 700; line-height: 1.5; }
+.show-details-season-actions { display: flex; flex-wrap: wrap; gap: 10px; min-width: 0; padding: 12px 16px; border-top: 1px solid var(--line); }
+.show-details-season-actions button { min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--accent-dark); background: var(--paper); cursor: pointer; font-size: 14px; line-height: 1.4; }
+.show-details-season-actions button:last-child { color: var(--muted); }
+.show-details-episode-list { display: grid; min-width: 0; border-top: 1px solid var(--line); }
+.show-details-episode { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto 44px; align-items: center; gap: 12px; min-width: 0; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.show-details-episode > b { display: grid; place-items: center; min-width: 32px; min-height: 32px; padding: 4px; border-radius: 50%; color: var(--muted); background: var(--paper); font-size: 13px; overflow-wrap: anywhere; }
+.show-details-episode-title { display: grid; gap: 5px; min-width: 0; min-height: 44px; padding: 4px 0; border: 0; color: var(--ink); background: transparent; cursor: pointer; text-align: left; overflow-wrap: anywhere; }
+.show-details-episode-title strong { font-size: 16px; line-height: 1.5; }
+.show-details-episode-title small { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.show-details-episode-status { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.show-details-mark-episode { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 10px; color: var(--accent-dark); background: var(--paper); cursor: pointer; }
+.show-details-mark-episode svg { width: 20px; height: 20px; }
+.show-details-episode[data-watched="true"] > b { color: var(--accent-dark); background: var(--accent-soft); }
+.show-details-episode[data-watched="true"] .show-details-episode-status { color: var(--accent-dark); font-weight: 700; }
+.show-details-add-episode { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; min-height: 44px; margin: 12px 16px; padding: 10px; border: 1px dashed var(--line); border-radius: 9px; color: var(--accent-dark); background: var(--paper); cursor: pointer; font-size: 14px; line-height: 1.5; }
+.show-details-add-episode svg { flex: 0 0 18px; width: 18px; height: 18px; }
+.show-details-episode-list > .show-details-empty { padding: 16px 16px 0; }
+.show-details-page .async-state { min-width: 0; }
+.show-details-page .async-state > div { min-width: 0; overflow-wrap: anywhere; }
+.show-details-page .async-state strong { color: var(--ink); }
+.show-details-page .async-error button { min-height: 44px; font-size: 14px; }
+@media (max-width: 1200px) {
+  .show-details-hero { grid-template-columns: 160px minmax(0, 1fr); gap: 20px; }
+  .show-details-poster { width: 160px; }
+  .show-details-personal { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 20px 0 0; border-top: 1px solid var(--line); border-left: 0; }
+  .show-details-score { text-align: right; }
+  .show-details-note { grid-column: 1 / -1; }
+  .show-details-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .show-details-progress { grid-column: 1 / -1; }
+}
+
+@media (max-width: 600px) {
+  .show-details-toolbar { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .show-details-toolbar button { width: 100%; }
+  .show-details-hero { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .show-details-poster { justify-self: center; width: min(200px, 100%); }
+  .show-details-info h2 { font-size: 28px; }
+  .show-details-panel { padding: 16px; }
+  .show-details-summary { grid-template-columns: minmax(0, 1fr); }
+  .show-details-add-season { width: 100%; }
+  .show-details-season-list summary { grid-template-columns: minmax(0, 1fr) 20px; gap: 8px 12px; padding: 14px 12px; }
+  .show-details-season-count { grid-column: 1; grid-row: 2; }
+  .show-details-season-list summary > svg { grid-column: 2; grid-row: 1 / span 2; }
+  .show-details-season-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 12px; }
+  .show-details-season-actions button { padding: 10px 6px; font-size: 13px; }
+  .show-details-episode { grid-template-columns: 32px minmax(0, 1fr) 44px; gap: 6px 8px; padding: 12px 10px; }
+  .show-details-episode > b { align-self: start; margin-top: 6px; }
+  .show-details-episode-title { grid-column: 2; }
+  .show-details-episode-status { grid-column: 2; grid-row: 2; }
+  .show-details-mark-episode { grid-column: 3; grid-row: 1 / span 2; }
+  .show-details-add-episode { margin: 12px; }
+  .show-details-page .async-state { flex-direction: column; text-align: center; }
+}
