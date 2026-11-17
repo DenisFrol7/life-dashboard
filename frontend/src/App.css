@@ -500,15 +500,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .myshows-preview-list em.matched { color: #527a5c; background: #e7f2e9; }
 .myshows-preview-list em.new { color: #496985; background: #e8f0f6; }
 .myshows-preview-list em.ambiguous { color: #9a6b37; background: #f8eddc; }
-.myshows-match-action { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
-.myshows-match-action p { margin: 0; }
-.myshows-match-action button { flex: 0 0 auto; }
-.myshows-preview-summary.kinopoisk-summary { grid-template-columns: repeat(4, 1fr); margin-top: 16px; }
-.myshows-match-list { display: grid; gap: 8px; margin-top: 14px; }
-.myshows-match-list > label { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(260px, 1.4fr); align-items: center; gap: 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
-.myshows-match-list span, .myshows-match-list strong, .myshows-match-list small { display: block; }
-.myshows-match-list small { margin-top: 3px; color: var(--muted); font-size: 11px; }
-.myshows-match-list select { width: 100%; }
 .myshows-confirm { position: sticky; bottom: -26px; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 16px -26px -26px; padding: 16px 26px; border-top: 1px solid var(--line); background: var(--paper); }
 .series-list-progress span { display: block; height: 100%; border-radius: inherit; background: #6689a4; }
 .series-list-progress-row > strong { justify-self: end; color: #496985; font-size: 15px; line-height: 1; white-space: nowrap; }

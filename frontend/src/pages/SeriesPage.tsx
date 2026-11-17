@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { ChevronDown, FileSpreadsheet, Heart, Plus, RefreshCw, Search, Tv, Upload, X } from 'lucide-react'
+import { ChevronDown, FileSpreadsheet, Heart, Plus, RefreshCw, Search, Tv } from 'lucide-react'
 import { getSeriesCatalog, type Series, type SeriesLibraryEntry } from '../api/series'
 import type { LibraryStatus, ReleaseStatus } from '../api/movies'
-import { confirmMyShowsImport, enrichSeriesFromKinopoisk, matchMyShowsWithKinopoisk, previewMyShowsImport, type KinopoiskCandidate, type KinopoiskEnrichmentResult, type KinopoiskMatchPreview, type MyShowsImportChoice, type MyShowsImportPreview, type MyShowsImportResult } from '../api/myShowsImport'
+import { enrichSeriesFromKinopoisk, type KinopoiskEnrichmentResult } from '../api/myShowsImport'
 import { getApiErrorMessage } from '../api/client'
 import { ErrorState, LoadingState } from '../components/AsyncState'
 import { useToast } from '../components/ToastContext'
 import { useLatestRequest } from '../hooks/useLatestRequest'
 import { useFormMutation } from '../hooks/useFormMutation'
 import { SeriesForm } from '../components/SeriesForm'
+import { MyShowsImportDialog } from '../components/MyShowsImportDialog'
 import './SeriesPage.css'
 
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
@@ -143,88 +144,6 @@ export function SeriesPage() {
       </aside>
     </section>
     {editing && <SeriesForm returnFocusTo={triggerRef.current} series={editing === 'new' ? undefined : editing} library={editing === 'new' ? undefined : library[editing.id]} onClose={() => finishDialog()} onSaved={() => finishDialog(true)} />}
-    {importing && <MyShowsImportDialog onClose={() => finishDialog()} onImported={() => finishDialog(true)} />}
-  </div>
-}
-
-
-function MyShowsImportDialog({ onClose, onImported }: { onClose: () => void; onImported: () => void }) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [fileName, setFileName] = useState('')
-  const [file, setFile] = useState<File | null>(null)
-  const [preview, setPreview] = useState<MyShowsImportPreview | null>(null)
-  const [kinopoiskPreview, setKinopoiskPreview] = useState<KinopoiskMatchPreview | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [selections, setSelections] = useState<Record<string, string>>({})
-  const [result, setResult] = useState<MyShowsImportResult | null>(null)
-  const [enrichment, setEnrichment] = useState<KinopoiskEnrichmentResult | null>(null)
-  const selectFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-    if (!file.name.toLocaleLowerCase().endsWith('.xlsx')) { setError('Выберите XLSX-файл экспорта MyShows.'); return }
-    setFile(file); setFileName(file.name); setLoading(true); setError(null); setPreview(null); setKinopoiskPreview(null)
-    try { setPreview(await previewMyShowsImport(file)) }
-    catch (reason) { setError(getApiErrorMessage(reason, 'Не удалось проверить экспорт MyShows')) }
-    finally { setLoading(false) }
-  }
-  const matchWithKinopoisk = async () => {
-    if (!file) return
-    setLoading(true); setError(null); setKinopoiskPreview(null)
-    try {
-      const matched = await matchMyShowsWithKinopoisk(file)
-      setKinopoiskPreview(matched)
-      setSelections(Object.fromEntries(matched.series.map((item) => [item.title, item.selectedFilmId != null ? String(item.selectedFilmId) : item.candidates.length ? '' : 'BASIC'])))
-    }
-    catch (reason) { setError(getApiErrorMessage(reason, 'Не удалось сопоставить сериалы с Кинопоиском')) }
-    finally { setLoading(false) }
-  }
-  const candidateFor = (title: string): KinopoiskCandidate | null => {
-    const item = kinopoiskPreview?.series.find((entry) => entry.title === title)
-    return item?.candidates.find((candidate) => String(candidate.filmId) === selections[title]) ?? null
-  }
-  const unresolved = kinopoiskPreview?.series.filter((item) => !selections[item.title]).length ?? 0
-  const confirmImport = async () => {
-    if (!file || !kinopoiskPreview || unresolved) return
-    if (!window.confirm('Импортировать выбранные сериалы и историю просмотров? Перед записью backend создаст резервную копию базы.')) return
-    const choices: MyShowsImportChoice[] = kinopoiskPreview.series.map((item) => {
-      const value = selections[item.title]; const candidate = candidateFor(item.title)
-      return { sourceTitle: item.title, action: value === 'SKIP' ? 'SKIP' : 'IMPORT', filmId: candidate?.filmId ?? null, nameRu: candidate?.nameRu ?? null, nameEn: candidate?.nameEn ?? null, year: candidate?.year ?? null }
-    })
-    setLoading(true); setError(null)
-    try { setResult(await confirmMyShowsImport(file, choices)) }
-    catch (reason) { setError(getApiErrorMessage(reason, 'Не удалось импортировать данные MyShows')) }
-    finally { setLoading(false) }
-  }
-  const enrichCatalog = async () => {
-    setLoading(true); setError(null)
-    try { setEnrichment(await enrichSeriesFromKinopoisk(10)) }
-    catch (reason) { setError(getApiErrorMessage(reason, 'Не удалось загрузить каталог Кинопоиска')) }
-    finally { setLoading(false) }
-  }
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
-    <section className="myshows-import-dialog">
-      <div className="form-heading"><div><p className="eyebrow">Сериалы</p><h2>Импорт из MyShows</h2></div><button type="button" aria-label="Закрыть" onClick={onClose}><X /></button></div>
-      <p className="form-hint">Сначала файл будет проверен. На этапе предварительного просмотра данные в Life Dashboard не изменяются.</p>
-      {error && <div className="form-error">{error}</div>}
-      <input ref={inputRef} hidden type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(event) => void selectFile(event)} />
-      <button className="secondary-button icon-button myshows-file-button" disabled={loading} onClick={() => inputRef.current?.click()}><Upload />{loading ? 'Проверяем файл…' : fileName || 'Выбрать XLSX-файл'}</button>
-      {preview && <>
-        <div className="myshows-preview-summary">
-          <div><span>Сериалов</span><strong>{preview.totalSeries}</strong></div>
-          <div><span>Просмотров эпизодов</span><strong>{preview.totalEpisodeWatches}</strong></div>
-          <div><span>Совпало</span><strong>{preview.matchedSeries}</strong></div>
-          <div><span>Новых</span><strong>{preview.newSeries}</strong></div>
-          <div><span>Неоднозначных</span><strong>{preview.ambiguousSeries}</strong></div>
-        </div>
-        <ul className="myshows-warnings">{preview.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
-        <div className="myshows-preview-list">{preview.series.slice(0, 20).map((item) => <div key={item.title}><span><strong>{item.title}</strong><small>{item.status} · просмотрено {item.watchedEpisodes ?? 0}</small></span><em className={item.match.toLowerCase()}>{item.match === 'MATCHED' ? 'Совпадение' : item.match === 'NEW' ? 'Новый' : 'Проверить'}</em></div>)}</div>
-        {preview.series.length > 20 && <p className="form-hint">Показаны первые 20 из {preview.series.length} сериалов.</p>}
-        {!kinopoiskPreview && <div className="myshows-match-action"><p className="form-hint">Следующий шаг отправит названия сериалов в Kinopoisk Unofficial API и найдёт полную структуру сезонов.</p><button className="primary-button icon-button" disabled={loading} onClick={() => void matchWithKinopoisk()}><Search />{loading ? 'Ищем совпадения…' : 'Найти в Кинопоиске'}</button></div>}
-        {kinopoiskPreview && !result && <><div className="myshows-preview-summary kinopoisk-summary"><div><span>Всего</span><strong>{kinopoiskPreview.totalSeries}</strong></div><div><span>Найдено точно</span><strong>{kinopoiskPreview.matchedSeries}</strong></div><div><span>Нужно проверить</span><strong>{kinopoiskPreview.reviewRequired}</strong></div><div><span>Не найдено</span><strong>{kinopoiskPreview.notFound}</strong></div></div><div className="myshows-match-list">{kinopoiskPreview.series.map((item) => <label key={item.title}><span><strong>{item.title}</strong><small>{item.status}</small></span><select value={selections[item.title] ?? ''} onChange={(event) => setSelections((current) => ({ ...current, [item.title]: event.target.value }))}><option value="" disabled>Выберите соответствие</option>{item.candidates.map((candidate) => <option key={candidate.filmId} value={candidate.filmId}>{candidate.nameRu || candidate.nameEn || `ID ${candidate.filmId}`} {candidate.year ? `(${candidate.year})` : ''}</option>)}<option value="BASIC">Импортировать без Кинопоиска</option><option value="SKIP">Пропустить</option></select></label>)}</div><div className="myshows-confirm"><span>{unresolved ? `Осталось выбрать: ${unresolved}` : 'Все спорные результаты обработаны'}</span><button className="primary-button" disabled={loading || unresolved > 0} onClick={() => void confirmImport()}>{loading ? 'Импортируем…' : 'Подтвердить импорт'}</button></div></>}
-        {result && <div className="notice settings-success"><strong>Импорт завершён</strong><span>Сериалов: {result.importedSeries}, пропущено: {result.skippedSeries}, просмотров эпизодов: {result.importedEpisodeWatches}. Резервная копия создана.</span><span>{enrichment ? `Обновлено из Кинопоиска: ${enrichment.updated}. Осталось: ${enrichment.remaining}.${enrichment.rateLimited ? ' Достигнут лимит API — продолжи позже.' : ''}` : 'Теперь можно загрузить обложки, сведения и полную структуру сезонов пакетами.'}</span><div className="form-buttons"><button className="secondary-button" disabled={loading || enrichment?.remaining === 0} onClick={() => void enrichCatalog()}>{loading ? 'Загружаем…' : enrichment ? 'Продолжить загрузку' : 'Загрузить данные из Кинопоиска'}</button><button className="primary-button" onClick={onImported}>Готово</button></div></div>}
-      </>}
-    </section>
+    {importing && <MyShowsImportDialog returnFocusTo={importRef.current} onClose={() => finishDialog()} onChanged={() => { void load() }} />}
   </div>
 }
