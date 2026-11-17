@@ -519,10 +519,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .series-list-card .movie-list-meta { position: relative; transform: translateY(-9px); }
 .series-list-card .series-list-inline-status { position: absolute; top: 10px; right: 10px; z-index: 1; min-height: 0; margin: 0; }
 .series-list-card .series-list-side { align-content: end; align-self: stretch; padding: 0 2px 5px 0; }
-.series-catalog-page .series-list-content { align-content: start; padding-top: 1px; }
-.series-catalog-page .series-list-heading,
-.series-catalog-page .series-list-content > p,
-.series-catalog-page .movie-list-meta { transform: none; }
 .anime-page .series-list-content { align-content: start; padding-top: 1px; }
 .anime-page .series-list-heading,
 .anime-page .series-list-content > p,
