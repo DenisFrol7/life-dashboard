@@ -547,8 +547,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .games-page .series-list-content > p,
 .games-page .movie-list-meta { margin-top: 6px; transform: none; }
 .series-list-score { color: #496985; font-family: Georgia, serif; font-size: 21px; }
-.movie-status-tabs { flex-grow: 0; flex-basis: 52%; }
-.movie-list-cover { background: linear-gradient(145deg, #324a5c, #182733) center/cover; }
 .movie-list-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; color: #626f75; font-size: 13px; }
 .movie-list-meta span + span::before { margin-right: 12px; color: #bbc1c3; content: '·'; }
 .series-details { width: min(850px, 100%); max-height: calc(100vh - 40px); padding: 26px; overflow-y: auto; border-radius: 20px; background: var(--paper); box-shadow: 0 30px 90px #07111a70; }

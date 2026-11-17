@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router'
-import { Download, Plus, Search } from 'lucide-react'
+import { Link } from 'react-router'
+import { ChevronDown, Download, Film, Heart, Plus, Search } from 'lucide-react'
 import { createKinopoiskMovie, createMovie, deleteMovie, enrichKinopoiskMovies, getMovieCatalogPage, importKinopoiskRatings, previewKinopoiskMovie, previewKinopoiskRatings, putInLibrary, removeFromLibrary, searchKinopoiskMovies, updateMovie, type ContentFormat, type KinopoiskMovieCandidate, type KinopoiskMovieEnrichmentResult, type KinopoiskRatingsImportResult, type KinopoiskRatingsPreview, type LibraryEntry, type LibraryInput, type LibraryStatus, type Movie, type MovieCatalogStatistics, type MovieInput } from '../api/movies'
 import { ErrorState, LoadingState } from '../components/AsyncState'
 import { useToast } from '../components/ToastContext'
 import { saveLibraryForm } from './libraryForm'
 import { useLatestRequest } from '../hooks/useLatestRequest'
 import { useFormMutation } from '../hooks/useFormMutation'
+import './MoviesPage.css'
 
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
 const movieStatuses: LibraryStatus[] = ['PLANNED', 'COMPLETED']
@@ -15,11 +16,12 @@ const emptyLibrary: LibraryInput = { status: 'PLANNED', rating: null, favorite: 
 const formatDuration = (minutes: number | null) => minutes == null ? null : `${Math.floor(minutes / 60)} ч ${minutes % 60} мин`
 
 export function MoviesPage() {
-  const navigate = useNavigate()
+  const requests = useLatestRequest()
   const [movies, setMovies] = useState<Movie[]>([])
   const [library, setLibrary] = useState<Record<number, LibraryEntry>>({})
   const [statistics, setStatistics] = useState<MovieCatalogStatistics>({ totalMovies: 0, inLibrary: 0, completed: 0, planned: 0, liveAction: 0, animation: 0 })
   const [page, setPage] = useState(0)
+  const [totalItems, setTotalItems] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [editing, setEditing] = useState<Movie | 'new' | null>(null)
@@ -29,20 +31,103 @@ export function MoviesPage() {
   const [loading, setLoading] = useState(true)
   const [initialized, setInitialized] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const requestSequence = useRef(0)
+  const [moreError, setMoreError] = useState<string | null>(null)
+  const [statisticsExpanded, setStatisticsExpanded] = useState(false)
+  const appendLockRef = useRef(false)
 
-  // oxlint-disable-next-line no-unused-expressions -- selects the appropriate loading indicator
-  const load = useCallback(async (nextPage = 0, append = false) => { const requestId = ++requestSequence.current; append ? setLoadingMore(true) : setLoading(true); setError(null); try { const catalog = await getMovieCatalogPage(nextPage, 50, query, status); if (requestId !== requestSequence.current) return; const loaded: Movie[] = catalog.items.map((item) => ({ ...item, itemType: 'MOVIE', xboxPlayAnywhere: false })); setMovies((current) => append ? [...current, ...loaded] : loaded); setLibrary((current) => ({ ...(append ? current : {}), ...Object.fromEntries(catalog.items.filter((item) => item.libraryId && item.userStatus).map((item) => [item.id, { id: item.libraryId!, content: { ...item, itemType: 'MOVIE', xboxPlayAnywhere: false }, status: item.userStatus!, rating: item.rating, favorite: item.favorite, startedAt: item.startedAt, completedAt: item.completedAt, personalNote: item.personalNote }] as const)) })); setStatistics(catalog.statistics); setPage(catalog.page); setHasMore(catalog.hasMore) } catch (reason) { if (requestId === requestSequence.current) setError(reason instanceof Error ? reason.message : 'Не удалось загрузить фильмы') } finally { if (requestId === requestSequence.current) { setLoading(false); setLoadingMore(false); setInitialized(true) } } }, [query, status])
-  useEffect(() => { const timeout = window.setTimeout(() => { void load() }, 250); return () => window.clearTimeout(timeout) }, [load])
+  const load = useCallback(async (nextPage = 0, append = false) => {
+    if (append && appendLockRef.current) return
+    appendLockRef.current = append
+    await requests.run(() => getMovieCatalogPage(nextPage, 50, query, status), {
+      onStart: () => {
+        if (append) setLoadingMore(true)
+        else setLoading(true)
+        setError(null)
+        setMoreError(null)
+      },
+      onSuccess: catalog => {
+        const loaded: Movie[] = catalog.items.map(item => ({ ...item, itemType: 'MOVIE', xboxPlayAnywhere: false }))
+        setMovies(current => append ? [...new Map([...current, ...loaded].map(movie => [movie.id, movie])).values()] : loaded)
+        setLibrary(current => ({ ...(append ? current : {}), ...Object.fromEntries(catalog.items.filter(item => item.libraryId != null && item.userStatus).map(item => [item.id, {
+          id: item.libraryId!, content: { ...item, itemType: 'MOVIE', xboxPlayAnywhere: false }, status: item.userStatus!, rating: item.rating,
+          favorite: item.favorite, startedAt: item.startedAt, completedAt: item.completedAt, personalNote: item.personalNote,
+        }] as const)) }))
+        setStatistics(catalog.statistics)
+        setTotalItems(catalog.totalItems)
+        setPage(catalog.page)
+        setHasMore(catalog.hasMore)
+        setInitialized(true)
+      },
+      onError: reason => {
+        const message = reason instanceof Error ? reason.message : 'Не удалось загрузить фильмы'
+        if (append) setMoreError(message)
+        else setError(message)
+      },
+      onFinish: () => { appendLockRef.current = false; setLoading(false); setLoadingMore(false) },
+    })
+  }, [query, status, requests])
+  useEffect(() => {
+    setLoading(true)
+    setLoadingMore(false)
+    appendLockRef.current = false
+    const timeout = window.setTimeout(() => { void load() }, 250)
+    return () => { window.clearTimeout(timeout); requests.invalidate() }
+  }, [load, requests])
+  const changeFilters = (nextQuery: string, nextStatus: LibraryStatus | '') => {
+    if (nextQuery === query && nextStatus === status) return
+    requests.invalidate()
+    appendLockRef.current = false
+    setLoading(true)
+    setLoadingMore(false)
+    setError(null)
+    setMoreError(null)
+    setQuery(nextQuery)
+    setStatus(nextStatus)
+  }
+  const filtered = Boolean(query.trim() || status)
 
-  if (loading && !initialized) return <LoadingState message="Загружаем фильмы…" />
-  if (error) return <ErrorState title="Не удалось загрузить фильмы" message={error} onRetry={() => void load()} />
-  return <div className="movies-page series-page movie-catalog-page">
-    <section className="media-toolbar series-media-toolbar"><div className="series-status-tabs movie-status-tabs" aria-label="Фильтр фильмов по статусу">{([['', 'Все'], ['PLANNED', 'В планах'], ['COMPLETED', 'Просмотрено']] as const).map(([value, label]) => <button key={value || 'all'} className={status === value ? 'active' : ''} onClick={() => setStatus(value)}>{label}</button>)}</div><div className="journal-search series-search"><span><Search /></span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти фильм" /></div><button className="secondary-button icon-button" onClick={() => setImporting(true)}><Download />Импорт оценок</button><button className="primary-button series-add-button media-add-button icon-button" onClick={() => setEditing('new')}><Plus />Добавить фильм</button></section>
-    <section className="series-catalog-layout"><div className="series-catalog-main">
-    {error && <div className="notice error movies-error"><strong>Ошибка</strong><span>{error}</span></div>}
-    {loading ? <div className="loading"><span />Загружаем медиатеку…</div> : movies.length === 0 ? <div className="media-empty"><span>▶</span><h2>Фильмов не найдено</h2><p>Измените поиск или фильтр.</p></div> : <><section className="movie-grid series-catalog-grid">{movies.map((movie) => { const entry = library[movie.id]; return <article className="series-list-card" key={movie.id}><button className="series-list-cover movie-list-cover" onClick={() => navigate(`/movies/${movie.id}`)} style={movie.coverUrl ? { backgroundImage: `url(${movie.coverUrl})` } : undefined}><span>{movie.title.slice(0, 1)}</span>{entry?.favorite && <i>♥</i>}</button><div className="series-list-content"><div className="series-list-heading"><button onClick={() => navigate(`/movies/${movie.id}`)}>{movie.title}</button><span className="release-badge released">{movie.format === 'ANIMATION' ? 'Мультфильм' : 'Фильм'}</span></div><p aria-hidden={!movie.originalTitle}>{movie.originalTitle || '\u00a0'}</p><div className="movie-list-meta"><span>{movie.releaseYear ?? '—'}</span>{movie.genre && <span>{movie.genre}</span>}{movie.durationMinutes && <span>{formatDuration(movie.durationMinutes)}</span>}</div><div className="series-list-inline-status">{entry ? <span className={`media-status ${entry.status.toLowerCase()}`}>{statusLabels[entry.status]}</span> : <span className="media-status not_started">Не в библиотеке</span>}</div></div><div className="series-list-side">{entry ? <strong className="series-list-score">{entry.rating ? `${entry.rating}/10` : 'Без оценки'}</strong> : <button className="add-library-button" onClick={() => setEditing(movie)}>+ В библиотеку</button>}</div></article>})}</section>{hasMore && <button className="secondary-button movie-load-more" disabled={loadingMore} onClick={() => void load(page + 1, true)}>{loadingMore ? 'Загружаем…' : 'Показать ещё 50'}</button>}</>}
-    </div><aside className="series-statistics"><p className="eyebrow">Общая статистика</p><h2>Фильмы</h2><dl><div><dt>Количество фильмов</dt><dd>{statistics.totalMovies}</dd></div><div><dt>В библиотеке</dt><dd>{statistics.inLibrary}</dd></div><div><dt>Просмотрено</dt><dd>{statistics.completed}</dd></div><div><dt>В планах</dt><dd>{statistics.planned}</dd></div><div><dt>Фильмы</dt><dd>{statistics.liveAction}</dd></div><div><dt>Мультфильмы</dt><dd>{statistics.animation}</dd></div></dl></aside></section>
+  return <div className="movie-catalog-page">
+    <section className="movies-catalog-toolbar" aria-label="Управление каталогом фильмов">
+      <div className="movies-catalog-status-tabs" role="group" aria-label="Статус фильмов">{([['', 'Все'], ['PLANNED', 'В планах'], ['COMPLETED', 'Просмотрено']] as const).map(([value, label]) => <button type="button" key={value || 'all'} aria-pressed={status === value} onClick={() => changeFilters(query, value)}>{label}</button>)}</div>
+      <div className="movies-catalog-search"><Search aria-hidden="true" /><input type="search" aria-label="Найти фильм" value={query} onChange={event => changeFilters(event.target.value, status)} placeholder="Найти фильм" /></div>
+      <div className="movies-catalog-actions"><button type="button" className="secondary-button icon-button" onClick={() => setImporting(true)}><Download aria-hidden="true" />Импорт оценок</button><button type="button" className="primary-button icon-button" onClick={() => setEditing('new')}><Plus aria-hidden="true" />Добавить фильм</button></div>
+    </section>
+    <section className="movies-catalog-layout">
+      <div className="movies-catalog-main">
+        <div className="movies-catalog-heading"><h2>Каталог</h2><output aria-live="polite" aria-atomic="true">{loading ? 'Загружаем фильмы…' : error ? 'Фильмы не загружены' : `Показано: ${movies.length} из ${totalItems}`}</output></div>
+        {loading ? <LoadingState message="Загружаем фильмы…" /> : error ? <ErrorState title="Не удалось загрузить фильмы" message={error} onRetry={() => void load()} /> : movies.length === 0 ? <div className="movies-catalog-empty"><Film aria-hidden="true" /><h2>{filtered ? 'Фильмов не найдено' : 'Каталог пока пуст'}</h2><p>{filtered ? 'Попробуйте изменить поиск или статус.' : 'Добавьте первый фильм или импортируйте оценки.'}</p>{filtered && <button type="button" className="secondary-button" onClick={() => changeFilters('', '')}>Сбросить фильтры</button>}</div> : <>
+          <section className="movies-catalog-grid" aria-label="Фильмы">{movies.map(movie => {
+            const entry = library[movie.id]
+            return <article className="movies-catalog-card" key={movie.id}>
+              <Link className="movies-catalog-cover" to={`/movies/${movie.id}`} aria-label={`Открыть фильм: ${movie.title}`}>
+                <span className="movies-catalog-cover-letter" aria-hidden="true">{movie.title.slice(0, 1)}</span>
+                {movie.coverUrl && <img key={movie.coverUrl} src={movie.coverUrl} loading="lazy" decoding="async" alt="" onError={event => { event.currentTarget.hidden = true }} />}
+                {entry?.favorite && <span className="movies-catalog-favorite" role="img" aria-label="В избранном"><Heart aria-hidden="true" /></span>}
+              </Link>
+              <div className="movies-catalog-copy">
+                <h3><Link to={`/movies/${movie.id}`}>{movie.title}</Link></h3>
+                {movie.originalTitle && <p className="movies-catalog-original">{movie.originalTitle}</p>}
+                <div className="movies-catalog-meta"><span>{movie.releaseYear ?? 'Год неизвестен'}</span>{movie.durationMinutes != null && <span>{formatDuration(movie.durationMinutes)}</span>}</div>
+                {movie.genre && <p className="movies-catalog-genre">{movie.genre}</p>}
+                <span className="movies-catalog-format">{movie.format === 'ANIMATION' ? 'Мультфильм' : 'Фильм'}</span>
+              </div>
+              <div className="movies-catalog-personal">
+                <span className={`movies-catalog-status ${entry?.status.toLowerCase() ?? 'not_started'}`}>{entry ? statusLabels[entry.status] : 'Не в библиотеке'}</span>
+                {entry ? <strong className="movies-catalog-rating" data-rated={entry.rating != null} aria-label={entry.rating != null ? `Моя оценка: ${entry.rating} из 10` : 'Без оценки'}>{entry.rating != null ? `${entry.rating}/10` : 'Без оценки'}</strong> : <button type="button" className="movies-catalog-add-library" aria-label={`Добавить в библиотеку: ${movie.title}`} onClick={() => setEditing(movie)}><Plus aria-hidden="true" />В библиотеку</button>}
+              </div>
+            </article>
+          })}</section>
+          {moreError && <div className="notice error movies-catalog-more-error" role="alert"><strong>Не удалось загрузить следующую страницу</strong><span>{moreError}</span></div>}
+          {hasMore && <button type="button" className="secondary-button movies-catalog-load-more" disabled={loadingMore} onClick={() => void load(page + 1, true)}>{loadingMore ? 'Загружаем…' : moreError ? 'Повторить загрузку' : 'Показать ещё 50'}</button>}
+          {loadingMore && <p className="movies-catalog-loading-more" role="status">Загружаем следующую страницу…</p>}
+        </>}
+      </div>
+      <aside className="movies-catalog-statistics" aria-label="Общая статистика фильмов">
+        <p className="eyebrow">Весь каталог</p><h2>Фильмы <span>{initialized ? statistics.totalMovies : '—'}</span></h2>
+        <button type="button" className="movies-catalog-statistics-toggle" aria-expanded={statisticsExpanded} aria-controls="movies-catalog-statistics-details" onClick={() => setStatisticsExpanded(expanded => !expanded)}>Общая статистика<ChevronDown aria-hidden="true" /></button>
+        <dl id="movies-catalog-statistics-details" data-expanded={statisticsExpanded}>{([['Количество фильмов', statistics.totalMovies], ['В библиотеке', statistics.inLibrary], ['Просмотрено', statistics.completed], ['В планах', statistics.planned], ['Фильмы', statistics.liveAction], ['Мультфильмы', statistics.animation]] as const).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{initialized ? value : '—'}</dd></div>)}</dl>
+      </aside>
+    </section>
     {editing && <MovieForm movie={editing === 'new' ? undefined : editing} library={editing === 'new' ? undefined : library[editing.id]} existingMovieIds={movies.map((item) => item.id)} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void load() }} />}
     {importing && <KinopoiskRatingsDialog onClose={() => setImporting(false)} onImported={() => { setImporting(false); void load() }} />}
   </div>
