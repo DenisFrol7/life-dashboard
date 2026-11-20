@@ -2,11 +2,12 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
-import { useNavigate } from "react-router";
-import { Plus, Search } from "lucide-react";
+import { Link } from "react-router";
+import { BookOpen, ChevronDown, Heart, Plus, Search } from "lucide-react";
 import {
   createBook,
   createReadingSession,
@@ -35,6 +36,8 @@ import { useToast } from "../components/ToastContext";
 import { saveLibraryForm } from "./libraryForm";
 import { useLatestRequest } from "../hooks/useLatestRequest";
 import { useFormMutation } from "../hooks/useFormMutation";
+import { getApiErrorMessage } from "../api/client";
+import "./BooksPage.css";
 
 const emptyBook: BookInput = {
   title: "",
@@ -57,287 +60,100 @@ const localDateTime = (value: string) => {
 };
 
 export function BooksPage() {
-  const navigate = useNavigate();
+  const requests = useLatestRequest();
   const [books, setBooks] = useState<Book[]>([]);
   const [editing, setEditing] = useState<Book | "new" | null>(null);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<LibraryStatus | "">("");
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setBooks(await getBooks());
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "Не удалось загрузить книги",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [statisticsExpanded, setStatisticsExpanded] = useState(false);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const addRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const focusTargetRef = useRef<"new" | number>("new");
+  const focusAfterDialogRef = useRef(false);
+
+  const load = useCallback(() => requests.run(getBooks, {
+    onStart: () => { setLoading(true); setError(null); },
+    onSuccess: items => { setBooks(items); setInitialized(true); },
+    onError: reason => setError(getApiErrorMessage(reason, "Не удалось загрузить книги")),
+    onFinish: () => setLoading(false),
+  }), [requests]);
+  useEffect(() => { void load(); return () => requests.invalidate(); }, [load, requests]);
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!focusAfterDialogRef.current || loading || editing) return;
+    focusAfterDialogRef.current = false;
+    const target = focusTargetRef.current;
+    const fallback = target === "new" ? addRef.current : pageRef.current?.querySelector<HTMLButtonElement>(`[data-book-id="${target}"] .books-catalog-add-library`) ?? addRef.current;
+    (triggerRef.current?.isConnected ? triggerRef.current : fallback)?.focus({ preventScroll: true });
+  }, [loading, editing]);
+  const openForm = (book: Book | "new", trigger: HTMLButtonElement) => {
+    triggerRef.current = trigger;
+    focusTargetRef.current = book === "new" ? "new" : book.id;
+    setEditing(book);
+  };
+  const finishDialog = (refresh = false) => {
+    focusAfterDialogRef.current = true;
+    setEditing(null);
+    if (refresh) void load();
+  };
   const visible = useMemo(() => {
-    const q = query.trim().toLocaleLowerCase("ru-RU");
-    return books.filter(
-      (book) =>
-        (!q ||
-          `${book.title} ${book.author}`
-            .toLocaleLowerCase("ru-RU")
-            .includes(q)) &&
-        (!status || book.status === status),
-    );
+    const normalized = query.trim().toLocaleLowerCase("ru-RU");
+    return books.filter(book => (!normalized || `${book.title} ${book.author}`.toLocaleLowerCase("ru-RU").includes(normalized)) && (!status || book.status === status));
   }, [books, query, status]);
-  const libraryBooks = books.filter((book) => book.libraryEntryId);
-  const sessionCount = books.reduce(
-    (sum, book) => sum + book.sessions.length,
-    0,
-  );
-  const readingMinutes = books.reduce(
-    (sum, book) =>
-      sum +
-      book.sessions.reduce(
-        (bookSum, session) => bookSum + session.durationMinutes,
-        0,
-      ),
-    0,
-  );
-  if (loading) return <LoadingState message="Загружаем книги…" />;
-  if (error)
-    return (
-      <ErrorState
-        title="Не удалось загрузить книги"
-        message={error}
-        onRetry={() => void load()}
-      />
-    );
-  return (
-    <div className="movies-page series-page books-page">
-      <section className="media-toolbar series-media-toolbar">
-        <div
-          className="series-status-tabs book-status-tabs"
-          aria-label="Фильтр книг по статусу"
-        >
-          {(
-            [
-              ["", "Все"],
-              ["NOT_STARTED", "Не начато"],
-              ["IN_PROGRESS", "Читаю"],
-              ["PLANNED", "В планах"],
-              ["COMPLETED", "Прочитано"],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value || "all"}
-              className={status === value ? "active" : ""}
-              onClick={() => setStatus(value)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="journal-search series-search">
-          <span>
-            <Search />
-          </span>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Найти книгу или автора"
-          />
-        </div>
-        <button
-          className="primary-button series-add-button media-add-button icon-button"
-          onClick={() => setEditing("new")}
-        >
-          <Plus />
-          Добавить книгу
-        </button>
-      </section>
-      <section className="series-catalog-layout">
-        <div className="series-catalog-main">
-          {error && (
-            <div className="notice error movies-error">
-              <strong>Ошибка</strong>
-              <span>{error}</span>
+  const libraryBooks = books.filter(book => book.libraryEntryId != null);
+  const sessionCount = books.reduce((sum, book) => sum + book.sessions.length, 0);
+  const readingMinutes = books.reduce((sum, book) => sum + book.sessions.reduce((total, session) => total + session.durationMinutes, 0), 0);
+  const filtered = Boolean(query.trim() || status);
+
+  return <div ref={pageRef} className="books-library-page">
+    <section className="books-catalog-toolbar" aria-label="Управление каталогом книг">
+      <div className="books-catalog-tabs" role="group" aria-label="Статус книги">{([
+        ["", "Все"], ["NOT_STARTED", "Не начато"], ["IN_PROGRESS", "Читаю"], ["PLANNED", "В планах"], ["COMPLETED", "Прочитано"], ["PAUSED", "На паузе"], ["DROPPED", "Брошено"],
+      ] as const).map(([value, label]) => <button type="button" key={value || "all"} aria-pressed={status === value} onClick={() => setStatus(value)}>{label}</button>)}</div>
+      <div className="books-catalog-search"><Search aria-hidden="true" /><input type="search" aria-label="Найти книгу или автора" value={query} onChange={event => setQuery(event.target.value)} placeholder="Найти книгу или автора" /></div>
+      <button ref={addRef} type="button" className="primary-button icon-button books-catalog-add" onClick={event => openForm("new", event.currentTarget)}><Plus aria-hidden="true" />Добавить книгу</button>
+    </section>
+    <section className="books-catalog-layout">
+      <div className="books-catalog-main">
+        <div className="books-catalog-heading"><h2>Каталог</h2><output aria-live="polite" aria-atomic="true">{loading ? "Загружаем книги…" : error ? "Книги не загружены" : `Показано: ${visible.length} из ${books.length}`}</output></div>
+        {loading ? <LoadingState message="Загружаем книги…" /> : error ? <ErrorState title="Не удалось загрузить книги" message={error} onRetry={() => void load()} /> : visible.length === 0 ? <div className="books-catalog-empty"><BookOpen aria-hidden="true" /><h2>{filtered ? "Книги не найдены" : "Каталог пока пуст"}</h2><p>{filtered ? "Попробуйте изменить поиск или статус." : "Добавьте первую книгу в каталог."}</p>{filtered && <button type="button" className="secondary-button" onClick={() => { setQuery(""); setStatus(""); }}>Сбросить фильтры</button>}</div> : <section className="books-catalog-grid" aria-label="Книги">{visible.map(book => {
+          const inLibrary = book.libraryEntryId != null;
+          const progress = Math.max(0, Math.min(100, book.progressPercent));
+          return <article className="books-catalog-card" key={book.id} data-book-id={book.id}>
+            <Link className="books-catalog-cover" to={`/books/${book.id}`} aria-label={`Открыть книгу «${book.title}»`}>
+              <span className="books-catalog-cover-letter" aria-hidden="true">{book.title.slice(0, 1)}</span>
+              {book.coverUrl && <img key={book.coverUrl} src={book.coverUrl} alt="" loading="lazy" decoding="async" onError={event => { event.currentTarget.hidden = true; }} />}
+              {book.favorite && <span className="books-catalog-favorite" role="img" aria-label="В избранном"><Heart aria-hidden="true" /></span>}
+            </Link>
+            <div className="books-catalog-copy">
+              <h3><Link to={`/books/${book.id}`} title={book.title}>{book.title}</Link></h3>
+              <p className="books-catalog-author" title={book.author || undefined}>{book.author || "Автор не указан"}</p>
+              <div className="books-catalog-meta"><span>{book.releaseYear ?? "Год не указан"}</span><span>{bookFormatLabels[book.bookFormat]}</span></div>
+              <p className="books-catalog-genre" title={book.genre || undefined}>{book.genre || "Жанр не указан"}</p>
+              {inLibrary && <div className="books-catalog-progress"><strong>{progressText(book)} <small>· {Math.round(progress)}%</small></strong><div role="progressbar" aria-label={book.bookFormat === "AUDIOBOOK" ? "Прогресс прослушивания" : "Прогресс чтения"} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)} aria-valuetext={progressText(book)}><span style={{ width: `${progress}%` }} /></div></div>}
             </div>
-          )}
-          {loading ? (
-            <div className="loading">
-              <span />
-              Загружаем книги…
-            </div>
-          ) : visible.length === 0 ? (
-            <div className="media-empty">
-              <span>▥</span>
-              <h2>Книг пока нет</h2>
-              <p>Добавьте первую книгу в библиотеку.</p>
-            </div>
-          ) : (
-            <section className="movie-grid series-catalog-grid">
-              {visible.map((book) => (
-                <article
-                  className="series-list-card book-list-card"
-                  key={book.id}
-                >
-                  <button
-                    className="series-list-cover book-list-cover"
-                    onClick={() => navigate(`/books/${book.id}`)}
-                    style={
-                      book.coverUrl
-                        ? { backgroundImage: `url(${book.coverUrl})` }
-                        : undefined
-                    }
-                  >
-                    <span>{book.title.slice(0, 1)}</span>
-                    {book.favorite && <i>♥</i>}
-                    <em>{bookFormatLabels[book.bookFormat]}</em>
-                  </button>
-                  <div className="series-list-content">
-                    <div className="series-list-heading">
-                      <button onClick={() => navigate(`/books/${book.id}`)}>
-                        {book.title}
-                      </button>
-                    </div>
-                    <p className="book-list-author">{book.author}</p>
-                    <div className="movie-list-meta">
-                      <span>{book.releaseYear ?? "—"}</span>
-                      {book.genre && <span>{book.genre}</span>}
-                      <span>{bookFormatLabels[book.bookFormat]}</span>
-                    </div>
-                    {book.status ? (
-                      <div className="series-list-inline-status">
-                        <span
-                          className={`media-status ${book.status.toLowerCase()}`}
-                        >
-                          {bookStatusLabels[book.status]}
-                        </span>
-                      </div>
-                    ) : (
-                      <button
-                        className="add-library-button book-list-add"
-                        onClick={() => setEditing(book)}
-                      >
-                        + В библиотеку
-                      </button>
-                    )}
-                    {book.libraryEntryId && (
-                      <div className="series-list-progress-row book-list-progress">
-                        <strong>
-                          {progressText(book)}{" "}
-                          <small>· {Math.round(book.progressPercent)}%</small>
-                        </strong>
-                        <div className="series-list-progress">
-                          <span style={{ width: `${book.progressPercent}%` }} />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="series-list-side book-list-side">
-                    <strong className="series-list-score">
-                      {book.rating ? `${book.rating}/10` : "Без оценки"}
-                    </strong>
-                  </div>
-                </article>
-              ))}
-            </section>
-          )}
-        </div>
-        <aside className="series-statistics">
-          <p className="eyebrow">Общая статистика</p>
-          <h2>Книги</h2>
-          <dl>
-            <div>
-              <dt>Количество книг</dt>
-              <dd>{books.length}</dd>
-            </div>
-            <div>
-              <dt>В библиотеке</dt>
-              <dd>{libraryBooks.length}</dd>
-            </div>
-            <div>
-              <dt>Не начато</dt>
-              <dd>
-                {
-                  libraryBooks.filter((book) => book.status === "NOT_STARTED")
-                    .length
-                }
-              </dd>
-            </div>
-            <div>
-              <dt>Читаю</dt>
-              <dd>
-                {
-                  libraryBooks.filter((book) => book.status === "IN_PROGRESS")
-                    .length
-                }
-              </dd>
-            </div>
-            <div>
-              <dt>В планах</dt>
-              <dd>
-                {
-                  libraryBooks.filter((book) => book.status === "PLANNED")
-                    .length
-                }
-              </dd>
-            </div>
-            <div>
-              <dt>Прочитано</dt>
-              <dd>
-                {
-                  libraryBooks.filter((book) => book.status === "COMPLETED")
-                    .length
-                }
-              </dd>
-            </div>
-            <div className="series-stat-total">
-              <dt>Бумажные</dt>
-              <dd>
-                {books.filter((book) => book.bookFormat === "PAPER").length}
-              </dd>
-            </div>
-            <div>
-              <dt>Электронные</dt>
-              <dd>
-                {books.filter((book) => book.bookFormat === "EBOOK").length}
-              </dd>
-            </div>
-            <div>
-              <dt>Аудиокниги</dt>
-              <dd>
-                {books.filter((book) => book.bookFormat === "AUDIOBOOK").length}
-              </dd>
-            </div>
-            <div className="series-stat-total">
-              <dt>Сеансы чтения</dt>
-              <dd>{sessionCount}</dd>
-            </div>
-            <div>
-              <dt>Время чтения</dt>
-              <dd>
-                {Math.floor(readingMinutes / 60)} ч {readingMinutes % 60} мин
-              </dd>
-            </div>
-          </dl>
-        </aside>
-      </section>
-      {editing && (
-        <BookForm
-          book={editing === "new" ? undefined : editing}
-          onClose={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
-            void load();
-          }}
-        />
-      )}
-    </div>
-  );
+            <div className="books-catalog-personal">{inLibrary ? <>
+              <span className={`books-catalog-status ${book.status?.toLowerCase() ?? "not_started"}`}>{bookStatusLabels[book.status ?? "NOT_STARTED"]}</span>
+              <strong className="books-catalog-rating" data-rated={book.rating != null} aria-label={book.rating != null ? `Оценка: ${book.rating} из 10` : "Без оценки"}>{book.rating != null ? `${book.rating}/10` : "Без оценки"}</strong>
+            </> : <button type="button" className="books-catalog-add-library" aria-label={`Добавить в библиотеку «${book.title}»`} onClick={event => openForm(book, event.currentTarget)}><Plus aria-hidden="true" />В библиотеку</button>}</div>
+          </article>;
+        })}</section>}
+      </div>
+      <aside className="books-catalog-statistics">
+        <p className="eyebrow">Общая статистика</p><h2>Книги <span>{initialized ? books.length : "—"}</span></h2>
+        <button type="button" className="books-catalog-statistics-toggle" aria-expanded={statisticsExpanded} aria-controls="books-catalog-statistics-details" onClick={() => setStatisticsExpanded(expanded => !expanded)}>Общая статистика<ChevronDown aria-hidden="true" /></button>
+        <div id="books-catalog-statistics-details" className="books-catalog-statistics-details" data-expanded={statisticsExpanded}><dl>{([
+          ["Количество книг", books.length], ["В библиотеке", libraryBooks.length], ["Не начато", libraryBooks.filter(book => book.status === "NOT_STARTED").length], ["Читаю", libraryBooks.filter(book => book.status === "IN_PROGRESS").length], ["В планах", libraryBooks.filter(book => book.status === "PLANNED").length], ["Прочитано", libraryBooks.filter(book => book.status === "COMPLETED").length], ["На паузе", libraryBooks.filter(book => book.status === "PAUSED").length], ["Брошено", libraryBooks.filter(book => book.status === "DROPPED").length], ["Бумажные", books.filter(book => book.bookFormat === "PAPER").length], ["Электронные", books.filter(book => book.bookFormat === "EBOOK").length], ["Аудиокниги", books.filter(book => book.bookFormat === "AUDIOBOOK").length], ["Сеансы чтения", sessionCount], ["Время чтения", `${Math.floor(readingMinutes / 60)} ч ${readingMinutes % 60} мин`],
+        ] as const).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{initialized ? value : "—"}</dd></div>)}</dl></div>
+      </aside>
+    </section>
+    {editing && <BookForm book={editing === "new" ? undefined : editing} onClose={() => finishDialog()} onSaved={() => finishDialog(true)} />}
+  </div>;
 }
+
 
 export function BookForm({
   book,
