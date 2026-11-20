@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { ChevronDown, Heart, Plus, Search, Tv, Upload, X } from 'lucide-react'
-import { getAnime, getAnimeDetails, importShikimori, previewShikimoriImport, type AnimeDetails, type AnimeSummary, type ShikimoriImportPreview, type ShikimoriImportResult } from '../api/anime'
+import { ChevronDown, Heart, Plus, Search, Tv, Upload } from 'lucide-react'
+import { getAnime, getAnimeDetails, type AnimeDetails, type AnimeSummary } from '../api/anime'
 import type { LibraryStatus, ReleaseStatus } from '../api/movies'
 import { getApiErrorMessage } from '../api/client'
 import { ErrorState, LoadingState } from '../components/AsyncState'
 import { useLatestRequest } from '../hooks/useLatestRequest'
 import { AnimeForm } from '../components/AnimeForm'
+import { ShikimoriImportDialog } from '../components/ShikimoriImportDialog'
 import './AnimePage.css'
 
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
@@ -125,19 +126,6 @@ export function AnimePage() {
       </aside>
     </section>
     {editing && <AnimeForm returnFocusTo={triggerRef.current} anime={editing === 'new' ? undefined : editing} onClose={() => finishDialog()} onSaved={() => finishDialog(true)} />}
-    {importing && <ShikimoriImportDialog onClose={() => finishDialog()} onImported={() => finishDialog(true)} />}
+    {importing && <ShikimoriImportDialog returnFocusTo={importRef.current} onClose={() => finishDialog()} onChanged={() => { void load() }} />}
   </div>
-}
-
-
-function ShikimoriImportDialog({ onClose, onImported }: { onClose: () => void; onImported: () => void }) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [fileName, setFileName] = useState('')
-  const [preview, setPreview] = useState<ShikimoriImportPreview | null>(null)
-  const [result, setResult] = useState<ShikimoriImportResult | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const selectFile = async (event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; if (!file.name.toLowerCase().endsWith('.json')) { setError('Выберите JSON-файл экспорта Shikimori.'); return } setFileName(file.name); setLoading(true); setError(null); setResult(null); try { setPreview(await previewShikimoriImport(file)) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось проверить экспорт Shikimori') } finally { setLoading(false) } }
-  const confirm = async () => { if (!preview || !window.confirm(`Импортировать ${preview.total} записей? Перед изменением данных будет создана резервная копия.`)) return; setLoading(true); setError(null); try { setResult(await importShikimori(preview.token)) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось импортировать Shikimori') } finally { setLoading(false) } }
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><section className="myshows-import-dialog"><div className="form-heading"><div><p className="eyebrow">Аниме</p><h2>Импорт из Shikimori</h2></div><button type="button" aria-label="Закрыть" onClick={onClose}><X /></button></div><p className="form-hint">Сначала файл будет проверен без изменения базы. При подтверждении сведения о тайтлах загрузятся из Shikimori API.</p>{error && <div className="form-error">{error}</div>}<input ref={inputRef} hidden type="file" accept=".json,application/json" onChange={(event) => void selectFile(event)} /><button className="secondary-button icon-button myshows-file-button" disabled={loading} onClick={() => inputRef.current?.click()}><Upload />{loading ? 'Обрабатываем…' : fileName || 'Выбрать JSON-файл'}</button>{preview && !result && <><div className="myshows-preview-summary"><div><span>Всего</span><strong>{preview.total}</strong></div><div><span>Просмотрено</span><strong>{preview.completed}</strong></div><div><span>Смотрю</span><strong>{preview.watching}</strong></div><div><span>В планах</span><strong>{preview.planned}</strong></div><div><span>Уже в каталоге</span><strong>{preview.existing}</strong></div></div><ul className="myshows-warnings">{preview.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul><div className="myshows-preview-list">{preview.items.map((item) => <div key={item.shikimoriId}><span><strong>{item.title}</strong><small>{item.originalTitle} · эпизодов просмотрено: {item.watchedEpisodes}</small></span><em className={item.existingContentId ? 'matched' : 'new'}>{item.existingContentId ? 'Проверить' : item.score ? `${item.score}/10` : 'Добавить'}</em></div>)}</div><div className="myshows-confirm"><span>Данные проверены</span><button className="primary-button" disabled={loading} onClick={() => void confirm()}>{loading ? 'Загружаем каталог…' : `Импортировать ${preview.total}`}</button></div></>}{result && <div className="notice settings-success"><strong>Импорт завершён</strong><span>Добавлено аниме: {result.animeCreated}, фильмов: {result.moviesCreated}, обновлено: {result.updated}, пропущено фильмов Кинопоиска: {result.skipped}, отметок эпизодов: {result.episodeWatches}.</span><span>Резервная копия создана.</span><div className="form-buttons"><button className="primary-button" onClick={onImported}>Готово</button></div></div>}</section></div>
 }
