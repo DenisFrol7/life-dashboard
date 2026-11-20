@@ -6,7 +6,7 @@ import { getApiErrorMessage } from '../api/client'
 import { ErrorState, LoadingState } from '../components/AsyncState'
 import { useLatestRequest } from '../hooks/useLatestRequest'
 import { useFormMutation } from '../hooks/useFormMutation'
-import { ProgressForm, SessionForm } from './BooksPage'
+import { BookProgressForm, BookSessionForm } from '../components/BookReadingForms'
 import { BookForm } from '../components/BookForm'
 import { bookFormatLabels, bookStatusLabels, progressText } from './bookUi'
 import './BookDetailsPage.css'
@@ -147,7 +147,7 @@ function BookDetailsContent({ id }: { id: number }) {
       </section>
     </>}
     {editing && book && <BookForm returnFocusTo={triggerRef.current} book={book} onClose={() => closeForms()} onSaved={() => closeForms(true)} onDeleted={() => navigate('/books', { replace: true })} />}
-    {progressOpen && book && <ProgressForm book={book} onClose={() => closeForms()} onSaved={() => closeForms(true)} />}
-    {session && book && <SessionForm book={book} session={session === 'new' ? undefined : session} onClose={() => closeForms()} onSaved={() => closeForms(true)} />}
+    {progressOpen && book && <BookProgressForm returnFocusTo={triggerRef.current} book={book} onClose={() => closeForms()} onSaved={() => closeForms(true)} />}
+    {session && book && <BookSessionForm returnFocusTo={triggerRef.current} book={book} session={session === 'new' ? undefined : session} onClose={() => closeForms()} onSaved={() => closeForms(true)} />}
   </div>
 }

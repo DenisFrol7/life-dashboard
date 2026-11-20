@@ -542,7 +542,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .book-actions { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; margin-top: 10px; }
 .book-actions button { padding: 7px 3px; border: 0; border-radius: 7px; color: #587084; background: #e7eef3; cursor: pointer; font-size: 7px; font-weight: 800; }
 .book-actions button:disabled { cursor: default; opacity: .4; }
-.compact-book-form { width: min(520px,calc(100vw - 32px)); }
 .series-details-page { display: grid; gap: 14px; max-width: 1280px; margin: 0 auto; }
 .series-hero-card { display: grid; grid-template-columns: 210px minmax(0,1fr) minmax(300px,34%); gap: 14px; padding: 18px; border: 1px solid #dde4e7; border-radius: 15px; background: var(--paper); box-shadow: 0 8px 24px #2a39430d; }
 .series-hero-card .movie-detail-poster { min-height: 300px; }
