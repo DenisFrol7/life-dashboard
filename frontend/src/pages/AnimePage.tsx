@@ -1,20 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { Link } from 'react-router'
 import { ChevronDown, Heart, Plus, Search, Tv, Upload, X } from 'lucide-react'
-import { createAnime, createShikimoriAnime, deleteAnime, getAnime, getAnimeDetails, importShikimori, previewShikimoriAnime, previewShikimoriImport, putAnimeLibrary, removeAnimeLibrary, searchShikimoriAnime, updateAnime, type AnimeDetails, type AnimeInput, type AnimeSummary, type ShikimoriAnimeCandidate, type ShikimoriImportPreview, type ShikimoriImportResult } from '../api/anime'
-import type { LibraryInput, LibraryStatus, ReleaseStatus } from '../api/movies'
+import { getAnime, getAnimeDetails, importShikimori, previewShikimoriImport, type AnimeDetails, type AnimeSummary, type ShikimoriImportPreview, type ShikimoriImportResult } from '../api/anime'
+import type { LibraryStatus, ReleaseStatus } from '../api/movies'
 import { getApiErrorMessage } from '../api/client'
 import { ErrorState, LoadingState } from '../components/AsyncState'
-import { useToast } from '../components/ToastContext'
-import { saveLibraryForm } from './libraryForm'
 import { useLatestRequest } from '../hooks/useLatestRequest'
-import { useFormMutation } from '../hooks/useFormMutation'
+import { AnimeForm } from '../components/AnimeForm'
 import './AnimePage.css'
 
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
 const releaseLabels: Record<ReleaseStatus, string> = { ANNOUNCED: 'Анонсировано', ONGOING: 'Выходит', RELEASED: 'Вышло', ENDED: 'Завершено', CANCELLED: 'Отменено' }
-const emptyAnime: AnimeInput = { title: '', originalTitle: null, releaseYear: null, description: null, coverUrl: null, releaseStatus: 'ONGOING' }
-const emptyLibrary: LibraryInput = { status: 'PLANNED', rating: null, favorite: false, startedAt: null, completedAt: null, personalNote: null }
 const formatSeasonCount = (count: number) => {
   const lastTwo = count % 100, last = count % 10
   return `${count} ${lastTwo >= 11 && lastTwo <= 14 ? 'сезонов' : last === 1 ? 'сезон' : last >= 2 && last <= 4 ? 'сезона' : 'сезонов'}`
@@ -128,7 +124,7 @@ export function AnimePage() {
         ] as const).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{initialized ? value : '—'}</dd></div>)}</dl></div>
       </aside>
     </section>
-    {editing && <AnimeForm anime={editing === 'new' ? undefined : editing} onClose={() => finishDialog()} onSaved={() => finishDialog(true)} />}
+    {editing && <AnimeForm returnFocusTo={triggerRef.current} anime={editing === 'new' ? undefined : editing} onClose={() => finishDialog()} onSaved={() => finishDialog(true)} />}
     {importing && <ShikimoriImportDialog onClose={() => finishDialog()} onImported={() => finishDialog(true)} />}
   </div>
 }
@@ -144,73 +140,4 @@ function ShikimoriImportDialog({ onClose, onImported }: { onClose: () => void; o
   const selectFile = async (event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; if (!file.name.toLowerCase().endsWith('.json')) { setError('Выберите JSON-файл экспорта Shikimori.'); return } setFileName(file.name); setLoading(true); setError(null); setResult(null); try { setPreview(await previewShikimoriImport(file)) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось проверить экспорт Shikimori') } finally { setLoading(false) } }
   const confirm = async () => { if (!preview || !window.confirm(`Импортировать ${preview.total} записей? Перед изменением данных будет создана резервная копия.`)) return; setLoading(true); setError(null); try { setResult(await importShikimori(preview.token)) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось импортировать Shikimori') } finally { setLoading(false) } }
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><section className="myshows-import-dialog"><div className="form-heading"><div><p className="eyebrow">Аниме</p><h2>Импорт из Shikimori</h2></div><button type="button" aria-label="Закрыть" onClick={onClose}><X /></button></div><p className="form-hint">Сначала файл будет проверен без изменения базы. При подтверждении сведения о тайтлах загрузятся из Shikimori API.</p>{error && <div className="form-error">{error}</div>}<input ref={inputRef} hidden type="file" accept=".json,application/json" onChange={(event) => void selectFile(event)} /><button className="secondary-button icon-button myshows-file-button" disabled={loading} onClick={() => inputRef.current?.click()}><Upload />{loading ? 'Обрабатываем…' : fileName || 'Выбрать JSON-файл'}</button>{preview && !result && <><div className="myshows-preview-summary"><div><span>Всего</span><strong>{preview.total}</strong></div><div><span>Просмотрено</span><strong>{preview.completed}</strong></div><div><span>Смотрю</span><strong>{preview.watching}</strong></div><div><span>В планах</span><strong>{preview.planned}</strong></div><div><span>Уже в каталоге</span><strong>{preview.existing}</strong></div></div><ul className="myshows-warnings">{preview.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul><div className="myshows-preview-list">{preview.items.map((item) => <div key={item.shikimoriId}><span><strong>{item.title}</strong><small>{item.originalTitle} · эпизодов просмотрено: {item.watchedEpisodes}</small></span><em className={item.existingContentId ? 'matched' : 'new'}>{item.existingContentId ? 'Проверить' : item.score ? `${item.score}/10` : 'Добавить'}</em></div>)}</div><div className="myshows-confirm"><span>Данные проверены</span><button className="primary-button" disabled={loading} onClick={() => void confirm()}>{loading ? 'Загружаем каталог…' : `Импортировать ${preview.total}`}</button></div></>}{result && <div className="notice settings-success"><strong>Импорт завершён</strong><span>Добавлено аниме: {result.animeCreated}, фильмов: {result.moviesCreated}, обновлено: {result.updated}, пропущено фильмов Кинопоиска: {result.skipped}, отметок эпизодов: {result.episodeWatches}.</span><span>Резервная копия создана.</span><div className="form-buttons"><button className="primary-button" onClick={onImported}>Готово</button></div></div>}</section></div>
-}
-
-export function AnimeForm({ anime, onClose, onSaved, onDeleted }: { anime?: AnimeDetails; onClose: () => void; onSaved: () => void; onDeleted?: () => void }) {
-  const { showToast } = useToast()
-  const [item, setItem] = useState<AnimeInput>(anime ? { title: anime.title, originalTitle: anime.originalTitle, releaseYear: anime.releaseYear, description: anime.description, coverUrl: anime.coverUrl, releaseStatus: anime.releaseStatus } : emptyAnime)
-  const [entry, setEntry] = useState<LibraryInput>(anime?.userStatus ? { status: anime.userStatus, rating: anime.rating, favorite: anime.favorite, startedAt: anime.startedAt, completedAt: anime.completedAt, personalNote: anime.personalNote } : emptyLibrary)
-  const [inLibrary, setInLibrary] = useState(Boolean(anime?.userStatus) || !anime)
-  const [searchQuery, setSearchQuery] = useState(''); const [candidates, setCandidates] = useState<ShikimoriAnimeCandidate[]>([]); const [selectedId, setSelectedId] = useState<number | null>(null); const [episodeCount, setEpisodeCount] = useState<number | null>(null); const [searching, setSearching] = useState(false)
-  const mutations = useFormMutation()
-  const { saving, deleting, pending } = mutations
-  const [error, setError] = useState<string | null>(null)
-  const catalogRequests = useLatestRequest()
-  const cancelCatalog = () => { catalogRequests.invalidate(); setSearching(false); setCandidates([]) }
-  const changeSearchQuery = (value: string) => { cancelCatalog(); setSearchQuery(value) }
-  const closeForm = () => { mutations.dispose(); catalogRequests.dispose(); onClose() }
-  const setItemValue = <K extends keyof AnimeInput>(key: K, value: AnimeInput[K]) => { cancelCatalog(); setItem((current) => ({ ...current, [key]: value })) }
-  const setEntryValue = <K extends keyof LibraryInput>(key: K, value: LibraryInput[K]) => setEntry((current) => ({ ...current, [key]: value }))
-  const searchCatalog = async () => {
-    const value = searchQuery.trim()
-    if (value.length < 2) return
-    await catalogRequests.run(() => searchShikimoriAnime(value), {
-      onStart: () => { setSearching(true); setError(null); setCandidates([]) },
-      onSuccess: setCandidates,
-      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось выполнить поиск в Shikimori'),
-      onFinish: () => setSearching(false),
-    })
-  }
-  const selectCandidate = async (candidate: ShikimoriAnimeCandidate) => {
-    if (candidate.existingContentId) return
-    await catalogRequests.run(() => previewShikimoriAnime(candidate.shikimoriId), {
-      onStart: () => { setSearching(true); setError(null) },
-      onSuccess: (details) => {
-        setSelectedId(details.shikimoriId)
-        setEpisodeCount(details.episodeCount)
-        setItem({ title: details.title, originalTitle: details.originalTitle, releaseYear: details.releaseYear, description: details.description, coverUrl: details.coverUrl, releaseStatus: details.releaseStatus })
-        setCandidates([])
-      },
-      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось загрузить данные Shikimori'),
-      onFinish: () => setSearching(false),
-    })
-  }
-  const submit = async (event: FormEvent) => {
-    event.preventDefault(); if (pending || searching) return
-    setError(null)
-    await mutations.run('save', () => saveLibraryForm({
-      title: anime?.title ?? item.title, inLibrary, wasInLibrary: Boolean(anime?.userStatus),
-      saveItem: () => anime ? updateAnime(anime.id, item) : selectedId ? createShikimoriAnime(selectedId, item) : createAnime(item),
-      putLibrary: (id) => putAnimeLibrary(id, entry), removeLibrary: removeAnimeLibrary,
-    }), {
-      onSuccess: (saved) => {
-        if (!saved) return
-        showToast(anime ? 'Аниме обновлено' : 'Аниме добавлено'); onSaved()
-      },
-      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось сохранить аниме'),
-    })
-  }
-  const remove = async () => {
-    if (!anime || pending || searching) return
-    setError(null)
-    await mutations.run('delete', async () => {
-      if (!window.confirm(`Удалить «${anime.title}» вместе с сезонами?`)) return false
-      await deleteAnime(anime.id)
-      return true
-    }, {
-      onSuccess: (deleted) => { if (deleted) { showToast('Аниме удалено'); (onDeleted ?? onSaved)() } },
-      onError: (reason) => setError(reason instanceof Error ? reason.message : 'Не удалось удалить аниме'),
-    })
-  }
-  return <div className="modal-backdrop"><form className="habit-form movie-form" onSubmit={(event) => void submit(event)}><div className="form-heading"><div><p className="eyebrow">Аниме</p><h2>{anime ? 'Редактирование' : 'Новое аниме'}</h2></div><button type="button" onClick={closeForm}>×</button></div>{error && <div className="form-error">{error}</div>}<p className="anime-rule">Только многосерийное аниме. Полнометражные работы добавляются в раздел «Фильмы» как мультфильмы.</p>{!anime && <section className="kinopoisk-movie-search"><div><input value={searchQuery} onChange={(event) => changeSearchQuery(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void searchCatalog() } }} placeholder="Введите название аниме" /><button className="secondary-button" type="button" disabled={searching || searchQuery.trim().length < 2} onClick={() => void searchCatalog()}>{searching ? 'Ищем…' : 'Найти в Shikimori'}</button></div>{selectedId && <p>Данные загружены. Будет создано эпизодов: {episodeCount ?? 0}. Проверьте поля и укажите личный статус.</p>}{candidates.length > 0 && <div className="kinopoisk-movie-results">{candidates.map((candidate) => <button type="button" key={candidate.shikimoriId} disabled={Boolean(candidate.existingContentId)} onClick={() => void selectCandidate(candidate)}>{candidate.coverUrl ? <img src={candidate.coverUrl} alt="" /> : <span>◇</span>}<span><strong>{candidate.title}</strong><small>{candidate.originalTitle && candidate.originalTitle !== candidate.title ? `${candidate.originalTitle} · ` : ''}{candidate.kind ?? 'anime'}{candidate.existingContentId ? ' · Уже в каталоге' : ''}</small></span></button>)}</div>}</section>}<label>Название<input required value={item.title} onChange={(event) => setItemValue('title', event.target.value)} /></label><label>Оригинальное название<input value={item.originalTitle ?? ''} onChange={(event) => setItemValue('originalTitle', event.target.value || null)} /></label><div className="form-grid"><label>Год<input min="1900" type="number" value={item.releaseYear ?? ''} onChange={(event) => setItemValue('releaseYear', event.target.value ? Number(event.target.value) : null)} /></label><label>Статус выпуска<select value={item.releaseStatus} onChange={(event) => setItemValue('releaseStatus', event.target.value as ReleaseStatus)}>{Object.entries(releaseLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label></div><label>URL обложки<input type="url" value={item.coverUrl ?? ''} onChange={(event) => setItemValue('coverUrl', event.target.value || null)} /></label><label>Описание<textarea rows={3} value={item.description ?? ''} onChange={(event) => setItemValue('description', event.target.value || null)} /></label><fieldset className="library-fields"><legend>Моя библиотека</legend><label className="all-day-check"><input type="checkbox" checked={inLibrary} onChange={(event) => setInLibrary(event.target.checked)} />Добавить в библиотеку</label>{inLibrary && <><div className="form-grid"><label>Статус<select value={entry.status} onChange={(event) => setEntryValue('status', event.target.value as LibraryStatus)}>{Object.entries(statusLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label>Оценка<select value={entry.rating ?? ''} onChange={(event) => setEntryValue('rating', event.target.value ? Number(event.target.value) : null)}><option value="">Без оценки</option>{Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <option key={value}>{value}</option>)}</select></label></div><label className="favorite-check"><input type="checkbox" checked={entry.favorite} onChange={(event) => setEntryValue('favorite', event.target.checked)} />В избранном</label><label>Заметка<textarea rows={2} value={entry.personalNote ?? ''} onChange={(event) => setEntryValue('personalNote', event.target.value || null)} /></label></>}</fieldset><div className="form-buttons">{anime && <button className="danger-button" type="button" disabled={pending || searching} onClick={() => void remove()}>{deleting ? 'Удаляем…' : 'Удалить'}</button>}<button className="secondary-button" type="button" onClick={closeForm}>Отмена</button><button className="primary-button" disabled={pending || searching}>{saving ? 'Сохраняем…' : 'Сохранить'}</button></div></form></div>
 }

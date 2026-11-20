@@ -4,7 +4,7 @@ import { ArrowLeft, Check, ChevronDown, Pencil, Plus } from 'lucide-react'
 import { getViewingStructure, type Episode, type Season, type SeasonCompletion } from '../api/series'
 import { getAnimeDetails, type AnimeDetails } from '../api/anime'
 import type { LibraryStatus, ReleaseStatus, Watch } from '../api/movies'
-import { AnimeForm } from './AnimePage'
+import { AnimeForm } from '../components/AnimeForm'
 import { BulkEpisodeForm, EpisodeForm, SeasonCompletionForm, SeasonForm } from '../components/SeriesStructureForms'
 import { ErrorState, LoadingState } from '../components/AsyncState'
 import { useViewingActions } from '../hooks/useViewingActions'
@@ -115,7 +115,7 @@ function AnimeDetailsContent({ id }: { id: number }) {
         })}</div> : <p className="anime-view-empty">Сезонов пока нет.</p>}
       </section>
     </>}
-    {editing && anime && <AnimeForm anime={anime} onClose={() => closeForms()} onSaved={() => closeForms(true)} onDeleted={() => navigate('/anime', { replace: true })} />}
+    {editing && anime && <AnimeForm returnFocusTo={triggerRef.current} anime={anime} onClose={() => closeForms()} onSaved={() => closeForms(true)} onDeleted={() => navigate('/anime', { replace: true })} />}
     {addingSeason && anime && <SeasonForm returnFocusTo={triggerRef.current} series={anime} onClose={() => closeForms()} onSaved={() => closeForms(true)} />}
     {editingSeason && anime && <SeasonForm returnFocusTo={triggerRef.current} series={anime} season={editingSeason} onClose={() => closeForms()} onSaved={() => closeForms(true)} />}
     {episodeSeason && <EpisodeForm returnFocusTo={triggerRef.current} season={episodeSeason} onClose={() => closeForms()} onSaved={() => closeForms(true)} />}

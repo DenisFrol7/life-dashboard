@@ -535,7 +535,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .structure-forms input, .structure-forms select { min-width: 0; width: 75px; padding: 7px; border: 1px solid #d7d9d5; border-radius: 7px; background: #fff; font-size: 8px; }
 .structure-forms form:last-child input:last-of-type { width: 130px; }
 .structure-forms button { padding: 7px 8px; border: 0; border-radius: 7px; color: #fff; background: #56748a; cursor: pointer; font-size: 8px; font-weight: 700; }
-.anime-rule { margin: 0 0 14px; padding: 10px 12px; border-left: 3px solid #9279a7; border-radius: 4px 9px 9px 4px; color: #6e6474; background: #f0eaf3; font-size: 9px; line-height: 1.5; }
 .game-poster { background: linear-gradient(145deg, #31534f, #172d2d); }
 .xbox-progress span { background: #5b9a67; }
 .game-source { margin-top: 7px; overflow: hidden; color: #7d8580; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
@@ -1283,7 +1282,6 @@ html[data-theme="dark"] .library-fields,
 html[data-theme="dark"] .structure-forms,
 html[data-theme="dark"] .watch-history > div:not(.form-heading) { border-color: #263746; }
 html[data-theme="dark"] .structure-forms form { background: #111e2a; }
-html[data-theme="dark"] .anime-rule { border-color: #8578f6; color: #c5c0ff; background: #252142; }
 html[data-theme="dark"] .series-structure > section { border-color: #253746; }
 html[data-theme="dark"] .series-structure h3 { color: #dce5ee; background: #172532; }
 html[data-theme="dark"] .series-structure section > div { border-color: #253746; color: var(--muted); }
