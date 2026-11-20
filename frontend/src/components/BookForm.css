@@ -1,0 +1,24 @@
+.book-form-search { display: grid; gap: 12px; min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft); }
+.book-form-search > div:first-child { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
+.book-form-search button { min-width: 0; min-height: 48px; font-size: 14px; }
+.book-form-search p { margin: 0; color: var(--accent-dark); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.book-form-results { display: grid; grid-auto-rows: max-content; align-content: start; gap: 8px; min-width: 0; max-height: 320px; padding: 3px; overflow-y: auto; overscroll-behavior: contain; }
+.book-form-results > button { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--paper); cursor: pointer; text-align: left; }
+.book-form-results > button:disabled { cursor: default; }
+.book-form-candidate-cover { position: relative; display: grid; place-items: center; width: 44px; height: 64px; overflow: hidden; border-radius: 5px; color: var(--accent-dark); background: var(--accent-soft); }
+.book-form-candidate-cover > svg { width: 24px; height: 24px; }
+.book-form-candidate-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.book-form-results button > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.book-form-results strong { display: block; font-size: 15px; line-height: 1.4; }
+.book-form-results small { display: block; margin-top: 5px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.book-form-cover { display: grid; gap: 14px; min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+.book-form-cover-content { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; min-width: 0; }
+.book-form-cover-preview { position: relative; display: grid; flex: 0 0 88px; place-items: center; width: 88px; height: 132px; overflow: hidden; border-radius: 8px; color: var(--accent-dark); background: var(--accent-soft); }
+.book-form-cover-preview > svg { width: 30px; height: 30px; }
+.book-form-cover-preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.book-form-upload { display: grid; flex: 1 1 200px; gap: 8px; min-width: 0; }
+.book-form-upload button { min-width: 0; min-height: 48px; font-size: 14px; }
+.book-form-upload p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.book-form-upload p[role="status"] { color: var(--accent-dark); }
+.book-form-upload .book-form-filename { color: var(--ink); font-weight: 600; }
+@media (max-width: 600px) { .book-form-search > div:first-child { grid-template-columns: minmax(0, 1fr); } }
