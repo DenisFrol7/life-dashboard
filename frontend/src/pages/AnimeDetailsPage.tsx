@@ -1,18 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, Pencil } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, Pencil, Plus } from 'lucide-react'
+import { getViewingStructure, type Episode, type Season, type SeasonCompletion } from '../api/series'
 import { getAnimeDetails, type AnimeDetails } from '../api/anime'
-import {
-  getViewingStructure,
-  type Episode, type Season, type SeasonCompletion,
-} from '../api/series'
 import type { LibraryStatus, ReleaseStatus, Watch } from '../api/movies'
 import { AnimeForm } from './AnimePage'
 import { BulkEpisodeForm, EpisodeForm, SeasonCompletionForm, SeasonForm } from '../components/SeriesStructureForms'
+import { ErrorState, LoadingState } from '../components/AsyncState'
 import { useViewingActions } from '../hooks/useViewingActions'
+import { useLatestRequest } from '../hooks/useLatestRequest'
+import './AnimeDetailsPage.css'
 
-type EpisodeDetails = Episode & { watches: Watch[] }
-type SeasonDetails = Season & { episodes: EpisodeDetails[]; completion?: SeasonCompletion }
+type SeasonDetails = Season & { episodes: Array<Episode & { watches: Watch[] }>; completion?: SeasonCompletion }
 const statusLabels: Record<LibraryStatus, string> = { NOT_STARTED: 'Не начато', PLANNED: 'В планах', IN_PROGRESS: 'Смотрю', COMPLETED: 'Просмотрено', PAUSED: 'На паузе', DROPPED: 'Брошено' }
 const releaseLabels: Record<ReleaseStatus, string> = { ANNOUNCED: 'Анонсировано', ONGOING: 'Выходит', RELEASED: 'Вышло', ENDED: 'Завершено', CANCELLED: 'Отменено' }
 const formatDate = (value: string) => new Intl.DateTimeFormat('ru-RU', { dateStyle: 'medium' }).format(new Date(value))
@@ -24,9 +23,15 @@ const countLabel = (count: number, one: string, few: string, many: string) => {
 
 export function AnimeDetailsPage() {
   const id = Number(useParams().id)
+  return <AnimeDetailsContent key={id} id={id} />
+}
+
+function AnimeDetailsContent({ id }: { id: number }) {
   const navigate = useNavigate()
+  const requests = useLatestRequest()
   const [anime, setAnime] = useState<AnimeDetails | null>(null)
   const [seasons, setSeasons] = useState<SeasonDetails[]>([])
+  const [openSeasons, setOpenSeasons] = useState<Set<number>>(() => new Set())
   const [editing, setEditing] = useState(false)
   const [addingSeason, setAddingSeason] = useState(false)
   const [editingSeason, setEditingSeason] = useState<Season | null>(null)
@@ -36,42 +41,86 @@ export function AnimeDetailsPage() {
   const [completingSeason, setCompletingSeason] = useState<Season | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const pageRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
+  const fallbackRef = useRef('.anime-view-add-season')
+  const focusAfterRefreshRef = useRef(false)
+  const formOpen = Boolean(editing || addingSeason || editingSeason || episodeSeason || editingEpisode || bulkSeason || completingSeason)
 
-  const load = useCallback(async () => {
-    setLoading(true); setError(null)
-    try {
-      const [item, structure] = await Promise.all([getAnimeDetails(id), getViewingStructure(id)])
-      setAnime(item); setSeasons(structure.seasons)
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Не удалось загрузить аниме') }
-    finally { setLoading(false) }
-  }, [id])
-  useEffect(() => { void load() }, [load])
-
-  const episodes = useMemo(() => seasons.flatMap((season) => season.episodes), [seasons])
-  const watched = useMemo(() => episodes.filter((episode) => episode.watches.length), [episodes])
+  const load = useCallback(() => requests.run(async () => {
+    if (!Number.isSafeInteger(id) || id < 1) throw new Error('Некорректный идентификатор аниме')
+    const result = await Promise.all([getAnimeDetails(id), getViewingStructure(id)])
+    if (result[0].id !== id) throw new Error('Некорректный ответ при загрузке аниме')
+    return result
+  }, {
+    onStart: () => { setLoading(true); setError(null) },
+    onSuccess: ([item, structure]) => { setAnime(item); setSeasons(structure.seasons) },
+    onError: reason => setError(reason instanceof Error ? reason.message : 'Не удалось загрузить аниме'),
+    onFinish: () => setLoading(false),
+  }), [id, requests])
+  useEffect(() => { void load(); return () => requests.invalidate() }, [load, requests])
+  useEffect(() => {
+    if (!focusAfterRefreshRef.current || loading || formOpen) return
+    focusAfterRefreshRef.current = false
+    const trigger = triggerRef.current?.isConnected && !triggerRef.current.disabled ? triggerRef.current : pageRef.current?.querySelector<HTMLElement>(fallbackRef.current) ?? pageRef.current?.querySelector<HTMLElement>('.anime-view-add-season')
+    trigger?.focus({ preventScroll: true })
+  }, [loading, formOpen])
+  const captureTrigger = (trigger: HTMLButtonElement, fallback = '.anime-view-add-season') => { triggerRef.current = trigger; fallbackRef.current = fallback }
+  const closeForms = (refresh = false) => {
+    focusAfterRefreshRef.current = true
+    setEditing(false); setAddingSeason(false); setEditingSeason(null); setEpisodeSeason(null); setEditingEpisode(null); setBulkSeason(null); setCompletingSeason(null)
+    if (refresh) void load()
+  }
+  const viewing = useViewingActions(() => { focusAfterRefreshRef.current = true; void load() }, formOpen || loading || Boolean(error))
+  const disabled = viewing.disabled
+  const episodes = useMemo(() => seasons.flatMap(season => season.episodes), [seasons])
+  const watched = useMemo(() => episodes.filter(episode => episode.watches.length > 0), [episodes])
   const progress = episodes.length ? watched.length / episodes.length * 100 : 0
   const lastWatch = useMemo(() => {
-    const manual = watched.flatMap((episode) => { const seasonNumber = seasons.find((season) => season.id === episode.seasonId)?.seasonNumber ?? 0; return episode.watches.filter((watch) => !watch.bulk).map((watch) => ({ occurredAt: watch.watchedAt, seasonNumber, episodeNumber: episode.episodeNumber, label: `S${seasonNumber} · E${episode.episodeNumber}`, detail: episode.title })) })
-    const completed = seasons.filter((season) => season.completion?.completedAt).map((season) => ({ occurredAt: season.completion!.completedAt!, seasonNumber: season.seasonNumber, episodeNumber: season.completion!.episodeCount, label: `Сезон ${season.seasonNumber}`, detail: `Просмотрено ${season.completion!.episodeCount} эпизодов` }))
-    return [...manual, ...completed].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt) || b.seasonNumber - a.seasonNumber || b.episodeNumber - a.episodeNumber)[0]
-  }, [seasons, watched])
-  const viewing = useViewingActions(() => { void load() }, Boolean(editing || addingSeason || editingSeason || episodeSeason || editingEpisode || bulkSeason || completingSeason))
+    const manual = seasons.flatMap(season => season.episodes.flatMap(episode => episode.watches.filter(watch => !watch.bulk).map(watch => ({ occurredAt: watch.watchedAt, seasonNumber: season.seasonNumber, episodeNumber: episode.episodeNumber, label: `S${season.seasonNumber} · E${episode.episodeNumber}`, detail: episode.title }))))
+    const completed = seasons.filter(season => season.completion?.completedAt).map(season => ({ occurredAt: season.completion!.completedAt!, seasonNumber: season.seasonNumber, episodeNumber: season.completion!.episodeCount, label: `Сезон ${season.seasonNumber}`, detail: `Просмотрено ${season.completion!.episodeCount} эпизодов` }))
+    return [...manual, ...completed].sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt) || b.seasonNumber - a.seasonNumber || b.episodeNumber - a.episodeNumber)[0]
+  }, [seasons])
 
-  if (loading) return <div className="loading"><span />Загружаем аниме…</div>
-  if (error || !anime) return <div className="notice error"><strong>Не удалось открыть аниме</strong><span>{error}</span></div>
-
-  return <div className="series-details-page anime-details-page">
-    <div className="game-details-toolbar"><Link to="/anime"><ArrowLeft />Назад к аниме</Link><button disabled={viewing.disabled} className="secondary-button icon-button" onClick={() => setEditing(true)}><Pencil />Редактировать</button></div>
-    <section className="series-hero-card"><div className="movie-detail-poster anime-detail-poster" style={anime.coverUrl ? { backgroundImage: `url(${anime.coverUrl})` } : undefined}><span>{anime.title.slice(0, 1)}</span></div><div className="movie-main-info"><p className="eyebrow">Многосерийное аниме</p><h1>{anime.title}</h1>{anime.originalTitle && <h2>{anime.originalTitle}</h2>}<dl><div><dt>Год</dt><dd>{anime.releaseYear ?? '—'}</dd></div><div><dt>Статус выпуска</dt><dd>{releaseLabels[anime.releaseStatus]}</dd></div><div><dt>Формат</dt><dd>TV-сериал</dd></div></dl></div><div className="movie-personal-info series-personal-info"><div><small>Мой статус</small><strong className="detail-status">● {anime.userStatus ? statusLabels[anime.userStatus] : 'Не в библиотеке'}</strong>{anime.userStatus === 'COMPLETED' && anime.completedAt && <span>Завершено: {formatDate(anime.completedAt)}</span>}</div><div><small>Моя оценка</small><strong className="series-detail-rating">{anime.rating ? `${anime.rating}/10` : '—'}</strong></div><div><small>Заметки</small><p>{anime.personalNote ?? 'Заметок пока нет.'}</p></div></div></section>
-    <section className="series-summary-grid"><article className="detail-card series-progress-card"><div><h2>Прогресс просмотра</h2><strong>{watched.length} из {episodes.length} эпизодов</strong></div><b>{Math.round(progress)}%</b><div className="series-progress anime-progress"><span style={{ width: `${progress}%` }} /></div></article><article className="detail-card series-count-card"><h2>Сезоны и эпизоды</h2><strong>{seasons.length}<small>{countLabel(seasons.length, 'сезон', 'сезона', 'сезонов')}</small></strong><strong>{episodes.length}<small>{countLabel(episodes.length, 'эпизод', 'эпизода', 'эпизодов')}</small></strong></article><article className="detail-card series-last-watch"><h2>Последний просмотр</h2>{lastWatch ? <><strong>{lastWatch.label}</strong><span>{lastWatch.detail}</span><small>{formatDate(lastWatch.occurredAt)}</small></> : <span>{watched.length ? 'Дата исторического просмотра не указана' : 'Просмотров пока нет'}</span>}</article></section>
-    {anime.description && <section className="detail-card movie-description"><h2>Описание</h2><p>{anime.description}</p></section>}
-    <section className="detail-card series-season-panel" aria-busy={viewing.pending}>{viewing.error && <div className="notice error viewing-action-error" role="alert">{viewing.error}</div>}{viewing.pending && <p className="muted" role="status">{viewing.deleting ? "Снимаем отметки…" : "Сохраняем отметку…"}</p>}<div className="panel-heading"><div><p className="eyebrow">Структура аниме</p><h2>Сезоны и эпизоды</h2></div><button disabled={viewing.disabled} className="primary-button" onClick={() => setAddingSeason(true)}>+ Добавить сезон</button></div>{seasons.length ? <div className="season-detail-list">{seasons.map((season) => <details key={season.id}><summary><span><b>Сезон {season.seasonNumber}</b>{season.title && <small>{season.title}</small>}{season.completion && <small>{season.completion.completedAt ? `Завершён ${new Intl.DateTimeFormat('ru-RU').format(new Date(season.completion.completedAt))}` : 'Просмотрен · дата неизвестна'}</small>}</span><span className="season-summary-actions"><em>{season.episodes.filter((episode) => episode.watches.length).length} из {season.episodes.length}</em><button disabled={viewing.disabled} onClick={(event) => { event.preventDefault(); setEditingSeason(season) }}>Изменить</button></span></summary><div className="season-bulk-actions"><button disabled={viewing.disabled} onClick={() => setBulkSeason(season)}>+ Добавить несколько эпизодов</button><button disabled={viewing.disabled || (!season.episodes.length)} onClick={() => setCompletingSeason(season)}>✓ Просмотрен весь сезон</button><button disabled={viewing.disabled || (!season.episodes.some((episode) => episode.watches.length))} onClick={() => void viewing.clearSeason(season)}>Снять просмотры</button></div><div className="episode-detail-list">{season.episodes.map((episode) => <div className={episode.watches.length ? 'watched' : ''} key={episode.id}><b>{episode.episodeNumber}</b><button disabled={viewing.disabled} className="episode-title-button" onClick={() => setEditingEpisode({ season, episode })}><strong>{episode.title}</strong><small>{episode.releaseDate ? new Intl.DateTimeFormat('ru-RU').format(new Date(episode.releaseDate)) : 'Дата не указана'}{episode.durationMinutes ? ` · ${episode.durationMinutes} мин` : ''}</small></button><em>{episode.watches.length ? `Просмотрено${episode.watches.length > 1 ? ` ×${episode.watches.length}` : ''}` : 'Не просмотрено'}</em><button disabled={viewing.disabled} title="Отметить просмотренным" onClick={() => void viewing.markEpisode(episode.id)}>✓</button></div>)}<button disabled={viewing.disabled} className="add-episode-row" onClick={() => setEpisodeSeason(season)}>+ Добавить один эпизод</button></div></details>)}</div> : <p className="muted">Сезонов пока нет.</p>}</section>
-    {editing && <AnimeForm anime={anime} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); void load() }} onDeleted={() => navigate('/anime', { replace: true })} />}
-    {addingSeason && <SeasonForm series={anime} onClose={() => setAddingSeason(false)} onSaved={() => { setAddingSeason(false); void load() }} />}
-    {editingSeason && <SeasonForm series={anime} season={editingSeason} onClose={() => setEditingSeason(null)} onSaved={() => { setEditingSeason(null); void load() }} />}
-    {episodeSeason && <EpisodeForm season={episodeSeason} onClose={() => setEpisodeSeason(null)} onSaved={() => { setEpisodeSeason(null); void load() }} />}
-    {editingEpisode && <EpisodeForm season={editingEpisode.season} episode={editingEpisode.episode} onClose={() => setEditingEpisode(null)} onSaved={() => { setEditingEpisode(null); void load() }} />}
-    {bulkSeason && <BulkEpisodeForm season={bulkSeason} onClose={() => setBulkSeason(null)} onSaved={() => { setBulkSeason(null); void load() }} />}
-    {completingSeason && <SeasonCompletionForm season={completingSeason} onClose={() => setCompletingSeason(null)} onSaved={() => { setCompletingSeason(null); void load() }} />}
+  return <div ref={pageRef} className="anime-view-page">
+    <div className="anime-view-toolbar"><Link className="icon-button" to="/anime"><ArrowLeft aria-hidden="true" />Назад к аниме</Link>{anime && <button type="button" disabled={disabled} className="secondary-button icon-button anime-view-edit" onClick={event => { captureTrigger(event.currentTarget, '.anime-view-edit'); setEditing(true) }}><Pencil aria-hidden="true" />Редактировать</button>}</div>
+    {loading && !anime ? <LoadingState message="Загружаем аниме…" /> : !anime ? <ErrorState title="Не удалось открыть аниме" message={error ?? 'Аниме не найдено'} onRetry={() => void load()} /> : <>
+      {error && <ErrorState title="Не удалось обновить аниме" message={error} onRetry={() => void load()} compact />}
+      {loading && <p className="anime-view-loading" role="status">Обновляем сведения об аниме…</p>}
+      <section className="anime-view-hero">
+        <div className="anime-view-poster"><span aria-hidden="true">{anime.title.slice(0, 1)}</span>{anime.coverUrl && <img key={anime.coverUrl} src={anime.coverUrl} alt={`Постер аниме «${anime.title}»`} onError={event => { event.currentTarget.hidden = true }} />}</div>
+        <div className="anime-view-info"><p className="eyebrow">Многосерийное аниме</p><h2>{anime.title}</h2>{anime.originalTitle && <p className="anime-view-original">{anime.originalTitle}</p>}<dl><div><dt>Год</dt><dd>{anime.releaseYear ?? '—'}</dd></div><div><dt>Статус выпуска</dt><dd>{releaseLabels[anime.releaseStatus]}</dd></div><div className="anime-view-format"><dt>Формат</dt><dd>TV-сериал</dd></div></dl></div>
+        <div className="anime-view-personal"><div><span>Мой статус</span><strong className="anime-view-status">{anime.userStatus ? statusLabels[anime.userStatus] : 'Не в библиотеке'}</strong>{anime.userStatus === 'COMPLETED' && anime.completedAt && <small>Завершено: {formatDate(anime.completedAt)}</small>}</div><div className="anime-view-score"><span>Моя оценка</span><strong className="anime-view-rating">{anime.rating != null ? `${anime.rating}/10` : 'Без оценки'}</strong></div><div className="anime-view-note"><span>Заметки</span><p>{anime.personalNote || 'Заметок пока нет.'}</p></div></div>
+      </section>
+      <section className="anime-view-summary" aria-label="Прогресс аниме">
+        <article className="anime-view-panel anime-view-progress"><h2>Прогресс просмотра</h2><div><strong>{watched.length} из {episodes.length} эпизодов</strong><b>{Math.round(progress)}%</b></div><div className="anime-view-progress-bar" role="progressbar" aria-label="Прогресс просмотра" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)} aria-valuetext={`Просмотрено ${watched.length} из ${episodes.length} эпизодов`}><span style={{ width: `${progress}%` }} /></div></article>
+        <article className="anime-view-panel anime-view-count"><h2>Сезоны и эпизоды</h2><dl><div><dt>{countLabel(seasons.length, 'сезон', 'сезона', 'сезонов')}</dt><dd>{seasons.length}</dd></div><div><dt>{countLabel(episodes.length, 'эпизод', 'эпизода', 'эпизодов')}</dt><dd>{episodes.length}</dd></div></dl></article>
+        <article className="anime-view-panel anime-view-last-watch"><h2>Последний просмотр</h2>{lastWatch ? <><strong>{lastWatch.label}</strong><span>{lastWatch.detail}</span><time dateTime={lastWatch.occurredAt}>{formatDate(lastWatch.occurredAt)}</time></> : <span>{watched.length ? 'Дата исторического просмотра не указана' : 'Просмотров пока нет'}</span>}</article>
+      </section>
+      {anime.description && <section className="anime-view-panel anime-view-description"><h2>Описание</h2><p>{anime.description}</p></section>}
+      <section className="anime-view-panel anime-view-seasons" aria-busy={viewing.pending || loading}>
+        <div className="anime-view-season-heading"><div><p className="eyebrow">Структура аниме</p><h2>Сезоны и эпизоды</h2></div><button type="button" disabled={disabled} className="primary-button icon-button anime-view-add-season" onClick={event => { captureTrigger(event.currentTarget); setAddingSeason(true) }}><Plus aria-hidden="true" />Добавить сезон</button></div>
+        {viewing.error && <div className="anime-view-action-error" role="alert">{viewing.error}</div>}{viewing.pending && <p className="anime-view-loading" role="status">{viewing.deleting ? 'Снимаем отметки…' : 'Сохраняем отметку…'}</p>}
+        {seasons.length ? <div className="anime-view-season-list">{seasons.map(season => {
+          const seasonFallback = `[data-season-id="${season.id}"] > summary`
+          return <details data-season-id={season.id} key={season.id} open={openSeasons.has(season.id)} onToggle={event => { const open = event.currentTarget.open; setOpenSeasons(current => { if (current.has(season.id) === open) return current; const next = new Set(current); if (open) next.add(season.id); else next.delete(season.id); return next }) }}>
+            <summary><div className="anime-view-season-copy"><strong>Сезон {season.seasonNumber}</strong>{season.title && <p>{season.title}</p>}{season.releaseYear && <small>{season.releaseYear}</small>}{season.completion && <small>{season.completion.completedAt ? `Завершён ${formatDate(season.completion.completedAt)}` : 'Просмотрен · дата неизвестна'}</small>}</div><span className="anime-view-season-count">{season.episodes.filter(episode => episode.watches.length).length} из {season.episodes.length} эпизодов</span><ChevronDown aria-hidden="true" /></summary>
+            <div className="anime-view-season-actions"><button type="button" disabled={disabled} onClick={event => { captureTrigger(event.currentTarget, seasonFallback); setEditingSeason(season) }}>Изменить сезон</button><button type="button" disabled={disabled} onClick={event => { captureTrigger(event.currentTarget, seasonFallback); setBulkSeason(season) }}>Добавить эпизоды</button><button type="button" disabled={disabled || !season.episodes.length} onClick={event => { captureTrigger(event.currentTarget, seasonFallback); setCompletingSeason(season) }}>Просмотрен весь сезон</button><button type="button" disabled={disabled || !season.episodes.some(episode => episode.watches.length)} onClick={event => { captureTrigger(event.currentTarget, seasonFallback); void viewing.clearSeason(season) }}>Снять просмотры</button></div>
+            <div className="anime-view-episode-list">{season.episodes.map(episode => {
+              const watchedEpisode = episode.watches.length > 0
+              const watchLabel = `${watchedEpisode ? 'Добавить повторный просмотр' : 'Отметить просмотр'}: ${episode.title}`
+              return <div className="anime-view-episode" data-episode-id={episode.id} data-watched={watchedEpisode} key={episode.id}><b>{episode.episodeNumber}</b><button type="button" disabled={disabled} className="anime-view-episode-title" onClick={event => { captureTrigger(event.currentTarget, seasonFallback); setEditingEpisode({ season, episode }) }} aria-label={`Изменить эпизод ${episode.episodeNumber}: ${episode.title}`}><strong>{episode.title}</strong><small>{episode.releaseDate ? formatDate(episode.releaseDate) : 'Дата не указана'}{episode.durationMinutes ? ` · ${episode.durationMinutes} мин` : ''}</small></button><span className="anime-view-episode-status">{watchedEpisode ? `Просмотрено${episode.watches.length > 1 ? ` ×${episode.watches.length}` : ''}` : 'Не просмотрено'}</span><button type="button" disabled={disabled} className="anime-view-mark-episode" title={watchLabel} aria-label={watchLabel} onClick={event => { captureTrigger(event.currentTarget, seasonFallback); void viewing.markEpisode(episode.id) }}>{watchedEpisode ? <Plus aria-hidden="true" /> : <Check aria-hidden="true" />}</button></div>
+            })}{!season.episodes.length && <p className="anime-view-empty">В этом сезоне пока нет эпизодов.</p>}<button type="button" disabled={disabled} className="anime-view-add-episode" onClick={event => { captureTrigger(event.currentTarget, seasonFallback); setEpisodeSeason(season) }}><Plus aria-hidden="true" />Добавить один эпизод</button></div>
+          </details>
+        })}</div> : <p className="anime-view-empty">Сезонов пока нет.</p>}
+      </section>
+    </>}
+    {editing && anime && <AnimeForm anime={anime} onClose={() => closeForms()} onSaved={() => closeForms(true)} onDeleted={() => navigate('/anime', { replace: true })} />}
+    {addingSeason && anime && <SeasonForm returnFocusTo={triggerRef.current} series={anime} onClose={() => closeForms()} onSaved={() => closeForms(true)} />}
+    {editingSeason && anime && <SeasonForm returnFocusTo={triggerRef.current} series={anime} season={editingSeason} onClose={() => closeForms()} onSaved={() => closeForms(true)} />}
+    {episodeSeason && <EpisodeForm returnFocusTo={triggerRef.current} season={episodeSeason} onClose={() => closeForms()} onSaved={() => closeForms(true)} />}
+    {editingEpisode && <EpisodeForm returnFocusTo={triggerRef.current} season={editingEpisode.season} episode={editingEpisode.episode} onClose={() => closeForms()} onSaved={() => closeForms(true)} />}
+    {bulkSeason && <BulkEpisodeForm returnFocusTo={triggerRef.current} season={bulkSeason} onClose={() => closeForms()} onSaved={() => closeForms(true)} />}
+    {completingSeason && <SeasonCompletionForm returnFocusTo={triggerRef.current} season={completingSeason} onClose={() => closeForms()} onSaved={() => closeForms(true)} />}
   </div>
 }
