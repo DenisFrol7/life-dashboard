@@ -27,8 +27,8 @@
 .shows-catalog-copy h3 a { display: -webkit-box; overflow: hidden; color: var(--ink); text-decoration: none; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
 .shows-catalog-copy h3 a:hover { color: var(--accent-dark); text-decoration: underline; }
 .shows-catalog-original { display: -webkit-box; margin: 4px 0 0; overflow: hidden; color: var(--muted); font-size: 15px; line-height: 1.4; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
-.shows-catalog-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; color: var(--muted); font-size: 15px; line-height: 1.4; }
-.shows-catalog-genre { display: -webkit-box; margin: 4px 0 0; overflow: hidden; color: var(--muted); font-size: 15px; line-height: 1.4; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+.shows-catalog-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; color: var(--muted); font-size: var(--media-meta-font-size); line-height: 1.4; }
+.shows-catalog-genre { display: -webkit-box; margin: 4px 0 0; overflow: hidden; color: var(--muted); font-size: var(--media-meta-font-size); line-height: 1.4; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
 .shows-catalog-progress { display: grid; gap: 6px; min-width: 0; margin-top: auto; padding-top: 7px; }
 .shows-catalog-progress > span { color: var(--muted); font-size: 15px; font-weight: 700; line-height: 1.4; }
 .shows-catalog-progress > div { height: 5px; overflow: hidden; border-radius: 999px; background: var(--line); }
@@ -91,7 +91,7 @@ html[data-theme="dark"] .shows-catalog-favorite { color: #efb8c4; background: #4
   .shows-catalog-copy { min-height: 0; padding: 12px 10px 10px; }
   .shows-catalog-copy h3 { font-size: 17px; }
   .shows-catalog-copy h3 a { -webkit-line-clamp: 3; }
-  .shows-catalog-original, .shows-catalog-meta, .shows-catalog-genre, .shows-catalog-progress > span { font-size: 14px; }
+  .shows-catalog-original, .shows-catalog-progress > span { font-size: 14px; }
   .shows-catalog-original, .shows-catalog-genre { -webkit-line-clamp: 2; }
   .shows-catalog-meta { margin-top: 8px; }
   .shows-catalog-personal { align-content: end; justify-items: stretch; gap: 10px; padding: 0 10px 12px; }

@@ -16,6 +16,7 @@
   --accent-soft: #e4edf4;
   --success: #5b9a67;
   --mobile-navigation-height: 69px;
+  --media-meta-font-size: 15px;
 }
 
 :root[data-theme="dark"] {
@@ -42,6 +43,10 @@ a { color: inherit; }
 h1, h2, h3, p { margin-top: 0; }
 
 ::selection { color: #fff; background: #496985; }
+
+@media (max-width: 600px) {
+  :root { --media-meta-font-size: 14px; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }

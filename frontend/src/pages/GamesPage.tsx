@@ -2,11 +2,12 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
-import { useNavigate, useSearchParams } from "react-router";
-import { Download, ListChecks, Plus, RefreshCw, Search, X } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router";
+import { ChevronDown, Download, Gamepad2, Heart, ListChecks, Plus, RefreshCw, Search, X } from "lucide-react";
 import {
   createGame,
   createGameLibrary,
@@ -69,6 +70,8 @@ import { ErrorState, LoadingState } from "../components/AsyncState";
 import { useToast } from "../components/ToastContext";
 import { useLatestRequest } from "../hooks/useLatestRequest";
 import { useFormMutation } from "../hooks/useFormMutation";
+import { getApiErrorMessage } from "../api/client";
+import "./GamesPage.css";
 
 const statusLabels: Record<LibraryStatus, string> = {
   NOT_STARTED: "Не начато",
@@ -194,6 +197,14 @@ function newestBy<T>(items: T[], timestamp: (item: T) => string) {
 
 export function GamesPage() {
   const navigate = useNavigate();
+  const requests = useLatestRequest();
+  const pageRef = useRef<HTMLDivElement>(null);
+  const addRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const dialogWasOpenRef = useRef(false);
+  const [statisticsExpanded, setStatisticsExpanded] = useState(false);
+  const [toolsExpanded, setToolsExpanded] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [savedFilters] = useState(readGameFilters);
@@ -233,27 +244,9 @@ export function GamesPage() {
   const [visibleCount, setVisibleCount] = useState(readVisibleGameCount);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [
-        catalog,
-        entries,
-        platformList,
-        sourceList,
-        sessionList,
-        xboxSummary,
-        steamSummary,
-      ] = await Promise.all([
-        getGameCatalog(),
-        getGameLibrary(),
-        getPlatforms(),
-        getSources(),
-        getGameSessions(),
-        getXboxLibrarySummary(),
-        getSteamLibrarySummary(),
-      ]);
+  const load = useCallback(() => requests.run(() => Promise.all([getGameCatalog(), getGameLibrary(), getPlatforms(), getSources(), getGameSessions(), getXboxLibrarySummary(), getSteamLibrarySummary()]), {
+    onStart: () => { setLoading(true); setError(null); },
+    onSuccess: ([catalog, entries, platformList, sourceList, sessionList, xboxSummary, steamSummary]) => {
       setGames(catalog);
       setLibraryEntries(entries);
       setLibrary(
@@ -293,17 +286,19 @@ export function GamesPage() {
           }),
         ),
       );
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "Не удалось загрузить игры",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      setInitialized(true);
+    },
+    onError: reason => setError(getApiErrorMessage(reason, "Не удалось загрузить игры")),
+    onFinish: () => setLoading(false),
+  }), [requests]);
+  useEffect(() => { void load(); return () => requests.invalidate(); }, [load, requests]);
+  const dialogOpen = Boolean(editing || editingSession || steamImportOpen || xboxImportOpen || qualityCheckOpen);
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (dialogOpen) { dialogWasOpenRef.current = true; return; }
+    if (!dialogWasOpenRef.current || loading) return;
+    dialogWasOpenRef.current = false;
+    (triggerRef.current?.isConnected ? triggerRef.current : addRef.current)?.focus({ preventScroll: true });
+  }, [dialogOpen, loading]);
   useEffect(() => {
     setAchievementProviderByGame({});
   }, [platform, source]);
@@ -521,130 +516,24 @@ export function GamesPage() {
       setSyncingXbox(false);
     }
   };
-  if (loading) return <LoadingState message="Загружаем игры…" />;
-  if (error)
-    return (
-      <ErrorState
-        title="Не удалось загрузить игры"
-        message={error}
-        onRetry={() => void load()}
-      />
-    );
   return (
-    <div className="movies-page series-page games-page">
-      <section className="media-toolbar series-media-toolbar">
-        <div
-          className="series-status-tabs game-status-tabs"
-          aria-label="Фильтр игр по статусу"
-        >
-          {(
-            [
-              ["", "Все"],
-              ["IN_PROGRESS", "Играю"],
-              ["COMPLETED", "Пройдено"],
-              ["NOT_STARTED", "Не начато"],
-              ["PAUSED", "На паузе"],
-              ["DROPPED", "Брошено"],
-              ["GAME_PASS", "Game Pass"],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value || "all"}
-              className={status === value ? "active" : ""}
-              onClick={() => {
-                setStatus(value);
-                setVisibleCount(GAME_PAGE_SIZE);
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="journal-search game-catalog-search">
-          <span>
-            <Search />
-          </span>
-          <input
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setVisibleCount(GAME_PAGE_SIZE);
-            }}
-            placeholder="Найти игру"
-          />
-        </div>
-        <select
-          className="game-platform-filter"
-          value={platform}
-          onChange={(event) => {
-            setPlatform(event.target.value);
-            setVisibleCount(GAME_PAGE_SIZE);
-          }}
-        >
-          <option value="">Все платформы</option>
-          {platforms.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
-        <select
-          className="game-platform-filter game-source-filter"
-          value={source}
-          onChange={(event) => {
-            setSource(event.target.value);
-            setVisibleCount(GAME_PAGE_SIZE);
-          }}
-        >
-          <option value="">Все источники</option>
-          {sources.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
-        <button
-          className="secondary-button icon-button steam-import-button"
-          disabled={syncingXbox || xboxProgressGames === 0}
-          onClick={() => void updateXboxProgress()}
-          title="Обновить достижения и время связанных Xbox-игр"
-        >
-          <RefreshCw className={syncingXbox ? "spinning" : undefined} />
-          {syncingXbox ? "Обновляем Xbox…" : "Обновить Xbox"}
-        </button>
-        <button
-          className="secondary-button icon-button steam-import-button"
-          onClick={() => setXboxImportOpen(true)}
-        >
-          <Download />
-          Импорт Xbox
-        </button>
-        <button
-          className="secondary-button icon-button steam-import-button"
-          disabled={syncingSteamRecent || steamGames === 0}
-          onClick={() => void updateRecentSteamProgress()}
-          title="Обновить недавние игры и загрузить достижения для 10 новых"
-        >
-          <RefreshCw className={syncingSteamRecent ? "spinning" : undefined} />
-          {syncingSteamRecent ? "Обновляем Steam…" : "Обновить Steam"}
-        </button>
-        <button
-          className="secondary-button icon-button steam-import-button"
-          onClick={() => setSteamImportOpen(true)}
-        >
-          <Download />
-          Импорт Steam
-        </button>
-        <button
-          className="primary-button series-add-button media-add-button icon-button"
-          onClick={() => setEditing("new")}
-        >
-          <Plus />
-          Добавить игру
-        </button>
+    <div ref={pageRef} className="games-library-page" onClickCapture={event => { if (!dialogOpen && event.target instanceof Element) { const button = event.target.closest<HTMLButtonElement>("button"); if (button) triggerRef.current = button; } }}>
+      <section className="games-catalog-toolbar" aria-label="Управление каталогом игр">
+        <div className="games-catalog-tabs" role="group" aria-label="Статус игры">{([
+          ["", "Все"], ["IN_PROGRESS", "Играю"], ["COMPLETED", "Пройдено"], ["NOT_STARTED", "Не начато"], ["PLANNED", "В планах"], ["PAUSED", "На паузе"], ["DROPPED", "Брошено"], ["GAME_PASS", "Game Pass"],
+        ] as const).map(([value, label]) => <button type="button" key={value || "all"} aria-pressed={status === value} onClick={() => { setStatus(value); setVisibleCount(GAME_PAGE_SIZE); }}>{label}</button>)}</div>
+        <div className="games-catalog-search"><Search aria-hidden="true" /><input type="search" aria-label="Найти игру" value={query} onChange={event => { setQuery(event.target.value); setVisibleCount(GAME_PAGE_SIZE); }} placeholder="Найти игру" /></div>
+        <div className="games-catalog-filters"><label>Платформа<select value={platform} onChange={event => { setPlatform(event.target.value); setVisibleCount(GAME_PAGE_SIZE); }}><option value="">Все платформы</option>{platforms.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Источник<select value={source} onChange={event => { setSource(event.target.value); setVisibleCount(GAME_PAGE_SIZE); }}><option value="">Все источники</option>{sources.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></div>
+        <button ref={addRef} type="button" className="primary-button icon-button games-catalog-add" disabled={loading || Boolean(error)} onClick={() => setEditing("new")}><Plus aria-hidden="true" />Добавить игру</button>
+        <div className="games-catalog-tools"><button type="button" className="games-catalog-tools-toggle" aria-expanded={toolsExpanded} aria-controls="games-catalog-tools" onClick={() => setToolsExpanded(value => !value)}>Импорт и синхронизация<ChevronDown aria-hidden="true" /></button><div id="games-catalog-tools" className="games-catalog-tools-actions" data-expanded={toolsExpanded}>
+          <button type="button" className="secondary-button icon-button" disabled={loading || Boolean(error) || syncingXbox || syncingSteamRecent || xboxProgressGames === 0} onClick={() => void updateXboxProgress()} title="Обновить достижения и время связанных Xbox-игр"><RefreshCw aria-hidden="true" className={syncingXbox ? "spinning" : undefined} />{syncingXbox ? "Обновляем Xbox…" : "Обновить Xbox"}</button>
+          <button type="button" className="secondary-button icon-button" disabled={loading || Boolean(error)} onClick={() => setXboxImportOpen(true)}><Download aria-hidden="true" />Импорт Xbox</button>
+          <button type="button" className="secondary-button icon-button" disabled={loading || Boolean(error) || syncingSteamRecent || syncingXbox || steamGames === 0} onClick={() => void updateRecentSteamProgress()} title="Обновить недавние игры и загрузить достижения для 10 новых"><RefreshCw aria-hidden="true" className={syncingSteamRecent ? "spinning" : undefined} />{syncingSteamRecent ? "Обновляем Steam…" : "Обновить Steam"}</button>
+          <button type="button" className="secondary-button icon-button" disabled={loading || Boolean(error)} onClick={() => setSteamImportOpen(true)}><Download aria-hidden="true" />Импорт Steam</button>
+        </div></div>
       </section>
-      <section className="series-catalog-layout">
-        <div className="series-catalog-main">
+      <section className="games-catalog-layout">
+        <div className="games-catalog-main">
           {xboxSyncResult && (
             <div
               className={`notice steam-recent-sync-summary${xboxSyncResult.failed || xboxSyncResult.playtimeSyncFailed ? " error" : ""}`}
@@ -717,26 +606,12 @@ export function GamesPage() {
                 ))}
             </div>
           )}
-          {error && (
-            <div className="notice error movies-error">
-              <strong>Ошибка</strong>
-              <span>{error}</span>
-            </div>
-          )}
-          {loading ? (
-            <div className="loading">
-              <span />
-              Загружаем игры…
-            </div>
-          ) : visible.length === 0 ? (
-            <div className="media-empty">
-              <span>＋</span>
-              <h2>Игр пока нет</h2>
-              <p>Добавьте первую игру в каталог.</p>
-            </div>
+          <div className="games-catalog-heading"><h2>Каталог</h2><output aria-live="polite" aria-atomic="true">{loading ? 'Загружаем игры…' : error ? 'Игры не загружены' : `Показано: ${visibleGames.length} из ${visible.length}`}</output></div>
+          {loading ? <LoadingState message="Загружаем игры…" /> : error ? <ErrorState title="Не удалось загрузить игры" message={error} onRetry={() => void load()} /> : visible.length === 0 ? (
+            <div className="games-catalog-empty"><Gamepad2 aria-hidden="true" /><h2>{query.trim() || status || platform || source ? "Игры не найдены" : "Каталог пока пуст"}</h2><p>{query.trim() || status || platform || source ? "Попробуйте изменить поиск или фильтры." : "Добавьте первую игру в каталог."}</p>{(query.trim() || status || platform || source) && <button type="button" className="secondary-button" onClick={() => { setQuery(""); setStatus(""); setPlatform(""); setSource(""); setVisibleCount(GAME_PAGE_SIZE); }}>Сбросить фильтры</button>}</div>
           ) : (
             <>
-              <section className="movie-grid series-catalog-grid">
+              <section className="games-catalog-grid">
               {visibleGames.map((game) => {
                 const entry = library[game.id];
                 const copies = libraryEntries.filter(
@@ -745,7 +620,7 @@ export function GamesPage() {
                 const platformNames = [
                   ...new Set(copies.map((item) => item.platform.name)),
                 ];
-                const sourceNames = [
+                const libraryLabels = [
                   ...new Set(copies.map((item) => item.source.name)),
                 ];
                 const matchesActiveFilter = (copy: GameLibrary) =>
@@ -822,266 +697,44 @@ export function GamesPage() {
                 const hasBothProviders = Boolean(
                   xboxCandidate && steamCandidate,
                 );
-                return (
-                  <article
-                    className="series-list-card game-catalog-card"
-                    key={game.id}
-                  >
-                    <button
-                      className="series-list-cover game-poster"
-                      onClick={() => navigate(`/games/${game.id}`)}
-                      style={
-                        game.backgroundUrl ?? game.coverUrl
-                          ? {
-                              backgroundImage: `url(${game.backgroundUrl ?? game.coverUrl})`,
-                            }
-                          : undefined
-                      }
-                    >
-                      <span>{game.title.slice(0, 1)}</span>
-                      {entry?.favorite && <i>♥</i>}
-                    </button>
-                    <div className="series-list-content">
-                      <div className="series-list-heading">
-                        <button onClick={() => navigate(`/games/${game.id}`)}>
-                          {game.title}
-                        </button>
-                        {platformNames.map((name) => (
-                          <span
-                            className="release-badge game-platform-badge"
-                            key={name}
-                          >
-                            {name}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="movie-list-meta">
-                        <span>{game.releaseYear ?? "—"}</span>
-                        <span>{game.genre ?? "Жанр не указан"}</span>
-                        {sourceNames.map((name) => (
-                          <span key={name}>{name}</span>
-                        ))}
-                      </div>
-                      <div className="series-list-inline-status">
-                        {entry ? (
-                          <span
-                            className={`media-status ${entry.status.toLowerCase()}`}
-                          >
-                            {statusLabels[entry.status]}
-                          </span>
-                        ) : (
-                          <span className="media-status not_started">
-                            Не в библиотеке
-                          </span>
-                        )}
-                      </div>
-                      {selectedProgress && (
-                        <div
-                          className={`game-catalog-progress ${selectedProvider.toLowerCase()}`}
-                        >
-                          <div className="game-catalog-progress-main">
-                            {hasBothProviders && (
-                              <div
-                                className="game-achievement-provider-switch"
-                                aria-label="Платформа достижений"
-                                role="group"
-                              >
-                                {(["XBOX", "STEAM"] as const).map(
-                                  (provider) => (
-                                    <button
-                                      className={
-                                        selectedProvider === provider
-                                          ? "active"
-                                          : ""
-                                      }
-                                      key={provider}
-                                      onClick={() =>
-                                        setAchievementProviderByGame(
-                                          (current) => ({
-                                            ...current,
-                                            [game.id]: provider,
-                                          }),
-                                        )
-                                      }
-                                      aria-pressed={
-                                        selectedProvider === provider
-                                      }
-                                    >
-                                      {provider === "XBOX" ? "Xbox" : "Steam"}
-                                    </button>
-                                  ),
-                                )}
-                              </div>
-                            )}
-                            <strong className="game-catalog-achievements">
-                              <b>{selectedProgress.unlockedAchievements}</b>
-                              <small>из</small>
-                              <b>{selectedProgress.totalAchievements}</b>
-                              <small>достижений</small>
-                            </strong>
-                          </div>
-                          <div className="series-list-progress">
-                            <span
-                              style={{
-                                width: `${selectedProgress.achievementPercent}%`,
-                              }}
-                            />
-                          </div>
-                          {selectedProvider === "XBOX" && xboxCandidate && (
-                            <span className="game-catalog-gamerscore">
-                              <b>{xboxCandidate.progress.earnedGamerscore}</b>
-                              <small>из</small>
-                              <b>{xboxCandidate.progress.totalGamerscore}</b>
-                              <small>G</small>
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div className="series-list-side">
-                      {entry ? (
-                        <strong className="series-list-score">
-                          {entry.rating ? `${entry.rating}/10` : "Без оценки"}
-                        </strong>
-                      ) : (
-                        <button
-                          className="add-library-button"
-                          onClick={() => setEditing(game)}
-                        >
-                          + В библиотеку
-                        </button>
-                      )}
-                    </div>
-                  </article>
-                );
+                return <article className="games-catalog-card" key={game.id} data-game-id={game.id}>
+                  <Link className="games-catalog-cover" to={`/games/${game.id}`} aria-label={`Открыть игру «${game.title}»`}><span className="games-catalog-cover-letter" aria-hidden="true">{game.title.slice(0, 1)}</span>{(game.coverUrl || game.backgroundUrl) && <picture>{game.backgroundUrl && <source media="(min-width: 601px)" srcSet={game.backgroundUrl} />}<img src={game.coverUrl || game.backgroundUrl!} alt="" loading="lazy" decoding="async" onLoad={event => { event.currentTarget.hidden = false; }} onError={event => { event.currentTarget.hidden = true; }} /></picture>}{entry?.favorite && <span className="games-catalog-favorite" role="img" aria-label="В избранном"><Heart aria-hidden="true" /></span>}</Link>
+                  <div className="games-catalog-copy">
+                    <h3><Link to={`/games/${game.id}`} title={game.title}>{game.title}</Link></h3>
+                    <div className="games-catalog-platforms">{platformNames.length ? platformNames.map(name => <span key={name}>{name}</span>) : <span>Не в библиотеке</span>}</div>
+                    <div className="games-catalog-meta"><span>{game.releaseYear ?? "Год не указан"}</span><p title={game.genre || undefined}>{game.genre || "Жанр не указан"}</p></div>
+                    {libraryLabels.length > 0 && <p className="games-catalog-library" title={libraryLabels.join(" • ")}>{libraryLabels.join(" • ")}</p>}
+                    {selectedProgress && <div className="games-catalog-progress" data-provider={selectedProvider}>
+                      {hasBothProviders && <div className="games-catalog-provider" role="group" aria-label={`Источник достижений: ${game.title}`}>{(["XBOX", "STEAM"] as const).map(provider => <button type="button" key={provider} aria-pressed={selectedProvider === provider} onClick={() => setAchievementProviderByGame(current => ({ ...current, [game.id]: provider }))}>{provider === "XBOX" ? "Xbox" : "Steam"}</button>)}</div>}
+                      {!hasBothProviders && <span className="games-catalog-provider-name">{selectedProvider === "XBOX" ? "Xbox" : "Steam"}</span>}
+                      <strong>Достижения: {selectedProgress.unlockedAchievements} из {selectedProgress.totalAchievements}</strong>
+                      <div className="games-catalog-progress-bar" role="progressbar" aria-label={`Достижения ${selectedProvider === "XBOX" ? "Xbox" : "Steam"}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Math.max(0, Math.min(100, selectedProgress.achievementPercent)))}><span style={{ width: `${Math.max(0, Math.min(100, selectedProgress.achievementPercent))}%` }} /></div>
+                      {selectedProvider === "XBOX" && xboxCandidate && <span className="games-catalog-gamerscore">{xboxCandidate.progress.earnedGamerscore} из {xboxCandidate.progress.totalGamerscore} G</span>}
+                    </div>}
+                  </div>
+                  <div className="games-catalog-personal">{entry ? <><span className={`games-catalog-status ${entry.status.toLowerCase()}`}>{statusLabels[entry.status]}</span><strong className="games-catalog-rating" data-rated={entry.rating != null}>{entry.rating != null ? `${entry.rating}/10` : "Без оценки"}</strong></> : <button type="button" className="games-catalog-add-library" aria-label={`Добавить в библиотеку «${game.title}»`} onClick={() => setEditing(game)}><Plus aria-hidden="true" />В библиотеку</button>}</div>
+                </article>;
               })}
               </section>
               {visibleCount < visible.length && (
                 <button
-                  className="secondary-button movie-load-more"
+                  type="button" className="secondary-button games-catalog-load-more"
                   onClick={() =>
                     setVisibleCount((current) => current + GAME_PAGE_SIZE)
                   }
                 >
-                  Показать ещё 50
+                  Показать ещё {Math.min(GAME_PAGE_SIZE, visible.length - visibleCount)}
                 </button>
               )}
             </>
           )}
         </div>
-        <aside className="series-statistics">
-          <p className="eyebrow">Общая статистика</p>
-          <h2>Игры</h2>
-          <dl>
-            <div>
-              <dt>Количество игр</dt>
-              <dd>{games.length}</dd>
-            </div>
-            <div>
-              <dt>Не начато</dt>
-              <dd>
-                {
-                  Object.values(library).filter(
-                    (item) => item.status === "NOT_STARTED",
-                  ).length
-                }
-              </dd>
-            </div>
-            <div>
-              <dt>Пройдено</dt>
-              <dd>
-                {
-                  Object.values(library).filter(
-                    (item) => item.status === "COMPLETED",
-                  ).length
-                }
-              </dd>
-            </div>
-            <div>
-              <dt>Играю</dt>
-              <dd>
-                {
-                  Object.values(library).filter(
-                    (item) => item.status === "IN_PROGRESS",
-                  ).length
-                }
-              </dd>
-            </div>
-            <div>
-              <dt>На паузе</dt>
-              <dd>
-                {
-                  Object.values(library).filter(
-                    (item) => item.status === "PAUSED",
-                  ).length
-                }
-              </dd>
-            </div>
-            <div>
-              <dt>Брошено</dt>
-              <dd>
-                {
-                  Object.values(library).filter(
-                    (item) => item.status === "DROPPED",
-                  ).length
-                }
-              </dd>
-            </div>
-            <div className="series-stat-total">
-              <dt>Xbox</dt>
-              <dd>{xboxGames}</dd>
-            </div>
-            <div>
-              <dt>PC</dt>
-              <dd>{pcGames}</dd>
-            </div>
-            <div>
-              <dt>Game Pass</dt>
-              <dd>{gamePassGames}</dd>
-            </div>
-            <div className="series-stat-total">
-              <dt>Steam</dt>
-              <dd>{steamGames}</dd>
-            </div>
-            <div>
-              <dt>EA</dt>
-              <dd>{eaGames}</dd>
-            </div>
-            <div>
-              <dt>Epic Games</dt>
-              <dd>{epicGames}</dd>
-            </div>
-            <div>
-              <dt>Ubisoft Connect</dt>
-              <dd>{ubisoftGames}</dd>
-            </div>
-            <div className="series-stat-total">
-              <dt>Игровое время</dt>
-              <dd>
-                {Math.floor(sessionPlaytime / 60)} ч {sessionPlaytime % 60} мин
-              </dd>
-            </div>
-            <div>
-              <dt>Достижения Steam</dt>
-              <dd>{steamAchievements}</dd>
-            </div>
-            <div>
-              <dt>Достижения Xbox</dt>
-              <dd>{xboxAchievements}</dd>
-            </div>
-            <div>
-              <dt>Gamerscore</dt>
-              <dd>{totalGamerscore} G</dd>
-            </div>
-          </dl>
-          <button
-            className="secondary-button icon-button series-catalog-update"
-            onClick={() => setQualityCheckOpen(true)}
-          >
-            <ListChecks />
-            Проверить библиотеку
-            {qualityRows.length > 0 && <b>{qualityRows.length}</b>}
-          </button>
+        <aside className="games-catalog-statistics"><p className="eyebrow">Общая статистика</p><h2>Игры <span>{initialized ? games.length : "—"}</span></h2>
+          <button type="button" className="games-catalog-statistics-toggle" aria-expanded={statisticsExpanded} aria-controls="games-catalog-statistics" onClick={() => setStatisticsExpanded(value => !value)}>Общая статистика<ChevronDown aria-hidden="true" /></button>
+          <div id="games-catalog-statistics" className="games-catalog-statistics-details" data-expanded={statisticsExpanded}><dl>{([
+            ["Количество игр", games.length], ["В библиотеке", Object.keys(library).length], ["Не начато", Object.values(library).filter(item => item.status === "NOT_STARTED").length], ["В планах", Object.values(library).filter(item => item.status === "PLANNED").length], ["Пройдено", Object.values(library).filter(item => item.status === "COMPLETED").length], ["Играю", Object.values(library).filter(item => item.status === "IN_PROGRESS").length], ["На паузе", Object.values(library).filter(item => item.status === "PAUSED").length], ["Брошено", Object.values(library).filter(item => item.status === "DROPPED").length], ["Xbox", xboxGames], ["PC", pcGames], ["Game Pass", gamePassGames], ["Steam", steamGames], ["EA", eaGames], ["Epic Games", epicGames], ["Ubisoft Connect", ubisoftGames], ["Игровое время", `${Math.floor(sessionPlaytime / 60)} ч ${sessionPlaytime % 60} мин`], ["Достижения Steam", steamAchievements], ["Достижения Xbox", xboxAchievements], ["Gamerscore", `${totalGamerscore} G`],
+          ] as const).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{initialized ? value : "—"}</dd></div>)}</dl></div>
+          <button type="button" className="secondary-button icon-button games-catalog-quality" disabled={loading || Boolean(error)} onClick={() => setQualityCheckOpen(true)}><ListChecks aria-hidden="true" />Проверить библиотеку{qualityRows.length > 0 && <b>{qualityRows.length}</b>}</button>
         </aside>
       </section>
       {visibleGames.some((game) => game.rawgSlug) && (
@@ -1095,24 +748,24 @@ export function GamesPage() {
           <span aria-hidden="true">↗</span>
         </a>
       )}
-      <section className="game-sessions-panel game-sessions-bottom">
-        <div className="panel-heading">
+      <section className="games-catalog-sessions">
+        <div className="games-catalog-session-heading">
           <div>
             <p className="eyebrow">Игровая активность</p>
             <h2>Последние игровые сессии</h2>
           </div>
           <button
             className="primary-button"
-            disabled={!Object.keys(library).length}
+            disabled={loading || Boolean(error) || !Object.keys(library).length}
             onClick={() => setEditingSession("new")}
           >
             + Добавить сессию
           </button>
         </div>
-        {sessions.length === 0 ? (
+        {!initialized ? loading ? <LoadingState message="Загружаем сессии…" compact /> : <p>Не удалось загрузить сессии.</p> : sessions.length === 0 ? (
           <p className="muted">Игровых сессий пока нет.</p>
         ) : (
-          <div className="game-session-list">
+          <div className="games-catalog-session-list">
             {sessions.slice(0, 5).map((session) => (
               <button
                 key={session.id}
@@ -1124,7 +777,7 @@ export function GamesPage() {
                     {new Date(session.startedAt).toLocaleString("ru-RU")}
                   </small>
                 </span>
-                <span className="game-session-achievements">
+                <span className="games-catalog-session-achievements">
                   {session.unlockedAchievements
                     ? `+${session.unlockedAchievements} достиж.`
                     : ""}

@@ -24,8 +24,8 @@
 .books-catalog-copy h3 { margin: 0; font-family: Georgia, serif; font-size: 21px; line-height: 1.3; }
 .books-catalog-copy h3 a { display: -webkit-box; overflow: hidden; color: var(--ink); text-decoration: none; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
 .books-catalog-copy h3 a:hover { color: var(--accent-dark); text-decoration: underline; }
-.books-catalog-author, .books-catalog-genre { display: -webkit-box; margin: 4px 0 0; overflow: hidden; color: var(--muted); font-size: 15px; line-height: 1.4; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
-.books-catalog-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; color: var(--muted); font-size: 15px; line-height: 1.4; }
+.books-catalog-author, .books-catalog-genre { display: -webkit-box; margin: 4px 0 0; overflow: hidden; color: var(--muted); font-size: var(--media-meta-font-size); line-height: 1.4; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+.books-catalog-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; color: var(--muted); font-size: var(--media-meta-font-size); line-height: 1.4; }
 .books-catalog-progress { display: grid; gap: 6px; min-width: 0; margin-top: auto; padding-top: 7px; }
 .books-catalog-progress > strong { color: var(--ink); font-size: 15px; line-height: 1.5; }
 .books-catalog-progress small { color: var(--muted); font-size: 13px; font-weight: 400; }
@@ -96,7 +96,7 @@ html[data-theme="dark"] .books-catalog-favorite { color: #efb8c4; background: #4
   .books-catalog-copy { padding: 12px 10px 10px; }
   .books-catalog-copy h3 { font-size: 17px; }
   .books-catalog-copy h3 a { -webkit-line-clamp: 3; }
-  .books-catalog-author, .books-catalog-meta, .books-catalog-genre, .books-catalog-progress > strong { font-size: 14px; }
+  .books-catalog-progress > strong { font-size: 14px; }
   .books-catalog-author, .books-catalog-genre { -webkit-line-clamp: 2; }
   .books-catalog-meta { margin-top: 8px; }
   .books-catalog-personal { display: grid; grid-column: 1; align-content: end; justify-items: stretch; gap: 10px; padding: 0 10px 12px; }
