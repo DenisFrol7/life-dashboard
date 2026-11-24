@@ -1,0 +1,64 @@
+.game-view-page { display: grid; gap: 18px; width: 100%; max-width: 1280px; min-width: 0; margin: 0 auto; }
+.game-view-page > section, .game-view-page .detail-card { min-width: 0; }
+.game-view-page .detail-card { overflow-wrap: anywhere; }
+.game-view-page :is(button, a):focus-visible { outline: 3px solid var(--accent-strong); outline-offset: 2px; }
+.game-view-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.game-view-toolbar > a { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; color: var(--accent-dark); font-size: 14px; font-weight: 600; text-decoration: none; }
+.game-view-toolbar > a svg { flex: 0 0 18px; width: 18px; height: 18px; }
+.game-view-toolbar button { min-height: 44px; font-size: 14px; }
+.game-view-toolbar button:disabled { cursor: default; opacity: .6; }
+.game-view-hero { --game-view-cover-width: 200px; display: grid; grid-template-columns: var(--game-view-cover-width) minmax(0, 1fr) minmax(220px, .8fr); align-items: start; gap: 24px; padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); }
+.game-view-overview { display: grid; grid-column: 1 / span 2; grid-template-columns: var(--game-view-cover-width) minmax(0, 1fr); align-items: start; gap: 8px 24px; min-width: 0; }
+.game-view-cover { position: relative; display: grid; grid-column: 1; grid-row: 1; align-self: stretch; place-items: center; width: 100%; height: 100%; min-height: calc(var(--game-view-cover-width) * 1.5); min-width: 0; overflow: hidden; border-radius: 12px; color: #d8e4ee; background: linear-gradient(145deg, #526d7d, #263d4c); }
+.game-view-cover > span:first-child { font-family: Georgia, serif; font-size: 64px; font-weight: 700; }
+.game-view-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.game-view-favorite { position: absolute; top: 9px; right: 9px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: #ac3f56; background: #fff3f5; box-shadow: 0 2px 8px #0003; }
+.game-view-favorite svg { width: 17px; height: 17px; fill: currentColor; }
+.game-view-info { display: flex; grid-column: 2; grid-row: 1; align-self: stretch; flex-direction: column; min-width: 0; min-height: calc(var(--game-view-cover-width) * 1.5); overflow-wrap: anywhere; }
+.game-view-info h2 { margin: 0 0 12px; color: var(--ink); font-family: Georgia, serif; font-size: clamp(28px, 2.5vw, 34px); line-height: 1.2; }
+.game-view-info dl { display: grid; flex: 1; align-content: space-between; gap: 12px; margin: 18px 0 0; }
+.game-view-info dl > div { display: grid; gap: 4px; min-width: 0; }
+.game-view-info dt, .game-view-personal small { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.game-view-info dd { margin: 0; color: var(--ink); font-size: 16px; line-height: 1.5; }
+.game-view-attributions { display: flex; grid-column: 1; grid-row: 2; justify-content: center; flex-wrap: wrap; min-width: 0; }
+.game-view-attribution { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; min-height: 44px; color: var(--muted); font-size: 13px; line-height: 1.5; text-decoration: none; }
+.game-view-attribution strong { color: var(--accent-strong); }
+.game-view-attribution:hover strong { text-decoration: underline; text-underline-offset: 2px; }
+.game-view-personal { display: grid; gap: 20px; min-width: 0; padding-left: 24px; border-left: 1px solid var(--line); overflow-wrap: anywhere; }
+.game-view-personal > div { display: grid; align-content: start; gap: 7px; min-width: 0; }
+.game-view-personal > div > span { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.game-view-status { color: var(--accent-dark); font-size: 20px; line-height: 1.4; }
+.game-view-rating { color: var(--accent-dark); font-size: 28px; font-weight: 700; line-height: 1.3; }
+.game-view-note p { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
+.game-view-sessions .sessions-table > div > span { min-width: 0; overflow-wrap: anywhere; }
+.game-view-session-note { white-space: pre-wrap; }
+.game-view-page .async-state { min-width: 0; padding: 24px; }
+.game-view-page .async-state > div { min-width: 0; overflow-wrap: anywhere; }
+.game-view-page .async-state strong { color: var(--ink); }
+.game-view-page .async-error button { min-height: 44px; font-size: 14px; }
+html[data-theme="dark"] .game-view-favorite { color: #efb8c4; background: #482636; }
+@media (min-width: 601px) {
+  .game-view-sessions .sessions-table { min-width: 0; }
+  .game-view-sessions .sessions-table > div { grid-template-columns: minmax(0, 1fr) minmax(0, .7fr) minmax(0, 1fr) minmax(0, .8fr) minmax(0, .8fr) minmax(0, 1.8fr); }
+}
+@media (max-width: 1200px) {
+  .game-view-hero { --game-view-cover-width: 180px; grid-template-columns: var(--game-view-cover-width) minmax(0, 1fr); gap: 20px; }
+  .game-view-overview { column-gap: 20px; }
+  .game-view-personal { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 20px 0 0; border-top: 1px solid var(--line); border-left: 0; }
+  .game-view-score { text-align: right; }
+  .game-view-note { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .game-view-toolbar { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .game-view-toolbar button { width: 100%; }
+  .game-view-hero { --game-view-cover-width: 200px; grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .game-view-overview { grid-column: 1; grid-template-columns: minmax(0, 1fr); }
+  .game-view-cover { justify-self: center; width: min(var(--game-view-cover-width), 100%); height: auto; min-height: 0; aspect-ratio: 2 / 3; }
+  .game-view-info { grid-column: 1; grid-row: 3; min-height: 0; margin-top: 12px; }
+  .game-view-attributions { justify-self: center; }
+  .game-view-info h2 { font-size: 28px; }
+  .game-view-info dl { flex: none; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+  .game-view-genre { grid-column: 1 / -1; grid-row: 2; }
+  .game-view-personal { column-gap: 12px; }
+  .game-view-status { font-size: 18px; }
+}

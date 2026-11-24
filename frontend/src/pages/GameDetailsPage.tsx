@@ -2,12 +2,16 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { ArrowLeft, Pencil, RefreshCw } from "lucide-react";
+import { ArrowLeft, Heart, Pencil, RefreshCw } from "lucide-react";
 import { PlatformBadge } from "../components/PlatformBadge";
+import { ErrorState, LoadingState } from "../components/AsyncState";
+import { getApiErrorMessage } from "../api/client";
+import { useLatestRequest } from "../hooks/useLatestRequest";
 import { GameForm, GameSessionForm } from "./GamesPage";
 import {
   createGameLibrary,
@@ -49,6 +53,7 @@ import {
   type XboxProgress,
 } from "../api/games";
 import type { LibraryStatus } from "../api/movies";
+import "./GameDetailsPage.css";
 
 const statusLabels: Record<LibraryStatus, string> = {
   NOT_STARTED: "Не начата",
@@ -114,9 +119,15 @@ const xboxAchievementDiagnostic = (
 };
 
 export function GameDetailsPage() {
-  const { id } = useParams();
+  const contentId = Number(useParams().id);
+  return <GameDetailsContent key={contentId} contentId={contentId} />;
+}
+
+function GameDetailsContent({ contentId }: { contentId: number }) {
   const navigate = useNavigate();
-  const contentId = Number(id);
+  const requests = useLatestRequest();
+  const editRef = useRef<HTMLButtonElement>(null);
+  const restoreEditFocusRef = useRef(false);
   const [game, setGame] = useState<Game | null>(null);
   const [libraries, setLibraries] = useState<GameLibrary[]>([]);
   const [selectedLibraryId, setSelectedLibraryId] = useState<number | null>(
@@ -151,10 +162,9 @@ export function GameDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  const load = useCallback(() => requests.run(async () => {
+      if (!Number.isSafeInteger(contentId) || contentId < 1)
+        throw new Error("Некорректный идентификатор игры");
       const [catalog, entries, allSessions, platformList, sourceList] =
         await Promise.all([
           getGameCatalog(),
@@ -169,42 +179,49 @@ export function GameDetailsPage() {
         (item) => item.contentId === contentId,
       );
       if (!selectedGame) throw new Error("Игра не найдена");
-      setGame(selectedGame);
-      setLibraries(gameLibraries);
-      setSelectedLibraryId((current) =>
-        gameLibraries.some((item) => item.id === current)
-          ? current
-          : (gameLibraries.find(isXboxPlatform)?.id ??
-            gameLibraries.find(supportsXboxProgress)?.id ??
-            gameLibraries[0]?.id ??
-            null),
-      );
-      setPlatforms(platformList);
-      setSources(sourceList);
-      setSessions(allSessions.filter((item) => item.contentId === contentId));
       const histories = await Promise.all(
         gameLibraries.map((entry) => getGamePlaythroughs(entry.id)),
       );
-      setPlaythroughs(
-        histories
-          .flat()
-          .sort(
-            (left, right) =>
-              new Date(right.completedAt).getTime() -
-              new Date(left.completedAt).getTime(),
-          ),
-      );
-    } catch (reason) {
-      setError(
-        reason instanceof Error ? reason.message : "Не удалось загрузить игру",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [contentId]);
+      return { selectedGame, gameLibraries, platformList, sourceList, allSessions, histories };
+    }, {
+      onStart: () => { setLoading(true); setError(null); },
+      onSuccess: ({ selectedGame, gameLibraries, platformList, sourceList, allSessions, histories }) => {
+        setGame(selectedGame);
+        setLibraries(gameLibraries);
+        setSelectedLibraryId((current) =>
+          gameLibraries.some((item) => item.id === current)
+            ? current
+            : (gameLibraries.find(isXboxPlatform)?.id ??
+              gameLibraries.find(supportsXboxProgress)?.id ??
+              gameLibraries[0]?.id ??
+              null),
+        );
+        setPlatforms(platformList);
+        setSources(sourceList);
+        setSessions(allSessions.filter((item) => item.contentId === contentId));
+        setPlaythroughs(
+          histories
+            .flat()
+            .sort(
+              (left, right) =>
+                new Date(right.completedAt).getTime() -
+                new Date(left.completedAt).getTime(),
+            ),
+        );
+      },
+      onError: reason => setError(getApiErrorMessage(reason, "Не удалось загрузить игру")),
+      onFinish: () => setLoading(false),
+    }), [contentId, requests]);
   useEffect(() => {
     void load();
-  }, [load]);
+    return () => requests.invalidate();
+  }, [load, requests]);
+  useEffect(() => {
+    if (restoreEditFocusRef.current && !editingGame && !loading) {
+      restoreEditFocusRef.current = false;
+      editRef.current?.focus({ preventScroll: true });
+    }
+  }, [editingGame, loading]);
 
   useEffect(() => {
     const selectedLibrary = libraries.find(
@@ -281,20 +298,14 @@ export function GameDetailsPage() {
   const lastAchievement = selectedSessions.find(
     (item) => item.unlockedAchievements > 0 || item.earnedGamerscore > 0,
   );
-  if (loading)
-    return (
-      <div className="loading">
-        <span />
-        Загружаем страницу игры…
-      </div>
-    );
-  if (error || !game)
-    return (
-      <div className="notice error">
-        <strong>Не удалось открыть игру</strong>
-        <span>{error ?? "Игра не найдена"}</span>
-      </div>
-    );
+  const toolbar = <div className="game-view-toolbar">
+    <Link to="/games"><ArrowLeft aria-hidden="true" />Назад к играм</Link>
+    <button ref={editRef} type="button" className="secondary-button icon-button" disabled={loading || Boolean(error) || !game} onClick={() => setEditingGame(true)}><Pencil aria-hidden="true" />Редактировать</button>
+  </div>;
+  if (loading || error || !game)
+    return <div className="game-details-page game-view-page">{toolbar}{loading
+      ? <LoadingState message="Загружаем страницу игры…" />
+      : <ErrorState title="Не удалось открыть игру" message={error ?? "Игра не найдена"} onRetry={() => void load()} />}</div>;
   const xbox = library ? supportsXboxProgress(library) : false;
   const steam = library ? isSteam(library) : false;
   const sharedXboxAchievementSet = Boolean(
@@ -306,8 +317,7 @@ export function GameDetailsPage() {
           entry.xboxTitleId === library.xboxTitleId,
       ),
   );
-  const hasXbox = libraries.some(isXboxPlatform);
-  const hasPc = libraries.some((entry) => entry.platform.code === "PC");
+  const platformNames = [...new Set(libraries.map(entry => entry.platform.name))];
   const showRawgAttribution = Boolean(game.rawgSlug);
   const achievementPercent = progress?.achievementPercent ?? 0;
   const completed100 = Boolean(progress && achievementPercent >= 100);
@@ -415,59 +425,52 @@ export function GameDetailsPage() {
   };
 
   return (
-    <div className="game-details-page">
-      <div className="game-details-toolbar">
-        <Link to="/games">
-          <ArrowLeft />
-          Назад к играм
-        </Link>
-        <button
-          className="secondary-button icon-button"
-          onClick={() => setEditingGame(true)}
-        >
-          <Pencil />
-          Редактировать
-        </button>
-      </div>
-      <section className="game-hero-card">
-        <div
-          className="game-detail-cover"
-          style={
-            game.coverUrl ?? game.backgroundUrl
-              ? { backgroundImage: `url(${game.coverUrl ?? game.backgroundUrl})` }
-              : undefined
-          }
-        >
-          <span>{game.title.slice(0, 1)}</span>
-        </div>
-        <div className="game-main-info">
-          <h1>{game.title}</h1>
-          <div className="platform-badges">
-            {hasXbox && <PlatformBadge name="Xbox" />}
-            {hasPc && <PlatformBadge name="PC" />}
+    <div className="game-details-page game-view-page">
+      {toolbar}
+      <section className="game-view-hero" aria-labelledby="game-view-title">
+        <div className="game-view-overview">
+          <div className="game-view-cover" role="img" aria-label={`Обложка игры «${game.title}»`}>
+            <span aria-hidden="true">{game.title.slice(0, 1)}</span>
+            {(game.coverUrl || game.backgroundUrl) && <img
+              src={game.coverUrl || game.backgroundUrl!}
+              alt="" decoding="async"
+              onLoad={event => { event.currentTarget.hidden = false; }}
+              onError={event => {
+                if (game.backgroundUrl && event.currentTarget.getAttribute("src") !== game.backgroundUrl)
+                  event.currentTarget.src = game.backgroundUrl;
+                else event.currentTarget.hidden = true;
+              }}
+            />}
+            {library?.favorite && <span className="game-view-favorite" role="img" aria-label="В избранном"><Heart aria-hidden="true" /></span>}
           </div>
-          <dl>
-            <div>
-              <dt>Разработчик</dt>
-              <dd>{game.developer ?? "—"}</dd>
+          <div className="game-view-info">
+            <h2 id="game-view-title">{game.title}</h2>
+            <div className="platform-badges">
+              {platformNames.map(name => <PlatformBadge key={name} name={name} />)}
             </div>
-            <div>
-              <dt>Жанр</dt>
-              <dd>{game.genre ?? "—"}</dd>
-            </div>
-            <div>
-              <dt>Дата выхода</dt>
-              <dd>
-                {game.releaseDate
-                  ? formatDate(game.releaseDate)
-                  : (game.releaseYear ?? "—")}
-              </dd>
-            </div>
-          </dl>
+            <dl>
+              <div>
+                <dt>Разработчик</dt>
+                <dd>{game.developer ?? "—"}</dd>
+              </div>
+              <div className="game-view-genre">
+                <dt>Жанр</dt>
+                <dd>{game.genre ?? "—"}</dd>
+              </div>
+              <div>
+                <dt>Дата выхода</dt>
+                <dd>
+                  {game.releaseDate
+                    ? formatDate(game.releaseDate)
+                    : (game.releaseYear ?? "—")}
+                </dd>
+              </div>
+            </dl>
+          </div>
           {showRawgAttribution && (
-            <div className="game-source-attributions">
+            <div className="game-view-attributions">
               <a
-                className="rawg-attribution"
+                className="game-view-attribution"
                 href={`https://rawg.io/games/${game.rawgSlug}`}
                 target="_blank"
                 rel="noreferrer"
@@ -478,10 +481,10 @@ export function GameDetailsPage() {
             </div>
           )}
         </div>
-        <div className="game-personal-info">
+        <div className="game-view-personal">
           <div>
             <small>Статус</small>
-            <strong className="detail-status">
+            <strong className="game-view-status">
               ● {library ? statusLabels[library.status] : "Не в библиотеке"}
             </strong>
             {library?.status === "COMPLETED" && (
@@ -493,13 +496,13 @@ export function GameDetailsPage() {
               </span>
             )}
           </div>
-          <div>
+          <div className="game-view-score">
             <small>Моя оценка</small>
-            <div className="detail-rating">
-              {library?.rating ? `${library.rating}/10` : "—"}
+            <div className="game-view-rating">
+              {library?.rating != null ? `${library.rating}/10` : "—"}
             </div>
           </div>
-          <div>
+          <div className="game-view-note">
             <small>Заметки</small>
             <p>{library?.personalNote ?? "Заметок пока нет."}</p>
           </div>
@@ -844,7 +847,7 @@ export function GameDetailsPage() {
         </article>
       </section>
 
-      <section className="detail-card sessions-table-card">
+      <section className="detail-card sessions-table-card game-view-sessions">
         <h2>
           Последние игровые сессии ·{" "}
           {library?.platform.name ?? "копия не выбрана"}
@@ -876,7 +879,7 @@ export function GameDetailsPage() {
                   <span className={item.earnedGamerscore ? "positive" : ""}>
                     +{item.earnedGamerscore} G
                   </span>
-                  <span>{item.note ?? "—"}</span>
+                  <span className="game-view-session-note">{item.note ?? "—"}</span>
                 </div>
               ))}
             </div>
@@ -895,8 +898,9 @@ export function GameDetailsPage() {
           platforms={platforms}
           sources={sources}
           progress={baseAchievements ?? progress}
-          onClose={() => setEditingGame(false)}
+          onClose={() => { restoreEditFocusRef.current = true; setEditingGame(false); }}
           onSaved={() => {
+            restoreEditFocusRef.current = true;
             setEditingGame(false);
             void load();
           }}
