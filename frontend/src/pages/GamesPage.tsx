@@ -208,6 +208,7 @@ export function GamesPage() {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [savedFilters] = useState(readGameFilters);
+  const legacyGamePassFilterRef = useRef(savedFilters.status === "GAME_PASS");
   const [games, setGames] = useState<Game[]>([]);
   const [library, setLibrary] = useState<Record<number, GameLibrary>>({});
   const [libraryEntries, setLibraryEntries] = useState<GameLibrary[]>([]);
@@ -236,8 +237,8 @@ export function GamesPage() {
     Record<number, AchievementProvider>
   >({});
   const [query, setQuery] = useState(savedFilters.query);
-  const [status, setStatus] = useState<LibraryStatus | "GAME_PASS" | "">(
-    savedFilters.status,
+  const [status, setStatus] = useState<LibraryStatus | "">(
+    savedFilters.status === "GAME_PASS" ? "" : savedFilters.status,
   );
   const [platform, setPlatform] = useState(savedFilters.platform);
   const [source, setSource] = useState(savedFilters.source);
@@ -254,6 +255,11 @@ export function GamesPage() {
       );
       setPlatforms(platformList);
       setSources(sourceList);
+      if (legacyGamePassFilterRef.current) {
+        const gamePassSource = sourceList.find(item => item.code === "GAME_PASS");
+        setSource(gamePassSource ? String(gamePassSource.id) : "");
+        legacyGamePassFilterRef.current = false;
+      }
       setSessions(sessionList);
       setXbox(
         Object.fromEntries(
@@ -303,6 +309,7 @@ export function GamesPage() {
     setAchievementProviderByGame({});
   }, [platform, source]);
   useEffect(() => {
+    if (legacyGamePassFilterRef.current) return;
     try {
       sessionStorage.setItem(
         GAME_FILTERS_STORAGE_KEY,
@@ -337,10 +344,7 @@ export function GamesPage() {
       const copies = libraryEntries.filter(
         (item) => item.contentId === game.id,
       );
-      const matchesStatus =
-        !status || status === "GAME_PASS"
-          ? !status || copies.some((item) => item.source.code === "GAME_PASS")
-          : entry?.status === status;
+      const matchesStatus = !status || entry?.status === status;
       const matchesLocation =
         (!platform && !source) ||
         copies.some(
@@ -520,17 +524,19 @@ export function GamesPage() {
     <div ref={pageRef} className="games-library-page" onClickCapture={event => { if (!dialogOpen && event.target instanceof Element) { const button = event.target.closest<HTMLButtonElement>("button"); if (button) triggerRef.current = button; } }}>
       <section className="games-catalog-toolbar" aria-label="Управление каталогом игр">
         <div className="games-catalog-tabs" role="group" aria-label="Статус игры">{([
-          ["", "Все"], ["IN_PROGRESS", "Играю"], ["COMPLETED", "Пройдено"], ["NOT_STARTED", "Не начато"], ["PLANNED", "В планах"], ["PAUSED", "На паузе"], ["DROPPED", "Брошено"], ["GAME_PASS", "Game Pass"],
+          ["", "Все"], ["IN_PROGRESS", "Играю"], ["COMPLETED", "Пройдено"], ["NOT_STARTED", "Не начато"], ["PLANNED", "В планах"], ["PAUSED", "На паузе"], ["DROPPED", "Брошено"],
         ] as const).map(([value, label]) => <button type="button" key={value || "all"} aria-pressed={status === value} onClick={() => { setStatus(value); setVisibleCount(GAME_PAGE_SIZE); }}>{label}</button>)}</div>
         <div className="games-catalog-search"><Search aria-hidden="true" /><input type="search" aria-label="Найти игру" value={query} onChange={event => { setQuery(event.target.value); setVisibleCount(GAME_PAGE_SIZE); }} placeholder="Найти игру" /></div>
-        <div className="games-catalog-filters"><label>Платформа<select value={platform} onChange={event => { setPlatform(event.target.value); setVisibleCount(GAME_PAGE_SIZE); }}><option value="">Все платформы</option>{platforms.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Источник<select value={source} onChange={event => { setSource(event.target.value); setVisibleCount(GAME_PAGE_SIZE); }}><option value="">Все источники</option>{sources.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></div>
         <button ref={addRef} type="button" className="primary-button icon-button games-catalog-add" disabled={loading || Boolean(error)} onClick={() => setEditing("new")}><Plus aria-hidden="true" />Добавить игру</button>
-        <div className="games-catalog-tools"><button type="button" className="games-catalog-tools-toggle" aria-expanded={toolsExpanded} aria-controls="games-catalog-tools" onClick={() => setToolsExpanded(value => !value)}>Импорт и синхронизация<ChevronDown aria-hidden="true" /></button><div id="games-catalog-tools" className="games-catalog-tools-actions" data-expanded={toolsExpanded}>
-          <button type="button" className="secondary-button icon-button" disabled={loading || Boolean(error) || syncingXbox || syncingSteamRecent || xboxProgressGames === 0} onClick={() => void updateXboxProgress()} title="Обновить достижения и время связанных Xbox-игр"><RefreshCw aria-hidden="true" className={syncingXbox ? "spinning" : undefined} />{syncingXbox ? "Обновляем Xbox…" : "Обновить Xbox"}</button>
-          <button type="button" className="secondary-button icon-button" disabled={loading || Boolean(error)} onClick={() => setXboxImportOpen(true)}><Download aria-hidden="true" />Импорт Xbox</button>
-          <button type="button" className="secondary-button icon-button" disabled={loading || Boolean(error) || syncingSteamRecent || syncingXbox || steamGames === 0} onClick={() => void updateRecentSteamProgress()} title="Обновить недавние игры и загрузить достижения для 10 новых"><RefreshCw aria-hidden="true" className={syncingSteamRecent ? "spinning" : undefined} />{syncingSteamRecent ? "Обновляем Steam…" : "Обновить Steam"}</button>
-          <button type="button" className="secondary-button icon-button" disabled={loading || Boolean(error)} onClick={() => setSteamImportOpen(true)}><Download aria-hidden="true" />Импорт Steam</button>
-        </div></div>
+        <div className="games-catalog-options">
+          <div className="games-catalog-filters"><label>Платформа<select value={platform} onChange={event => { setPlatform(event.target.value); setVisibleCount(GAME_PAGE_SIZE); }}><option value="">Все платформы</option>{platforms.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Источник<select value={source} onChange={event => { setSource(event.target.value); setVisibleCount(GAME_PAGE_SIZE); }}><option value="">Все источники</option>{sources.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></div>
+          <div className="games-catalog-tools"><button type="button" className="games-catalog-tools-toggle" aria-expanded={toolsExpanded} aria-controls="games-catalog-tools" onClick={() => setToolsExpanded(value => !value)}>Импорт и синхронизация<ChevronDown aria-hidden="true" /></button><div id="games-catalog-tools" className="games-catalog-tools-actions" data-expanded={toolsExpanded}>
+            <button type="button" className="secondary-button icon-button" disabled={loading || Boolean(error) || syncingXbox || syncingSteamRecent || xboxProgressGames === 0} onClick={() => void updateXboxProgress()} title="Обновить достижения и время связанных Xbox-игр"><RefreshCw aria-hidden="true" className={syncingXbox ? "spinning" : undefined} />{syncingXbox ? "Обновляем Xbox…" : "Обновить Xbox"}</button>
+            <button type="button" className="secondary-button icon-button" disabled={loading || Boolean(error)} onClick={() => setXboxImportOpen(true)}><Download aria-hidden="true" />Импорт Xbox</button>
+            <button type="button" className="secondary-button icon-button" disabled={loading || Boolean(error) || syncingSteamRecent || syncingXbox || steamGames === 0} onClick={() => void updateRecentSteamProgress()} title="Обновить недавние игры и загрузить достижения для 10 новых"><RefreshCw aria-hidden="true" className={syncingSteamRecent ? "spinning" : undefined} />{syncingSteamRecent ? "Обновляем Steam…" : "Обновить Steam"}</button>
+            <button type="button" className="secondary-button icon-button" disabled={loading || Boolean(error)} onClick={() => setSteamImportOpen(true)}><Download aria-hidden="true" />Импорт Steam</button>
+          </div></div>
+        </div>
       </section>
       <section className="games-catalog-layout">
         <div className="games-catalog-main">
@@ -706,7 +712,6 @@ export function GamesPage() {
                     {libraryLabels.length > 0 && <p className="games-catalog-library" title={libraryLabels.join(" • ")}>{libraryLabels.join(" • ")}</p>}
                     {selectedProgress && <div className="games-catalog-progress" data-provider={selectedProvider}>
                       {hasBothProviders && <div className="games-catalog-provider" role="group" aria-label={`Источник достижений: ${game.title}`}>{(["XBOX", "STEAM"] as const).map(provider => <button type="button" key={provider} aria-pressed={selectedProvider === provider} onClick={() => setAchievementProviderByGame(current => ({ ...current, [game.id]: provider }))}>{provider === "XBOX" ? "Xbox" : "Steam"}</button>)}</div>}
-                      {!hasBothProviders && <span className="games-catalog-provider-name">{selectedProvider === "XBOX" ? "Xbox" : "Steam"}</span>}
                       <strong>Достижения: {selectedProgress.unlockedAchievements} из {selectedProgress.totalAchievements}</strong>
                       <div className="games-catalog-progress-bar" role="progressbar" aria-label={`Достижения ${selectedProvider === "XBOX" ? "Xbox" : "Steam"}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Math.max(0, Math.min(100, selectedProgress.achievementPercent)))}><span style={{ width: `${Math.max(0, Math.min(100, selectedProgress.achievementPercent))}%` }} /></div>
                       {selectedProvider === "XBOX" && xboxCandidate && <span className="games-catalog-gamerscore">{xboxCandidate.progress.earnedGamerscore} из {xboxCandidate.progress.totalGamerscore} G</span>}

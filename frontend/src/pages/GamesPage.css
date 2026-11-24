@@ -1,14 +1,15 @@
 .games-library-page { display: grid; gap: 18px; width: 100%; max-width: 1280px; min-width: 0; margin: 0 auto; }
 .games-library-page :is(button, a, input, select):focus-visible { outline: 3px solid var(--accent-strong); outline-offset: 2px; }
 .games-catalog-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) 240px; align-items: end; gap: 14px 20px; min-width: 0; }
-.games-catalog-tabs { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; min-width: 0; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft); }
+.games-catalog-tabs { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; min-width: 0; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft); }
 .games-catalog-tabs button { min-width: 0; min-height: 44px; padding: 8px 4px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; cursor: pointer; font-size: 13px; font-weight: 700; }
 .games-catalog-tabs button[aria-pressed="true"] { color: var(--accent-dark); background: var(--paper); box-shadow: 0 2px 9px #30485b12; }
 .games-catalog-search { position: relative; min-width: 0; }
 .games-catalog-search > svg { position: absolute; top: 15px; left: 13px; width: 18px; height: 18px; color: var(--muted); pointer-events: none; }
 .games-catalog-search input, .games-catalog-filters select { width: 100%; min-width: 0; min-height: 48px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--paper); font-size: 16px; }
 .games-catalog-search input { padding-left: 40px; }
-.games-catalog-filters { display: grid; grid-column: 1; grid-row: 3; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-width: 0; }
+.games-catalog-options { display: grid; grid-column: 1 / -1; gap: 14px; min-width: 0; }
+.games-catalog-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-width: 0; }
 .games-catalog-filters label { display: grid; gap: 7px; min-width: 0; color: var(--muted); font-size: 13px; }
 .games-catalog-add { min-width: 0; min-height: 48px; font-size: 14px; }
 .games-catalog-tools { grid-column: 1 / -1; min-width: 0; }
@@ -41,7 +42,6 @@
 .games-catalog-provider { display: flex; gap: 4px; min-width: 0; }
 .games-catalog-provider button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 8px 6px; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); background: var(--paper-soft); cursor: pointer; font-size: 13px; font-weight: 700; }
 .games-catalog-provider button[aria-pressed="true"] { color: var(--accent-dark); background: var(--accent-soft); }
-.games-catalog-provider-name { color: var(--muted); font-size: 13px; line-height: 1.4; }
 .games-catalog-progress > strong, .games-catalog-gamerscore { color: var(--accent-dark); font-size: 15px; font-weight: 700; line-height: 1.5; }
 .games-catalog-progress-bar { height: 5px; overflow: hidden; border-radius: 999px; background: var(--line); }
 .games-catalog-progress-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--accent-strong); }
@@ -99,7 +99,6 @@ html[data-theme="dark"] .games-catalog-progress[data-provider="STEAM"] .games-ca
   .games-catalog-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; }
   .games-catalog-meta > p { min-width: 0; max-width: 100%; }
   .games-catalog-progress { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 12px; }
-  .games-catalog-provider-name { display: none; }
   .games-catalog-provider { grid-column: 1 / -1; grid-row: 1; justify-self: start; }
   .games-catalog-provider button { flex: 0 0 auto; white-space: nowrap; }
   .games-catalog-progress > strong { grid-column: 1; grid-row: 1; font-size: 13px; text-align: left; white-space: nowrap; }
@@ -109,6 +108,10 @@ html[data-theme="dark"] .games-catalog-progress[data-provider="STEAM"] .games-ca
   .games-catalog-progress:has(.games-catalog-provider) > .games-catalog-progress-bar { grid-row: 3; }
 }
 @media (min-width: 1201px) {
+  .games-catalog-options { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: end; gap: 12px; }
+  .games-catalog-tools { grid-column: 2; }
+  .games-catalog-filters select { padding-inline: 10px; font-size: 14px; }
+  .games-catalog-tools-actions button { gap: 6px; padding: 10px 8px; font-size: 13px; }
   .games-catalog-grid { gap: 8px; }
   .games-catalog-card { grid-template-columns: 96px minmax(0, 1fr) 112px; gap: 12px; padding: 8px; border-radius: 12px; }
   .games-catalog-copy { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr; align-content: start; gap: 4px; }
@@ -125,6 +128,7 @@ html[data-theme="dark"] .games-catalog-progress[data-provider="STEAM"] .games-ca
   .games-catalog-status { padding: 4px 6px; font-size: 11px; }
 }
 @media (min-width: 1201px) and (max-width: 1439px) {
+  .games-catalog-tools-actions button { gap: 4px; padding: 8px 4px; font-size: 12px; line-height: 1.25; }
   .games-catalog-card { grid-template-columns: 96px minmax(0, 1fr) 96px; }
   .games-catalog-add-library svg { display: none; }
 }
@@ -154,7 +158,6 @@ html[data-theme="dark"] .games-catalog-progress[data-provider="STEAM"] .games-ca
 @media (max-width: 600px) {
   .games-catalog-toolbar { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .games-catalog-tabs { grid-column: 1; }
-  .games-catalog-filters { grid-row: auto; }
   .games-catalog-tools-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .games-catalog-tools-actions button { padding: 10px 6px; font-size: 13px; }
   .games-catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
