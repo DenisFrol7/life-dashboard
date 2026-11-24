@@ -21,14 +21,14 @@
 .games-catalog-heading h2 { margin: 0; color: var(--ink); font-family: Georgia, serif; font-size: 24px; }
 .games-catalog-heading output { color: var(--muted); font-size: 13px; line-height: 1.5; }
 .games-catalog-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 12px; min-width: 0; }
-.games-catalog-card { display: grid; grid-template-columns: 160px minmax(0, 1fr) 118px; align-items: start; gap: 16px; min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 15px; background: var(--paper); box-shadow: 0 5px 20px #25322707; }
-.games-catalog-cover { position: relative; display: grid; place-items: center; width: 160px; aspect-ratio: 16 / 9; min-width: 0; overflow: hidden; border-radius: 9px; color: #d8e4ee; background: linear-gradient(145deg, #536d67, #263b45); text-decoration: none; }
+.games-catalog-card { display: grid; grid-template-columns: 96px minmax(0, 1fr) 118px; align-items: start; gap: 16px; min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 15px; background: var(--paper); box-shadow: 0 5px 20px #25322707; }
+.games-catalog-cover { position: relative; display: grid; place-items: center; width: 96px; aspect-ratio: 2 / 3; min-width: 0; overflow: hidden; border-radius: 9px; color: #d8e4ee; background: linear-gradient(145deg, #536d67, #263b45); text-decoration: none; }
 .games-catalog-cover-letter { font-family: Georgia, serif; font-size: 38px; font-weight: 700; }
-.games-catalog-cover picture, .games-catalog-cover img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.games-catalog-cover img { position: absolute; inset: 0; width: 100%; height: 100%; }
 .games-catalog-cover img { object-fit: contain; }
 .games-catalog-favorite { position: absolute; top: 7px; right: 7px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; color: #ac3f56; background: #fff3f5; box-shadow: 0 2px 8px #0003; }
 .games-catalog-favorite svg { width: 15px; height: 15px; fill: currentColor; }
-.games-catalog-copy { display: flex; flex-direction: column; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.games-catalog-copy { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 144px; overflow-wrap: anywhere; }
 .games-catalog-copy h3 { margin: 0; font-family: Georgia, serif; font-size: 21px; line-height: 1.3; }
 .games-catalog-copy h3 a { display: -webkit-box; overflow: hidden; color: var(--ink); text-decoration: none; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
 .games-catalog-copy h3 a:hover { color: var(--accent-dark); text-decoration: underline; }
@@ -110,9 +110,8 @@ html[data-theme="dark"] .games-catalog-progress[data-provider="STEAM"] .games-ca
 }
 @media (min-width: 1201px) {
   .games-catalog-grid { gap: 8px; }
-  .games-catalog-card { grid-template-columns: 144px minmax(0, 1fr) 112px; gap: 12px; padding: 8px; border-radius: 12px; }
-  .games-catalog-cover { width: 144px; }
-  .games-catalog-copy { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr; align-content: start; gap: 4px; min-height: 81px; }
+  .games-catalog-card { grid-template-columns: 96px minmax(0, 1fr) 112px; gap: 12px; padding: 8px; border-radius: 12px; }
+  .games-catalog-copy { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr; align-content: start; gap: 4px; }
   .games-catalog-copy h3 { grid-column: 1; grid-row: 1; font-size: 18px; line-height: 1.3; }
   .games-catalog-platforms { grid-column: 1; grid-row: 2; gap: 4px; }
   .games-catalog-platforms > span { padding: 3px 5px; font-size: 11px; }
@@ -126,8 +125,7 @@ html[data-theme="dark"] .games-catalog-progress[data-provider="STEAM"] .games-ca
   .games-catalog-status { padding: 4px 6px; font-size: 11px; }
 }
 @media (min-width: 1201px) and (max-width: 1439px) {
-  .games-catalog-card { grid-template-columns: 128px minmax(0, 1fr) 96px; }
-  .games-catalog-cover { width: 128px; }
+  .games-catalog-card { grid-template-columns: 96px minmax(0, 1fr) 96px; }
   .games-catalog-add-library svg { display: none; }
 }
 @media (min-width: 1201px) and (pointer: coarse) {
@@ -148,12 +146,10 @@ html[data-theme="dark"] .games-catalog-progress[data-provider="STEAM"] .games-ca
   .games-catalog-rating { display: flex; align-items: center; justify-content: flex-end; min-height: 44px; }
 }
 @media (min-width: 601px) and (max-width: 1200px) {
-  .games-catalog-card { grid-template-columns: 128px minmax(0, 1fr) 112px; }
-  .games-catalog-cover { width: 128px; }
+  .games-catalog-card { grid-template-columns: 96px minmax(0, 1fr) 112px; }
 }
 @media (min-width: 601px) and (max-width: 700px) {
   .games-catalog-card { grid-template-columns: 96px minmax(0, 1fr) 96px; gap: 12px; }
-  .games-catalog-cover { width: 96px; }
 }
 @media (max-width: 600px) {
   .games-catalog-toolbar { grid-template-columns: minmax(0, 1fr); gap: 12px; }
@@ -163,8 +159,8 @@ html[data-theme="dark"] .games-catalog-progress[data-provider="STEAM"] .games-ca
   .games-catalog-tools-actions button { padding: 10px 6px; font-size: 13px; }
   .games-catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   .games-catalog-card { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr auto; gap: 0; padding: 0; overflow: hidden; border-radius: 13px; }
-  .games-catalog-cover { grid-row: auto; width: 100%; aspect-ratio: 2 / 3; border-radius: 0; }
-  .games-catalog-copy { padding: 12px 10px 10px; }
+  .games-catalog-cover { grid-row: auto; width: 100%; border-radius: 0; }
+  .games-catalog-copy { min-height: 0; padding: 12px 10px 10px; }
   .games-catalog-copy h3 { font-size: 17px; }
   .games-catalog-copy h3 a { -webkit-line-clamp: 3; }
   .games-catalog-platforms > span { padding: 4px; font-size: 12px; }
