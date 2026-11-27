@@ -12,7 +12,7 @@ import { ErrorState, LoadingState } from "../components/AsyncState";
 import { getApiErrorMessage } from "../api/client";
 import { useLatestRequest } from "../hooks/useLatestRequest";
 import { useFormMutation } from "../hooks/useFormMutation";
-import { GameForm } from "./GamesPage";
+import { GameForm } from "../components/GameForm";
 import { GameSessionForm } from "../components/GameSessionForm";
 import {
   getGameCatalog,
@@ -311,7 +311,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
   );
   const toolbar = <div className="game-view-toolbar">
     <Link to="/games"><ArrowLeft aria-hidden="true" />Назад к играм</Link>
-    <button ref={editRef} type="button" className="secondary-button icon-button" disabled={loading || Boolean(error) || !game || syncMutations.pending} onClick={() => setEditingGame(true)}><Pencil aria-hidden="true" />Редактировать</button>
+    <button ref={editRef} type="button" className="secondary-button icon-button" disabled={loading || Boolean(error) || !game || syncMutations.pending || progressLoading} onClick={() => setEditingGame(true)}><Pencil aria-hidden="true" />Редактировать</button>
   </div>;
   if (loading || error || !game)
     return <div className="game-details-page game-view-page">{toolbar}{loading

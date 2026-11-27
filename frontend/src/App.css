@@ -266,9 +266,6 @@ html[data-theme="dark"] .library-detail-list > div { border-color: #1d2b38; }
 html[data-theme="dark"] .platform-logo-badge { border-color: #294052; color: #dce5ee; background: #111e2a; }
 html[data-theme="dark"] .platform-logo-badge.xbox > svg { color: #42dc70; }
 html[data-theme="dark"] .platform-logo-badge.pc > svg { color: #76bfff; }
-html[data-theme="dark"] .xbox-fields { border-color: #285037; background: #10291a; }
-html[data-theme="dark"] .xbox-fields legend,
-html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 
 @media (max-width: 720px) {
   .theme-selector { grid-template-columns: 1fr; }
@@ -536,7 +533,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .movie-personal-info p { margin: 0; color: var(--ink); font-size: 12px; line-height: 1.6; }
 .movie-description p { margin: 0; color: #52636c; line-height: 1.7; }
 .form-hint { margin: 0; color: #75858d; font-size: 9px; }
-.game-form { width: min(760px, 100%); }
 .game-sessions-panel { margin-bottom: 20px; padding: 18px; border: 1px solid #e1e5e2; border-radius: 14px; background: #fff; }
 .game-sessions-panel h2 { margin: 2px 0 0; font-size: 18px; }
 .game-session-list { display: grid; gap: 7px; margin-top: 14px; }
@@ -635,11 +631,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .game-quality-info em.steam_progress, .game-quality-info em.xbox_progress { color: #68714b; background: #eef0df; }
 .game-quality-list > button > b { color: var(--accent-strong); font-size: 11px; white-space: nowrap; }
 .game-quality-empty { display: grid; min-height: 180px; color: var(--muted); font-size: 13px; text-align: center; place-items: center; }
-.game-form > label:nth-of-type(2) { display: none; }
-.game-form > label:nth-of-type(5) { display: none; }
-.game-library-flags { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 12px; }
-.game-library-flags .favorite-check, .game-library-flags .play-anywhere-check { display: flex; align-items: center; gap: 7px; margin: 0; }
-.game-library-flags .favorite-check input, .game-library-flags .play-anywhere-check input { width: 16px; height: 16px; margin: 0; padding: 0; flex: 0 0 16px; }
 .game-access-type { display: flex; align-items: center; gap: 7px; padding: 7px 9px; border-radius: 7px; background: #edf1f2; }
 .game-access-type span { color: #7c8580; font-size: 8px; text-transform: uppercase; }
 .game-access-type strong { color: #4e626f; font-size: 9px; }
@@ -657,16 +648,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .rawg-attribution:hover strong { text-decoration: underline; text-underline-offset: 2px; }
 .rawg-attribution span { margin-left: 1px; font-size: 10px; }
 .rawg-catalog-attribution { justify-self: end; margin-top: -5px; margin-right: 3px; }
-.rawg-search-attribution { margin-top: 0; }
-.rawg-game-results img { object-fit: cover; }
-.steamgriddb-search-title { color: var(--ink) !important; font-size: 12px !important; font-weight: 800; }
-.steamgriddb-cover-search > div:nth-child(2) { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-.steamgriddb-cover-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 9px; max-height: 340px; padding: 2px; overflow-y: auto; }
-.steamgriddb-cover-results button { position: relative; padding: 0; overflow: hidden; border: 2px solid transparent; border-radius: 8px; background: var(--paper); cursor: pointer; }
-.steamgriddb-cover-results button:hover { border-color: var(--line); }
-.steamgriddb-cover-results button.selected { border-color: var(--accent-strong); box-shadow: 0 0 0 2px var(--accent-soft); }
-.steamgriddb-cover-results img { display: block; width: 100%; aspect-ratio: 2 / 3; object-fit: cover; }
-.steamgriddb-cover-results button > span { position: absolute; right: 5px; bottom: 5px; padding: 4px 6px; border-radius: 5px; color: #fff; background: var(--accent-strong); font-size: 9px; font-weight: 800; }
 
 /* Consistent readable typography across media detail headers. */
 .series-details-page .movie-main-info dt { font-size: 16px; font-weight: 700; }
@@ -680,10 +661,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .library-detail-list dt { color: #7b878f; font-size: 11px; }
 .library-detail-list dd { display: flex; justify-content: flex-end; margin: 0; color: #33434d; font-size: 11px; text-align: right; }
 .library-detail-list b { color: #536b7c; }
-.xbox-fields { margin-top: 13px; padding: 13px; border: 1px solid #cfded0; border-radius: 10px; background: #f3f8f2; }
-.xbox-fields legend { padding: 0 5px; color: #55725b; font-size: 9px; font-weight: 800; }
-.xbox-fields label { display: grid; gap: 6px; color: #607068; font-size: 9px; font-weight: 800; }
-.xbox-fields input { width: 100%; padding: 9px; border: 1px solid #d4ddd3; border-radius: 8px; }
 
 @media (max-width: 1100px) {
   .movie-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
