@@ -686,7 +686,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .library-detail-list dt { color: #7b878f; font-size: 11px; }
 .library-detail-list dd { display: flex; justify-content: flex-end; margin: 0; color: #33434d; font-size: 11px; text-align: right; }
 .library-detail-list b { color: #536b7c; }
-.library-entry-form { width: min(620px, calc(100vw - 32px)); }
 .sessions-table-card { overflow: hidden; }
 .sessions-table { min-width: 780px; overflow-x: auto; }
 .sessions-table > div { display: grid; grid-template-columns: 1fr .7fr 1fr .8fr .8fr 1.8fr; gap: 10px; padding: 11px; border-bottom: 1px solid #edf0f2; color: #465761; font-size: 13px; }

@@ -4,7 +4,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type FormEvent,
 } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowLeft, ChevronRight, Clock3, Heart, Pencil, Plus, RefreshCw } from "lucide-react";
@@ -15,10 +14,6 @@ import { useLatestRequest } from "../hooks/useLatestRequest";
 import { useFormMutation } from "../hooks/useFormMutation";
 import { GameForm, GameSessionForm } from "./GamesPage";
 import {
-  createGameLibrary,
-  createGamePlaythrough,
-  deleteGameLibrary,
-  deleteGamePlaythrough,
   getGameCatalog,
   getGameLibrary,
   getGamePlaythroughs,
@@ -29,17 +24,11 @@ import {
   getXboxAchievements,
   getXboxAchievementGroups,
   getXboxProgress,
-  putGameProfile,
-  putXboxProgress,
   syncSteamProgress,
   syncXboxProgress,
-  updateGameLibrary,
-  updateGamePlaythrough,
   type Game,
   type GameLibrary,
-  type GameLibraryInput,
   type GamePlaythrough,
-  type GamePlaythroughInput,
   type GameSession,
   type Reference,
   type SteamProgress,
@@ -50,6 +39,7 @@ import {
 } from "../api/games";
 import type { LibraryStatus } from "../api/movies";
 import { AchievementGroupsModal, SteamAchievementsModal, XboxAchievementsModal } from "../components/GameAchievementDialogs";
+import { LibraryEntryModal, PlaythroughModal } from "../components/GameLibraryForms";
 import "./GameDetailsPage.css";
 
 const statusLabels: Record<LibraryStatus, string> = {
@@ -246,6 +236,13 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
     setEditingLibrary(null); setEditingPlaythrough(null); setAddingSession(false);
     if (refresh) void load();
   };
+  const finishLibraryForm = (id?: number) => {
+    if (id != null && !libraries.some(entry => entry.id === id)) {
+      setSelectedLibraryId(id);
+      collectionFallbackRef.current = `.game-view-copy-select[data-library-id="${id}"]`;
+    }
+    closeCollectionForms(id != null);
+  };
 
   const loadProgress = useCallback((preserveState = false) => {
     const selectedLibrary = libraries.find(
@@ -292,6 +289,8 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
     libraries.find((item) => item.id === selectedLibraryId) ??
     libraries[0] ??
     null;
+  const playthroughCopy = editingPlaythrough && editingPlaythrough !== "new"
+    ? libraries.find(entry => entry.id === editingPlaythrough.libraryEntryId) ?? library : library;
   const selectedSessions = useMemo(
     () =>
       library
@@ -311,7 +310,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
   );
   const toolbar = <div className="game-view-toolbar">
     <Link to="/games"><ArrowLeft aria-hidden="true" />Назад к играм</Link>
-    <button ref={editRef} type="button" className="secondary-button icon-button" disabled={loading || Boolean(error) || !game} onClick={() => setEditingGame(true)}><Pencil aria-hidden="true" />Редактировать</button>
+    <button ref={editRef} type="button" className="secondary-button icon-button" disabled={loading || Boolean(error) || !game || syncMutations.pending} onClick={() => setEditingGame(true)}><Pencil aria-hidden="true" />Редактировать</button>
   </div>;
   if (loading || error || !game)
     return <div className="game-details-page game-view-page">{toolbar}{loading
@@ -766,7 +765,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
         <article className="game-view-library">
           <div className="game-view-library-heading">
             <h2>Библиотека</h2>
-            <button type="button" className="secondary-button icon-button game-view-library-add" data-focus-fallback=".game-view-library-add" onClick={() => setEditingLibrary("new")}><Plus aria-hidden="true" />Добавить</button>
+            <button type="button" className="secondary-button icon-button game-view-library-add" data-focus-fallback=".game-view-library-add" disabled={syncMutations.pending} onClick={() => setEditingLibrary("new")}><Plus aria-hidden="true" />Добавить</button>
           </div>
           {libraries.length ? (
             <ul className="game-view-copies" aria-label="Копии игры">
@@ -793,6 +792,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
                     </span>
                   </button>
                   <button type="button" className="game-view-copy-edit" data-library-id={entry.id}
+                    disabled={syncMutations.pending}
                     data-focus-fallback={`.game-view-copy-edit[data-library-id="${entry.id}"]`}
                     aria-label={`Редактировать копию: ${entry.platform.name} · ${entry.source.name}`} onClick={() => setEditingLibrary(entry)}><Pencil aria-hidden="true" /></button>
                 </li>
@@ -813,7 +813,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
           </dd></div></dl>
           <button
             type="button" className="primary-button icon-button game-view-session-add" data-focus-fallback=".game-view-session-add"
-            disabled={!library}
+            disabled={!library || syncMutations.pending}
             onClick={() => setAddingSession(true)}
           >
             <Plus aria-hidden="true" />Добавить сессию
@@ -826,6 +826,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
               <li key={item.id}><button
                 type="button"
                 className="game-view-history-item" data-playthrough-id={item.id}
+                disabled={syncMutations.pending}
                 data-focus-fallback=".game-view-history-add"
                 aria-label={`Изменить прохождение №${item.playthroughNumber} от ${formatDate(item.completedAt)}`}
                 onClick={() => setEditingPlaythrough(item)}
@@ -859,6 +860,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
           {library && (
             <button
               type="button" className="secondary-button game-view-history-add" data-focus-fallback=".game-view-history-add"
+              disabled={syncMutations.pending}
               onClick={() => setEditingPlaythrough("new")}
             >
               Отметить прохождение
@@ -953,6 +955,8 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
       )}
       {editingPlaythrough && library && (
         <PlaythroughModal
+          gameTitle={game.title}
+          copyLabel={playthroughCopy ? `${playthroughCopy.platform.name} · ${playthroughCopy.source.name}` : "Копия не найдена"}
           libraryId={
             editingPlaythrough === "new"
               ? library.id
@@ -967,18 +971,13 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
       )}
       {editingLibrary && (
         <LibraryEntryModal
+          gameTitle={game.title}
           contentId={game.id}
           entry={editingLibrary === "new" ? undefined : editingLibrary}
           platforms={platforms}
           sources={sources}
-          onClose={() => closeCollectionForms()}
-          onSaved={(id) => {
-            if (!libraries.some((entry) => entry.id === id)) {
-              setSelectedLibraryId(id);
-              collectionFallbackRef.current = `.game-view-copy-select[data-library-id="${id}"]`;
-            }
-            closeCollectionForms(true);
-          }}
+          onClose={finishLibraryForm}
+          onSaved={finishLibraryForm}
         />
       )}
       {addingSession && library && (
@@ -988,412 +987,6 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
           onSaved={() => closeCollectionForms(true)}
         />
       )}
-    </div>
-  );
-}
-
-function LibraryEntryModal({
-  contentId,
-  entry,
-  platforms,
-  sources,
-  onClose,
-  onSaved,
-}: {
-  contentId: number;
-  entry?: GameLibrary;
-  platforms: Reference[];
-  sources: Reference[];
-  onClose: () => void;
-  onSaved: (id: number) => void;
-}) {
-  const defaultPlatform = entry?.platform.id ?? platforms[0]?.id ?? 0;
-  const defaultSource =
-    entry?.source.id ??
-    sources.find((item) => item.type !== "SUBSCRIPTION")?.id ??
-    sources[0]?.id ??
-    0;
-  const [input, setInput] = useState<GameLibraryInput>({
-    platformId: defaultPlatform,
-    sourceId: defaultSource,
-    accessType: entry?.accessType ?? "OWNED",
-    edition: entry?.edition ?? null,
-    acquiredAt: entry?.acquiredAt ?? null,
-    note: entry?.note ?? null,
-    legacyPlaytimeMinutes: entry?.legacyPlaytimeMinutes ?? 0,
-    status: entry?.status ?? "NOT_STARTED",
-    startedAt: entry?.startedAt ?? null,
-    completedAt: entry?.completedAt ?? null,
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const compatibleSources = sources.filter((item) =>
-    input.accessType === "SUBSCRIPTION"
-      ? item.type === "SUBSCRIPTION"
-      : item.type !== "SUBSCRIPTION",
-  );
-  const setValue = <K extends keyof GameLibraryInput>(
-    key: K,
-    value: GameLibraryInput[K],
-  ) => setInput((current) => ({ ...current, [key]: value }));
-  const changeAccessType = (accessType: GameLibraryInput["accessType"]) => {
-    const source = sources.find((item) =>
-      accessType === "SUBSCRIPTION"
-        ? item.type === "SUBSCRIPTION"
-        : item.type !== "SUBSCRIPTION",
-    );
-    setInput((current) => ({
-      ...current,
-      accessType,
-      sourceId: source?.id ?? current.sourceId,
-    }));
-  };
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setSaving(true);
-    setError(null);
-    try {
-      const saved = entry
-        ? await updateGameLibrary(entry.id, input)
-        : await createGameLibrary(contentId, input);
-      await putGameProfile(contentId, {
-        status: saved.status,
-        rating: saved.rating,
-        favorite: saved.favorite,
-        startedAt: saved.startedAt,
-        completedAt: saved.completedAt,
-        personalNote: saved.personalNote,
-      });
-      if (!entry && supportsXboxProgress(saved))
-        await putXboxProgress(saved.id, {
-          totalAchievements: 0,
-          unlockedAchievements: 0,
-          totalGamerscore: 0,
-          earnedGamerscore: 0,
-        });
-      onSaved(saved.id);
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Не удалось сохранить запись библиотеки",
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-  const remove = async () => {
-    if (
-      !entry ||
-      !window.confirm(
-        `Удалить запись «${entry.source.name} · ${entry.platform.name}»? Игровые сессии этой копии также будут удалены.`,
-      )
-    )
-      return;
-    setSaving(true);
-    setError(null);
-    try {
-      await deleteGameLibrary(entry.id);
-      onSaved(entry.id);
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Не удалось удалить запись библиотеки",
-      );
-      setSaving(false);
-    }
-  };
-  return (
-    <div className="modal-backdrop">
-      <form
-        className="habit-form library-entry-form"
-        onSubmit={(event) => void submit(event)}
-      >
-        <div className="form-heading">
-          <div>
-            <p className="eyebrow">Моя библиотека</p>
-            <h2>{entry ? "Редактирование копии" : "Добавить копию игры"}</h2>
-          </div>
-          <button type="button" onClick={onClose}>
-            ×
-          </button>
-        </div>
-        {error && <div className="form-error">{error}</div>}
-        <div className="form-grid">
-          <label>
-            Платформа
-            <select
-              required
-              value={input.platformId}
-              onChange={(event) =>
-                setValue("platformId", Number(event.target.value))
-              }
-            >
-              {platforms.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Тип доступа
-            <select
-              value={input.accessType}
-              onChange={(event) =>
-                changeAccessType(
-                  event.target.value as GameLibraryInput["accessType"],
-                )
-              }
-            >
-              <option value="OWNED">Куплена</option>
-              <option value="SUBSCRIPTION">Подписка</option>
-            </select>
-          </label>
-          <label>
-            Магазин или источник
-            <select
-              required
-              value={input.sourceId}
-              onChange={(event) =>
-                setValue("sourceId", Number(event.target.value))
-              }
-            >
-              {compatibleSources.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Издание
-            <input
-              value={input.edition ?? ""}
-              onChange={(event) =>
-                setValue("edition", event.target.value || null)
-              }
-              placeholder="Standard Edition"
-            />
-          </label>
-          <label>
-            Статус этой копии
-            <select
-              value={input.status}
-              onChange={(event) => {
-                const status = event.target.value as LibraryStatus;
-                setInput((current) => ({
-                  ...current,
-                  status,
-                  completedAt:
-                    status === "COMPLETED" && !current.completedAt
-                      ? new Date().toISOString()
-                      : status === "COMPLETED"
-                        ? current.completedAt
-                        : null,
-                }));
-              }}
-            >
-              {Object.entries(statusLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Дата прохождения этой копии
-            <input
-              disabled={input.status !== "COMPLETED"}
-              type="date"
-              value={input.completedAt?.slice(0, 10) ?? ""}
-              onChange={(event) =>
-                setValue(
-                  "completedAt",
-                  event.target.value
-                    ? new Date(`${event.target.value}T12:00:00`).toISOString()
-                    : null,
-                )
-              }
-            />
-          </label>
-          <label>
-            Время до начала учёта, часов
-            <input
-              min="0"
-              type="number"
-              value={Math.floor(input.legacyPlaytimeMinutes / 60)}
-              onChange={(event) =>
-                setValue(
-                  "legacyPlaytimeMinutes",
-                  Math.max(0, Number(event.target.value)) * 60 +
-                    (input.legacyPlaytimeMinutes % 60),
-                )
-              }
-            />
-          </label>
-          <label>
-            Минут
-            <input
-              min="0"
-              max="59"
-              type="number"
-              value={input.legacyPlaytimeMinutes % 60}
-              onChange={(event) =>
-                setValue(
-                  "legacyPlaytimeMinutes",
-                  Math.floor(input.legacyPlaytimeMinutes / 60) * 60 +
-                    Math.min(59, Math.max(0, Number(event.target.value))),
-                )
-              }
-            />
-          </label>
-        </div>
-        <div className="form-buttons">
-          {entry && (
-            <button
-              className="danger-button"
-              disabled={saving}
-              type="button"
-              onClick={() => void remove()}
-            >
-              Удалить
-            </button>
-          )}
-          <button className="secondary-button" type="button" onClick={onClose}>
-            Отмена
-          </button>
-          <button className="primary-button" disabled={saving}>
-            {saving ? "Сохраняем…" : "Сохранить"}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-function PlaythroughModal({
-  libraryId,
-  playthrough,
-  onClose,
-  onSaved,
-}: {
-  libraryId: number;
-  playthrough?: GamePlaythrough;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [input, setInput] = useState<GamePlaythroughInput>({
-    completedAt: playthrough?.completedAt ?? new Date().toISOString(),
-    note: playthrough?.note ?? null,
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setSaving(true);
-    setError(null);
-    try {
-      if (playthrough) await updateGamePlaythrough(playthrough.id, input);
-      else await createGamePlaythrough(libraryId, input);
-      onSaved();
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Не удалось сохранить прохождение",
-      );
-      setSaving(false);
-    }
-  };
-  const remove = async () => {
-    if (
-      !playthrough ||
-      !window.confirm("Удалить эту запись из истории прохождений?")
-    )
-      return;
-    setSaving(true);
-    setError(null);
-    try {
-      await deleteGamePlaythrough(playthrough.id);
-      onSaved();
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Не удалось удалить прохождение",
-      );
-      setSaving(false);
-    }
-  };
-  return (
-    <div className="modal-backdrop">
-      <form
-        className="habit-form playthrough-form"
-        onSubmit={(event) => void submit(event)}
-      >
-        <div className="form-heading">
-          <div>
-            <p className="eyebrow">История игры</p>
-            <h2>
-              {playthrough ? "Изменить прохождение" : "Добавить прохождение"}
-            </h2>
-          </div>
-          <button type="button" onClick={onClose}>
-            ×
-          </button>
-        </div>
-        {error && <div className="form-error">{error}</div>}
-        <label>
-          Дата прохождения
-          <input
-            required
-            type="date"
-            value={input.completedAt.slice(0, 10)}
-            onChange={(event) =>
-              setInput((current) => ({
-                ...current,
-                completedAt: new Date(
-                  `${event.target.value}T12:00:00`,
-                ).toISOString(),
-              }))
-            }
-          />
-        </label>
-        <label>
-          Заметка
-          <textarea
-            maxLength={5000}
-            rows={3}
-            value={input.note ?? ""}
-            onChange={(event) =>
-              setInput((current) => ({
-                ...current,
-                note: event.target.value || null,
-              }))
-            }
-          />
-        </label>
-        <div className="form-buttons">
-          {playthrough && (
-            <button
-              className="danger-button"
-              disabled={saving}
-              type="button"
-              onClick={() => void remove()}
-            >
-              Удалить
-            </button>
-          )}
-          <button className="secondary-button" type="button" onClick={onClose}>
-            Отмена
-          </button>
-          <button className="primary-button" disabled={saving}>
-            {saving ? "Сохраняем…" : "Сохранить"}
-          </button>
-        </div>
-      </form>
     </div>
   );
 }

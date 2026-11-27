@@ -14,15 +14,16 @@ type Props = {
   onSubmit: FormEventHandler<HTMLFormElement>
   returnFocusTo?: HTMLElement | null
   wide?: boolean
+  closeDisabled?: boolean
 }
 
-export function SeriesFormDialog({ title, eyebrow, context, error, pending, children, actions, onClose, onSubmit, returnFocusTo, wide }: Props) {
+export function SeriesFormDialog({ title, eyebrow, context, error, pending, children, actions, onClose, onSubmit, returnFocusTo, wide, closeDisabled = false }: Props) {
   const [trigger] = useState(() => returnFocusTo ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null))
   const errorRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (error) { errorRef.current?.scrollIntoView({ block: 'nearest' }); errorRef.current?.focus({ preventScroll: true }) }
   }, [error])
-  return <MovieDialog title={title} eyebrow={eyebrow} wide={wide} returnFocusTo={trigger} onClose={onClose} onSubmit={onSubmit} actions={actions}>
+  return <MovieDialog title={title} eyebrow={eyebrow} wide={wide} returnFocusTo={trigger} onClose={onClose} onSubmit={onSubmit} actions={actions} closeDisabled={closeDisabled}>
     {error && <div ref={errorRef} tabIndex={-1} className="form-error" role="alert">{error}</div>}
     <fieldset className="series-editor-fields" aria-label={title} disabled={pending}>
       {context && <p className="series-editor-context">{context}</p>}
