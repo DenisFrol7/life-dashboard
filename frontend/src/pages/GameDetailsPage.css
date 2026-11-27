@@ -30,23 +30,54 @@
 .game-view-status { color: var(--accent-dark); font-size: 20px; line-height: 1.4; }
 .game-view-rating { color: var(--accent-dark); font-size: 28px; font-weight: 700; line-height: 1.3; }
 .game-view-note p { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
-.game-view-sessions .sessions-table > div > span { min-width: 0; overflow-wrap: anywhere; }
-.game-view-session-note { white-space: pre-wrap; }
-.game-view-collection { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 18px; min-width: 0; }
+.game-view-sessions { min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: 16px; color: var(--ink); background: var(--paper); }
+.game-view-sessions h2 { margin: 0 0 16px; font-family: Georgia, serif; font-size: 24px; line-height: 1.3; }
+.game-view-sessions > p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.game-view-session-head, .game-view-session-list dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .7fr) minmax(0, 1fr) minmax(0, .9fr) minmax(0, .9fr) minmax(0, 1.8fr); gap: 12px; min-width: 0; padding: 14px 12px; }
+.game-view-session-head { border-radius: 8px; color: var(--muted); background: var(--paper-soft); font-size: 12px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.game-view-session-list { min-width: 0; margin: 0; padding: 0; list-style: none; }
+.game-view-session-list li { min-width: 0; border-bottom: 1px solid var(--line); }
+.game-view-session-list dl { margin: 0; font-size: 14px; line-height: 1.6; }
+.game-view-session-list dl > div { min-width: 0; overflow-wrap: anywhere; }
+.game-view-session-list dt { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.game-view-session-list dd { margin: 0; }
+.game-view-session-list dd[data-positive="true"] { color: #38843d; font-weight: 700; }
+.game-view-session-note dd { white-space: pre-wrap; }
+.game-view-sessions-all { display: grid; place-items: center; min-height: 44px; margin-top: 12px; padding: 10px 12px; border-radius: 8px; color: var(--accent-dark); background: var(--paper-soft); font-size: 14px; text-align: center; text-decoration: none; }
+html[data-theme="dark"] .game-view-session-list dd[data-positive="true"] { color: #67e98e; }
+@media (max-width: 900px) {
+  .game-view-session-head { display: none; }
+  .game-view-session-list { display: grid; gap: 12px; }
+  .game-view-session-list li { border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft); }
+  .game-view-session-list dl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 16px; }
+  .game-view-session-list dt { position: static; width: auto; height: auto; margin: 0 0 4px; overflow: visible; clip-path: none; color: var(--muted); font-size: 13px; white-space: normal; }
+  .game-view-session-list dl > div:nth-child(3) { grid-column: 1 / -1; }
+  .game-view-session-note { grid-column: 1 / -1; }
+}
+@media (max-width: 600px) {
+  .game-view-sessions { padding: 16px; }
+  .game-view-sessions h2 { font-size: 22px; }
+  .game-view-session-list dl { padding: 12px; }
+}
+.game-view-collection { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; gap: 18px; min-width: 0; }
 .game-view-library, .game-view-playtime, .game-view-history { display: grid; align-content: start; gap: 16px; min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); overflow-wrap: anywhere; }
 .game-view-collection h2 { margin: 0; color: var(--ink); font-family: Georgia, serif; font-size: 24px; line-height: 1.3; }
 .game-view-collection button:disabled { cursor: default; opacity: .6; }
 .game-view-library-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
 .game-view-library-add, .game-view-session-add, .game-view-history-add { min-width: 0; min-height: 44px; padding: 10px 12px; font-size: 14px; line-height: 1.5; }
 .game-view-copies, .game-view-playthroughs { display: grid; gap: 12px; min-width: 0; margin: 0; padding: 0; list-style: none; }
-.game-view-copy { display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: start; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft); }
-.game-view-copy[data-selected="true"] { border-color: var(--accent-strong); background: var(--accent-soft); box-shadow: inset 3px 0 var(--accent-strong); }
+.game-view-copy { --game-view-copy-accent: var(--accent-strong); --game-view-copy-tint: var(--accent-soft); --game-view-copy-ink: var(--accent-dark); display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: start; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper-soft); }
+.game-view-copy[data-provider="XBOX"] { --game-view-copy-accent: #65906b; --game-view-copy-tint: #e6f0e4; --game-view-copy-ink: #345c3c; }
+.game-view-copy[data-selected="true"] { border-color: var(--game-view-copy-accent); background: var(--game-view-copy-tint); box-shadow: inset 3px 0 var(--game-view-copy-accent); }
+.game-view-copy button:focus-visible { outline-color: var(--game-view-copy-accent); }
+html[data-theme="dark"] .game-view-copy[data-provider="XBOX"] { --game-view-copy-accent: #42dc70; --game-view-copy-tint: #10291a; --game-view-copy-ink: #87d69f; }
+html[data-theme="dark"] .game-view-copy[data-provider="STEAM"] { --game-view-copy-accent: #62b7ff; --game-view-copy-tint: #102b40; --game-view-copy-ink: #89c9ff; }
 .game-view-copy-select { display: grid; gap: 6px; min-width: 0; min-height: 44px; padding: 0; border: 0; color: var(--ink); background: transparent; cursor: pointer; text-align: left; overflow-wrap: anywhere; }
 .game-view-copy-select > strong { font-size: 16px; line-height: 1.4; }
 .game-view-copy-select > span { font-size: 14px; line-height: 1.5; }
 .game-view-copy-select > small { color: var(--muted); font-size: 13px; line-height: 1.5; }
-.game-view-copy-select .game-view-copy-access { justify-self: start; padding: 3px 6px; border-radius: 6px; color: var(--accent-dark); background: var(--paper); font-size: 12px; font-weight: 600; }
-.game-view-copy-edit { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 9px; color: var(--accent-dark); background: var(--paper); cursor: pointer; }
+.game-view-copy-select .game-view-copy-access { justify-self: start; padding: 3px 6px; border-radius: 6px; color: var(--game-view-copy-ink); background: var(--paper); font-size: 12px; font-weight: 600; }
+.game-view-copy-edit { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--line); border-radius: 9px; color: var(--game-view-copy-ink); background: var(--paper); cursor: pointer; }
 .game-view-copy-edit svg { width: 18px; height: 18px; }
 .game-view-collection-empty, .game-view-selected-copy { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
 .game-view-playtime-value { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--accent-dark); font-size: 28px; line-height: 1.3; }
@@ -66,6 +97,18 @@
 .game-view-playthrough-duration { display: flex; align-items: center; gap: 7px; min-width: 0; color: var(--accent-dark); font-size: 16px; line-height: 1.5; }
 .game-view-playthrough-duration > svg { flex: 0 0 16px; width: 16px; height: 16px; }
 .game-view-history-item > svg { width: 16px; height: 16px; margin-top: 8px; color: var(--muted); }
+.game-view-playtime, .game-view-history { display: flex; flex-direction: column; }
+.game-view-session-add, .game-view-history-add { margin-top: auto; }
+@media (min-width: 1201px) {
+  .game-view-history { gap: 12px; }
+  .game-view-history h2 { font-size: 22px; }
+  .game-view-playthroughs { gap: 8px; }
+  .game-view-history-item { grid-template-columns: 28px minmax(0, 1fr) 16px; gap: 8px; padding: 10px; }
+  .game-view-playthrough-number { width: 28px; height: 28px; font-size: 13px; }
+  .game-view-playthrough-copy { gap: 4px; }
+  .game-view-playthrough-copy > small, .game-view-playthrough-copy > time { font-size: 13px; line-height: 1.4; }
+  .game-view-playthrough-duration { font-size: 15px; }
+}
 .game-view-progress-set { --game-view-progress-color: #65906b; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(280px, 1fr); align-items: start; gap: 18px; min-width: 0; }
 .game-view-progress-set[data-provider="STEAM"] { --game-view-progress-color: #62859d; }
 .game-view-progress-panel, .game-view-achievement-panel { display: grid; align-content: start; gap: 16px; min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); overflow-wrap: anywhere; }
@@ -113,10 +156,6 @@ html[data-theme="dark"] .game-view-progress-set[data-provider="STEAM"] { --game-
 html[data-theme="dark"] .game-view-achievement-total { color: #8be6a4; }
 html[data-theme="dark"] .game-view-progress-set[data-provider="STEAM"] .game-view-achievement-total { color: #89c9ff; }
 html[data-theme="dark"] .game-view-achievement-panel .game-view-achievement-notice.warning { border-color: #76553b; color: #efc49b; background: #302318; }
-@media (min-width: 601px) {
-  .game-view-sessions .sessions-table { min-width: 0; }
-  .game-view-sessions .sessions-table > div { grid-template-columns: minmax(0, 1fr) minmax(0, .7fr) minmax(0, 1fr) minmax(0, .8fr) minmax(0, .8fr) minmax(0, 1.8fr); }
-}
 @media (max-width: 1200px) {
   .game-view-collection { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .game-view-history { grid-column: 1 / -1; }

@@ -12,7 +12,8 @@ import { ErrorState, LoadingState } from "../components/AsyncState";
 import { getApiErrorMessage } from "../api/client";
 import { useLatestRequest } from "../hooks/useLatestRequest";
 import { useFormMutation } from "../hooks/useFormMutation";
-import { GameForm, GameSessionForm } from "./GamesPage";
+import { GameForm } from "./GamesPage";
+import { GameSessionForm } from "../components/GameSessionForm";
 import {
   getGameCatalog,
   getGameLibrary,
@@ -770,7 +771,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
           {libraries.length ? (
             <ul className="game-view-copies" aria-label="Копии игры">
               {libraries.map((entry) => (
-                <li className="game-view-copy" data-selected={entry.id === library?.id} key={entry.id}>
+                <li className="game-view-copy" data-provider={supportsXboxProgress(entry) ? "XBOX" : entry.source.code === "STEAM" ? "STEAM" : undefined} data-selected={entry.id === library?.id} key={entry.id}>
                   <button type="button" className="game-view-copy-select" data-library-id={entry.id} aria-pressed={entry.id === library?.id}
                     aria-label={`Выбрать копию: ${entry.platform.name} · ${entry.source.name}`}
                     data-focus-fallback={`.game-view-copy-select[data-library-id="${entry.id}"]`} onClick={() => setSelectedLibraryId(entry.id)}>
@@ -869,43 +870,34 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
         </article>
       </section>
 
-      <section className="detail-card sessions-table-card game-view-sessions">
+      <section className="game-view-sessions">
         <h2>
           Последние игровые сессии ·{" "}
           {library?.platform.name ?? "копия не выбрана"}
         </h2>
         {selectedSessions.length ? (
           <>
-            <div className="sessions-table">
-              <div className="sessions-head">
-                <span>Дата</span>
-                <span>Время</span>
-                <span>Длительность</span>
-                <span>Достижения</span>
-                <span>Gamerscore</span>
-                <span>Заметка</span>
-              </div>
-              {selectedSessions.slice(0, 5).map((item) => (
-                <div key={item.id}>
-                  <span>{formatDate(item.startedAt)}</span>
-                  <span>
-                    {new Date(item.startedAt).toLocaleTimeString("ru-RU", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                  <span>{formatMinutes(item.durationMinutes)}</span>
-                  <span className={item.unlockedAchievements ? "positive" : ""}>
-                    +{item.unlockedAchievements}
-                  </span>
-                  <span className={item.earnedGamerscore ? "positive" : ""}>
-                    +{item.earnedGamerscore} G
-                  </span>
-                  <span className="game-view-session-note">{item.note ?? "—"}</span>
-                </div>
-              ))}
+            <div className="game-view-session-head" aria-hidden="true">
+              <span>Дата</span>
+              <span>Время</span>
+              <span>Длительность</span>
+              <span>Достижения</span>
+              <span>Gamerscore</span>
+              <span>Заметка</span>
             </div>
-            <Link className="all-sessions-link" to="/games">
+            <ul className="game-view-session-list" aria-label="Последние игровые сессии выбранной копии">
+              {selectedSessions.slice(0, 5).map(item => <li key={item.id}>
+                <dl>
+                  <div><dt>Дата</dt><dd><time dateTime={item.startedAt}>{formatDate(item.startedAt)}</time></dd></div>
+                  <div><dt>Время</dt><dd>{new Date(item.startedAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}</dd></div>
+                  <div><dt>Длительность</dt><dd>{formatMinutes(item.durationMinutes)}</dd></div>
+                  <div><dt>Достижения</dt><dd data-positive={item.unlockedAchievements > 0}>+{item.unlockedAchievements}</dd></div>
+                  <div><dt>Gamerscore</dt><dd data-positive={item.earnedGamerscore > 0}>+{item.earnedGamerscore} G</dd></div>
+                  <div className="game-view-session-note"><dt>Заметка</dt><dd>{item.note ?? "—"}</dd></div>
+                </dl>
+              </li>)}
+            </ul>
+            <Link className="game-view-sessions-all" to="/games">
               Показать все сессии
             </Link>
           </>

@@ -89,6 +89,8 @@
 .games-catalog-session-list strong { font-size: 16px; line-height: 1.5; }
 .games-catalog-session-list small { color: var(--muted); font-size: 13px; line-height: 1.5; }
 .games-catalog-session-list b { color: var(--accent-dark); font-size: 15px; }
+.games-catalog-session-list > button:disabled { cursor: default; opacity: .6; }
+.games-catalog-session-list > button > b { min-width: 0; overflow-wrap: anywhere; }
 .games-catalog-session-achievements { display: flex; flex-wrap: wrap; gap: 5px 10px; color: var(--accent-dark); font-size: 13px; line-height: 1.5; }
 .games-library-page > .rawg-catalog-attribution { min-height: 44px; max-width: 100%; margin: 0; font-size: 14px; overflow-wrap: anywhere; }
 html[data-theme="dark"] .games-catalog-status.completed { color: #a9d7b2; background: #173324; }

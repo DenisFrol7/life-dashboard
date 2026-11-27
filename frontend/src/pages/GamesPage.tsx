@@ -12,9 +12,7 @@ import {
   createGame,
   createGameLibrary,
   createRawgGame,
-  createGameSession,
   deleteGame,
-  deleteGameSession,
   getGameCatalog,
   getGameLibrary,
   getGameSessions,
@@ -22,9 +20,7 @@ import {
   getSources,
   getSteamLibrarySummary,
   getSteamGridDbCovers,
-  getXboxAchievementGroups,
   getXboxLibrarySummary,
-  initializeXboxProgress,
   importXboxGames,
   importSteamGames,
   prepareXboxImport,
@@ -41,13 +37,11 @@ import {
   updateGame,
   updateGameLibrary,
   updateRawgGame,
-  updateGameSession,
   type Game,
   type GameInput,
   type GameLibrary,
   type GameLibraryInput,
   type GameSession,
-  type GameSessionInput,
   type Reference,
   type RawgGameCandidate,
   type SteamGridDbCoverCandidate,
@@ -61,7 +55,6 @@ import {
   type XboxImportMatch,
   type XboxImportPreview,
   type XboxImportSelection,
-  type XboxAchievementGroup,
   type XboxProgress,
   type XboxProgressInput,
 } from "../api/games";
@@ -71,6 +64,7 @@ import { useToast } from "../components/ToastContext";
 import { useLatestRequest } from "../hooks/useLatestRequest";
 import { useFormMutation } from "../hooks/useFormMutation";
 import { getApiErrorMessage } from "../api/client";
+import { GameSessionForm } from "../components/GameSessionForm";
 import "./GamesPage.css";
 
 const statusLabels: Record<LibraryStatus, string> = {
@@ -200,6 +194,7 @@ export function GamesPage() {
   const requests = useLatestRequest();
   const pageRef = useRef<HTMLDivElement>(null);
   const addRef = useRef<HTMLButtonElement>(null);
+  const sessionAddRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const dialogWasOpenRef = useRef(false);
   const [statisticsExpanded, setStatisticsExpanded] = useState(false);
@@ -303,7 +298,8 @@ export function GamesPage() {
     if (dialogOpen) { dialogWasOpenRef.current = true; return; }
     if (!dialogWasOpenRef.current || loading) return;
     dialogWasOpenRef.current = false;
-    (triggerRef.current?.isConnected ? triggerRef.current : addRef.current)?.focus({ preventScroll: true });
+    const fallback = triggerRef.current?.dataset.sessionId ? sessionAddRef.current : addRef.current;
+    (triggerRef.current?.isConnected ? triggerRef.current : fallback)?.focus({ preventScroll: true });
   }, [dialogOpen, loading]);
   useEffect(() => {
     setAchievementProviderByGame({});
@@ -760,8 +756,8 @@ export function GamesPage() {
             <h2>Последние игровые сессии</h2>
           </div>
           <button
-            className="primary-button"
-            disabled={loading || Boolean(error) || !Object.keys(library).length}
+            ref={sessionAddRef} type="button" className="primary-button games-catalog-session-add"
+            disabled={loading || Boolean(error) || syncingXbox || syncingSteamRecent || !Object.keys(library).length}
             onClick={() => setEditingSession("new")}
           >
             + Добавить сессию
@@ -774,6 +770,7 @@ export function GamesPage() {
             {sessions.slice(0, 5).map((session) => (
               <button
                 key={session.id}
+                type="button" data-session-id={session.id} disabled={loading || syncingXbox || syncingSteamRecent}
                 onClick={() => setEditingSession(session)}
               >
                 <span>
@@ -783,12 +780,8 @@ export function GamesPage() {
                   </small>
                 </span>
                 <span className="games-catalog-session-achievements">
-                  {session.unlockedAchievements
-                    ? `+${session.unlockedAchievements} достиж.`
-                    : ""}
-                  {session.earnedGamerscore
-                    ? `+${session.earnedGamerscore} G`
-                    : ""}
+                  {session.unlockedAchievements > 0 && <span>Достижения: +{session.unlockedAchievements}</span>}
+                  {session.earnedGamerscore > 0 && <span>+{session.earnedGamerscore} G</span>}
                 </span>
                 <b>
                   {Math.floor(session.durationMinutes / 60)} ч{" "}
@@ -2670,290 +2663,6 @@ export function GameForm({
             Отмена
           </button>
           <button className="primary-button" disabled={pending || searching || artworkSearching}>
-            {saving ? "Сохраняем…" : "Сохранить"}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-export function GameSessionForm({
-  session,
-  library,
-  onClose,
-  onSaved,
-}: {
-  session?: GameSession;
-  library: GameLibrary[];
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const { showToast } = useToast();
-  const localDateTime = (value: string) => {
-    const date = new Date(value);
-    return new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
-      .toISOString()
-      .slice(0, 16);
-  };
-  const [libraryId, setLibraryId] = useState(
-    session?.libraryEntryId ?? library[0]?.id ?? 0,
-  );
-  const [input, setInput] = useState<GameSessionInput>({
-    startedAt: session?.startedAt ?? new Date().toISOString(),
-    durationMinutes: session?.durationMinutes ?? 60,
-    note: session?.note ?? null,
-    unlockedAchievements: session?.unlockedAchievements ?? 0,
-    earnedGamerscore: session?.earnedGamerscore ?? 0,
-    achievementGroupId: session?.achievementGroupId ?? null,
-  });
-  const [groups, setGroups] = useState<XboxAchievementGroup[]>([]);
-  const [loadingGroups, setLoadingGroups] = useState(false);
-  const mutations = useFormMutation();
-  const { saving, deleting, pending } = mutations;
-  const [error, setError] = useState<string | null>(null);
-  const closeForm = () => { mutations.dispose(); onClose(); };
-  const selectedEntry = library.find((entry) => entry.id === libraryId);
-  const achievementsEnabled = selectedEntry
-    ? supportsXboxProgress(selectedEntry)
-    : false;
-  const achievementValuesEntered =
-    input.unlockedAchievements > 0 || input.earnedGamerscore > 0;
-  const cannotSave = pending || loadingGroups ||
-    (achievementValuesEntered && input.achievementGroupId == null);
-  useEffect(() => {
-    let active = true;
-    if (!achievementsEnabled) {
-      setGroups([]);
-      setLoadingGroups(false);
-      setInput((current) => ({ ...current, achievementGroupId: null }));
-      return;
-    }
-    const loadGroups = async () => {
-      setLoadingGroups(true);
-      try {
-        let values = await getXboxAchievementGroups(libraryId);
-        if (values.length === 0 && selectedEntry?.xboxTitleId != null) {
-          await initializeXboxProgress(libraryId);
-          values = await getXboxAchievementGroups(libraryId);
-        }
-        if (!active) return;
-        setGroups(values);
-        setInput((current) => ({
-          ...current,
-          achievementGroupId: values.some(
-            (value) => value.id === current.achievementGroupId,
-          )
-            ? current.achievementGroupId
-            : (values.find((value) => value.groupType === "BASE_GAME")?.id ??
-              null),
-        }));
-      } catch (reason: unknown) {
-        if (!active) return;
-        setError(
-          reason instanceof Error
-            ? reason.message
-            : "Не удалось подготовить раздел достижений",
-        );
-      } finally {
-        if (active) setLoadingGroups(false);
-      }
-    };
-    void loadGroups();
-    return () => {
-      active = false;
-    };
-  }, [achievementsEnabled, libraryId, selectedEntry?.xboxTitleId]);
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (cannotSave) return;
-    setError(null);
-    await mutations.run('save', async () => {
-      const normalizedInput =
-        input.unlockedAchievements === 0 && input.earnedGamerscore === 0
-          ? { ...input, achievementGroupId: null }
-          : input;
-      if (session) await updateGameSession(session.id, normalizedInput);
-      else await createGameSession(libraryId, normalizedInput);
-    }, {
-      onSuccess: () => {
-        showToast(session ? "Игровая сессия обновлена" : "Игровая сессия добавлена");
-        onSaved();
-      },
-      onError: (reason) => setError(
-        reason instanceof Error
-          ? reason.message
-          : "Не удалось сохранить игровую сессию",
-      ),
-    });
-  };
-  const remove = async () => {
-    if (!session || pending) return;
-    setError(null);
-    await mutations.run('delete', async () => {
-      if (!window.confirm("Удалить игровую сессию?")) return false;
-      await deleteGameSession(session.id);
-      return true;
-    }, {
-      onSuccess: (deleted) => {
-        if (!deleted) return;
-        showToast("Игровая сессия удалена");
-        onSaved();
-      },
-      onError: (reason) => setError(
-        reason instanceof Error
-          ? reason.message
-          : "Не удалось удалить игровую сессию",
-      ),
-    });
-  };
-  return (
-    <div className="modal-backdrop">
-      <form
-        className="habit-form session-form"
-        onSubmit={(event) => void submit(event)}
-      >
-        <div className="form-heading">
-          <div>
-            <p className="eyebrow">Игровое время</p>
-            <h2>{session ? "Редактирование сессии" : "Новая сессия"}</h2>
-          </div>
-          <button type="button" onClick={closeForm}>
-            ×
-          </button>
-        </div>
-        {error && <div className="form-error">{error}</div>}
-        <label>
-          Игра и платформа
-          <select
-            disabled={Boolean(session) || library.length === 1}
-            value={libraryId}
-            onChange={(event) => setLibraryId(Number(event.target.value))}
-          >
-            {library.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.title} · {entry.platform.name} · {entry.source.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="form-grid">
-          <label>
-            Начало
-            <input
-              required
-              type="datetime-local"
-              value={localDateTime(input.startedAt)}
-              onChange={(event) =>
-                setInput((current) => ({
-                  ...current,
-                  startedAt: new Date(event.target.value).toISOString(),
-                }))
-              }
-            />
-          </label>
-          <label>
-            Продолжительность, минут
-            <input
-              required
-              min="1"
-              type="number"
-              value={input.durationMinutes}
-              onChange={(event) =>
-                setInput((current) => ({
-                  ...current,
-                  durationMinutes: Number(event.target.value),
-                }))
-              }
-            />
-          </label>
-        </div>
-        {achievementsEnabled && (
-          <fieldset className="xbox-fields">
-            <legend>Получено за эту сессию</legend>
-            <label>
-              Раздел достижений
-              <select
-                required={achievementValuesEntered}
-                disabled={loadingGroups || groups.length === 0}
-                value={input.achievementGroupId ?? ""}
-                onChange={(event) =>
-                  setInput((current) => ({
-                    ...current,
-                    achievementGroupId: Number(event.target.value),
-                  }))
-                }
-              >
-                <option value="" disabled>
-                  {loadingGroups
-                    ? "Подготавливаем разделы…"
-                    : groups.length === 0
-                      ? "Разделы недоступны"
-                      : "Выберите раздел"}
-                </option>
-                {groups.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="form-grid">
-              <label>
-                Достижений
-                <input
-                  min="0"
-                  type="number"
-                  value={input.unlockedAchievements}
-                  onChange={(event) =>
-                    setInput((current) => ({
-                      ...current,
-                      unlockedAchievements: Number(event.target.value),
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                Gamerscore
-                <input
-                  min="0"
-                  type="number"
-                  value={input.earnedGamerscore}
-                  onChange={(event) =>
-                    setInput((current) => ({
-                      ...current,
-                      earnedGamerscore: Number(event.target.value),
-                    }))
-                  }
-                />
-              </label>
-            </div>
-          </fieldset>
-        )}
-        <label>
-          Заметка
-          <textarea
-            rows={3}
-            value={input.note ?? ""}
-            onChange={(event) =>
-              setInput((current) => ({
-                ...current,
-                note: event.target.value || null,
-              }))
-            }
-          />
-        </label>
-        <div className="form-buttons">
-          {session && (
-            <button className="danger-button" type="button" disabled={pending} onClick={() => void remove()}>{deleting ? "Удаляем…" : "Удалить"}</button>
-          )}
-          <button className="secondary-button" type="button" onClick={closeForm}>
-            Отмена
-          </button>
-          <button
-            className="primary-button"
-            disabled={cannotSave}
-          >
             {saving ? "Сохраняем…" : "Сохранить"}
           </button>
         </div>
