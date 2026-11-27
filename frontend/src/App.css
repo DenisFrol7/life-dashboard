@@ -229,9 +229,7 @@ html[data-theme="dark"] .mint { color: #55d985; background: #123322; }
 html[data-theme="dark"] .series-list-progress span,
 html[data-theme="dark"] .series-progress span,
 html[data-theme="dark"] .book-progress span,
-html[data-theme="dark"] .xbox-progress span,
-html[data-theme="dark"] .detail-progress > div span { background: linear-gradient(90deg, #20c957, var(--success)); box-shadow: 0 0 9px #2ddd6340; }
-html[data-theme="dark"] .steam-progress-card .detail-progress > div span { background: linear-gradient(90deg, #378fc4, #62b7ff); box-shadow: 0 0 9px #45a9ed40; }
+html[data-theme="dark"] .xbox-progress span { background: linear-gradient(90deg, #20c957, var(--success)); box-shadow: 0 0 9px #2ddd6340; }
 html[data-theme="dark"] .media-status.completed { color: #75ee98; background: #123923; }
 html[data-theme="dark"] .series-list-progress-row > strong { color: #67e98e; }
 html[data-theme="dark"] .violet { color: #a99dff; background: #28224b; }
@@ -264,37 +262,24 @@ html[data-theme="dark"] .theme-selector button.active > span { color: #fff; back
 /* Game details: complete dark treatment for nested surfaces and content. */
 html[data-theme="dark"] .game-details-page .detail-card { border-color: #1d2b38; background: #0f1924; box-shadow: 0 10px 30px #0004; }
 html[data-theme="dark"] .detail-card h2,
-html[data-theme="dark"] .detail-progress strong,
-html[data-theme="dark"] .total-playtime > strong,
-html[data-theme="dark"] .achievement-compact-list b { color: #e7edf5; }
-html[data-theme="dark"] .detail-progress small,
-html[data-theme="dark"] .detail-progress em,
-html[data-theme="dark"] .achievement-summary span,
-html[data-theme="dark"] .achievement-summary p,
+html[data-theme="dark"] .total-playtime > strong { color: #e7edf5; }
 html[data-theme="dark"] .library-copy-list small,
 html[data-theme="dark"] .total-playtime small,
 html[data-theme="dark"] .playthrough-list small,
 html[data-theme="dark"] .playthrough-list em { color: #8f9baa; }
 html[data-theme="dark"] .library-detail-list > div,
 html[data-theme="dark"] .sessions-table > div { border-color: #1d2b38; }
-html[data-theme="dark"] .detail-progress,
-html[data-theme="dark"] .achievement-compact-list > div,
 html[data-theme="dark"] .library-copy-list > button,
 html[data-theme="dark"] .playthrough-list > button { border-color: #253746; background: #111e2a; }
-html[data-theme="dark"] .detail-progress > div { background: #263746; }
 html[data-theme="dark"] .library-copy-list > button:hover,
 html[data-theme="dark"] .playthrough-list > button:hover { background: #172735; }
 html[data-theme="dark"] .library-copy-list > button.active { border-color: #52718a; background: #172a39; box-shadow: inset 3px 0 #6e93ae; }
 html[data-theme="dark"] .library-copy-list em,
 html[data-theme="dark"] .library-card-heading button,
 html[data-theme="dark"] .total-playtime span { color: #b9d7ec; }
-html[data-theme="dark"] .achievement-summary strong { color: #67e98e; }
-html[data-theme="dark"] .achievement-diagnostic { border-color: #31516a; color: #b9d7ec; background: #142737; }
-html[data-theme="dark"] .achievement-diagnostic.warning { border-color: #76553b; color: #efc49b; background: #302318; }
 html[data-theme="dark"] .platform-logo-badge { border-color: #294052; color: #dce5ee; background: #111e2a; }
 html[data-theme="dark"] .platform-logo-badge.xbox > svg { color: #42dc70; }
 html[data-theme="dark"] .platform-logo-badge.pc > svg { color: #76bfff; }
-html[data-theme="dark"] .achievement-details-button { color: #c3cfdb; background: #172532; }
 html[data-theme="dark"] .achievement-groups-modal,
 html[data-theme="dark"] .steam-achievements-modal { color: var(--ink); background: #0f1924; box-shadow: 0 24px 70px #0009; }
 html[data-theme="dark"] .achievement-group-list article,
@@ -309,7 +294,6 @@ html[data-theme="dark"] .steam-achievement { border-color: #263746; background: 
 html[data-theme="dark"] .steam-achievement strong { color: #e7edf5; }
 html[data-theme="dark"] .steam-achievement p,
 html[data-theme="dark"] .steam-achievement time,
-html[data-theme="dark"] .steam-sync-date,
 html[data-theme="dark"] .steam-achievements-modal-summary span { color: #8f9baa; }
 html[data-theme="dark"] .steam-achievement-placeholder { color: #8f9baa; background: #263746; }
 html[data-theme="dark"] .sessions-table > div { color: #c3cfdb; }
@@ -722,30 +706,8 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 /* Consistent readable typography across media detail headers. */
 .series-details-page .movie-main-info dt { font-size: 16px; font-weight: 700; }
 .series-details-page .movie-personal-info small { font-size: 16px; font-weight: 700; }
-.xbox-detail-row,
-.steam-detail-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 34%); gap: 14px; }
 .detail-card { padding: 17px; }
 .detail-card h2 { margin: 0 0 15px; color: #293944; font-size: 15px; }
-.xbox-progress-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.detail-progress { position: relative; display: grid; gap: 7px; padding: 14px; border: 1px solid #e5eaec; border-radius: 10px; background: #f8fafb; }
-.detail-progress small { color: #74818a; }
-.detail-progress strong { color: #293944; font-size: 20px; }
-.detail-progress > div { height: 6px; overflow: hidden; border-radius: 5px; background: #e2e8eb; }
-.detail-progress > div span { display: block; height: 100%; border-radius: inherit; background: #607f95; }
-.detail-progress em { position: absolute; top: 43px; right: 14px; color: #53646f; font-size: 16px; font-style: normal; font-weight: 800; line-height: 1; }
-.achievement-summary { display: grid; align-content: start; gap: 7px; }
-.achievement-summary h2 { margin-bottom: 8px; }
-.achievement-summary strong { color: #3b7c3b; font-size: 16px; }
-.achievement-summary span, .achievement-summary p { margin: 0; color: #74818a; font-size: 11px; }
-.achievement-summary .achievement-diagnostic { padding: 9px 10px; border: 1px solid #cfe0ea; border-radius: 8px; color: #536f83; background: #eef5f8; font-size: 10px; line-height: 1.45; }
-.achievement-summary .achievement-diagnostic.warning { border-color: #ead4bd; color: #8c6141; background: #fbf1e6; }
-.achievement-compact-list { display: grid; gap: 5px; margin-bottom: 3px; }
-.achievement-compact-list > div { display: grid; grid-template-columns: 1fr auto auto; gap: 9px; padding: 6px 8px; border-radius: 7px; background: #f6f8f9; }
-.achievement-compact-list span, .achievement-compact-list b, .achievement-compact-list em { font-size: 9px; font-style: normal; }
-.achievement-compact-list > div > span { font-size: 13px; font-weight: 700; }
-.achievement-compact-list b, .achievement-compact-list em { font-size: 12px; font-weight: 700; }
-.achievement-compact-list b { color: #344750; }
-.achievement-details-button { margin-top: 4px; padding: 7px 10px; border: 0; border-radius: 7px; color: #536b7c; background: #edf2f5; cursor: pointer; }
 .achievement-groups-modal { width: min(760px, 100%); max-height: calc(100vh - 40px); padding: 24px; overflow-y: auto; border-radius: 17px; background: #fff; }
 .achievement-group-list { display: grid; gap: 8px; margin: 18px 0; }
 .achievement-group-list article { display: grid; grid-template-columns: minmax(170px, 1.4fr) minmax(120px, 1fr) minmax(135px, 1fr) 90px 32px; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e2e8eb; border-radius: 10px; }
@@ -762,15 +724,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .achievement-group-form label { display: grid; gap: 5px; color: #5f675f; font-size: 10px; font-weight: 700; }
 .achievement-group-form input { width: 100%; padding: 9px; border: 1px solid #d9dfe2; border-radius: 8px; font-size: 12px; }
 .achievement-group-form > div:not(.form-buttons) { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.xbox-progress-card,
-.steam-progress-card { display: grid; align-content: start; gap: 12px; }
-.steam-progress-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.steam-progress-heading h2 { margin: 0; }
-.steam-progress-heading button { padding: 7px 10px; font-size: 11px; }
-.steam-progress-heading button svg { width: 14px; height: 14px; }
 .spinning { animation: spin .8s linear infinite; }
-.steam-sync-date { color: #74818a; font-size: 10px; }
-.steam-recent-achievements { display: grid; gap: 6px; margin-bottom: 4px; }
 .steam-achievements-modal { width: min(820px, 100%); max-height: calc(100vh - 40px); padding: 24px; overflow-y: auto; border-radius: 17px; background: #fff; }
 .steam-achievements-modal-summary { display: flex; align-items: baseline; gap: 10px; margin: 16px 0; }
 .steam-achievements-modal-summary strong { color: #293944; font-size: 20px; }
@@ -785,11 +739,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .steam-achievement strong { overflow: hidden; color: #293944; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .steam-achievement p { margin: 0; color: #74818a; font-size: 10px; line-height: 1.4; }
 .steam-achievement time { color: #74818a; font-size: 10px; white-space: nowrap; }
-.steam-achievement.compact { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; padding: 5px 7px; }
-.steam-achievement.compact img,
-.steam-achievement.compact .steam-achievement-placeholder { width: 32px; height: 32px; border-radius: 5px; }
-.steam-achievement.compact strong { font-size: 10px; }
-.steam-achievement.compact time { font-size: 9px; }
 .xbox-achievement-meta { justify-items: end; }
 .xbox-achievement-meta b { color: #578066; font-size: 11px; white-space: nowrap; }
 .game-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr) minmax(300px, 34%); gap: 14px; }
@@ -874,9 +823,8 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
   .structure-forms { grid-template-columns: 1fr; }
   .compact-panel { grid-column: auto; }
   .series-hero-card { grid-template-columns: 120px 1fr; gap: 15px; }.movie-detail-poster { min-height: 180px; }.movie-personal-info { grid-column: 1/-1; border-top: 1px solid var(--line); border-left: 0; }.series-summary-grid { grid-template-columns: 1fr 1fr; }.series-summary-grid article:first-child { grid-column: 1/-1; }
-  .xbox-detail-row, .steam-detail-row, .game-detail-grid { grid-template-columns: 1fr; }
+  .game-detail-grid { grid-template-columns: 1fr; }
   .game-detail-grid > article:last-child { grid-column: auto; }
-  .xbox-progress-columns { grid-template-columns: 1fr; }
   .sessions-table-card { overflow-x: auto; }
   .achievement-group-list article { grid-template-columns: 1fr 1fr; }
   .achievement-group-list article > div:first-child { grid-column: 1 / -1; }

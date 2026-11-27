@@ -12,6 +12,7 @@ import { PlatformBadge } from "../components/PlatformBadge";
 import { ErrorState, LoadingState } from "../components/AsyncState";
 import { getApiErrorMessage } from "../api/client";
 import { useLatestRequest } from "../hooks/useLatestRequest";
+import { useFormMutation } from "../hooks/useFormMutation";
 import { GameForm, GameSessionForm } from "./GamesPage";
 import {
   createGameLibrary,
@@ -126,6 +127,8 @@ export function GameDetailsPage() {
 function GameDetailsContent({ contentId }: { contentId: number }) {
   const navigate = useNavigate();
   const requests = useLatestRequest();
+  const progressRequests = useLatestRequest();
+  const syncMutations = useFormMutation();
   const editRef = useRef<HTMLButtonElement>(null);
   const restoreEditFocusRef = useRef(false);
   const [game, setGame] = useState<Game | null>(null);
@@ -137,11 +140,11 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
   const [addingSession, setAddingSession] = useState(false);
   const [progress, setProgress] = useState<XboxProgress | null>(null);
   const [xboxAchievements, setXboxAchievements] = useState<XboxAchievement[]>([]);
-  const [syncingXbox, setSyncingXbox] = useState(false);
+  const [syncProvider, setSyncProvider] = useState<"XBOX" | "STEAM" | null>(null);
+  const [progressLoading, setProgressLoading] = useState(false);
   const [xboxError, setXboxError] = useState<string | null>(null);
   const [xboxSyncNote, setXboxSyncNote] = useState<string | null>(null);
   const [steamProgress, setSteamProgress] = useState<SteamProgress | null>(null);
-  const [syncingSteam, setSyncingSteam] = useState(false);
   const [steamError, setSteamError] = useState<string | null>(null);
   const [showSteamAchievements, setShowSteamAchievements] = useState(false);
   const [showXboxAchievements, setShowXboxAchievements] = useState(false);
@@ -161,6 +164,10 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
   const [sources, setSources] = useState<Reference[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const selectedLibraryRef = useRef(selectedLibraryId);
+  selectedLibraryRef.current = selectedLibraryId;
+  const syncingXbox = syncMutations.pending && syncProvider === "XBOX";
+  const syncingSteam = syncMutations.pending && syncProvider === "STEAM";
 
   const load = useCallback(() => requests.run(async () => {
       if (!Number.isSafeInteger(contentId) || contentId < 1)
@@ -223,59 +230,45 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
     }
   }, [editingGame, loading]);
 
-  useEffect(() => {
+  const loadProgress = useCallback(() => {
     const selectedLibrary = libraries.find(
       (item) => item.id === selectedLibraryId,
     );
-    let cancelled = false;
-    setProgress(null);
-    setXboxAchievements([]);
-    setAchievementGroups([]);
-    setXboxError(null);
-    setXboxSyncNote(null);
-    setSteamProgress(null);
-    setSteamError(null);
-    setShowAchievementDetails(false);
-    setShowSteamAchievements(false);
-    setShowXboxAchievements(false);
-    if (selectedLibrary && supportsXboxProgress(selectedLibrary)) {
-      void Promise.all([
-        getXboxProgress(selectedLibrary.id),
-        getXboxAchievementGroups(selectedLibrary.id),
-        getXboxAchievements(selectedLibrary.id),
-      ])
-        .then(([xbox, groups, achievements]) => {
-          if (cancelled) return;
-          setProgress(xbox);
-          setAchievementGroups(groups);
-          setXboxAchievements(achievements);
-        })
-        .catch((reason) => {
-          if (!cancelled)
-            setError(
-              reason instanceof Error
-                ? reason.message
-                : "Не удалось загрузить Xbox-прогресс",
-            );
-        });
-    } else if (selectedLibrary && isSteam(selectedLibrary)) {
-      void getSteamProgress(selectedLibrary.id)
-        .then((steamData) => {
-          if (!cancelled) setSteamProgress(steamData);
-        })
-        .catch((reason) => {
-          if (!cancelled)
-            setSteamError(
-              reason instanceof Error
-                ? reason.message
-                : "Не удалось загрузить Steam-прогресс",
-            );
-        });
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [libraries, selectedLibraryId]);
+    return progressRequests.run(async () => {
+      if (selectedLibrary && supportsXboxProgress(selectedLibrary)) {
+        const [xbox, groups, achievements] = await Promise.all([
+          getXboxProgress(selectedLibrary.id),
+          getXboxAchievementGroups(selectedLibrary.id),
+          getXboxAchievements(selectedLibrary.id),
+        ]);
+        return { xbox, groups, achievements, steam: null };
+      }
+      const steam = selectedLibrary && isSteam(selectedLibrary)
+        ? await getSteamProgress(selectedLibrary.id) : null;
+      return { xbox: null, groups: [], achievements: [], steam };
+    }, {
+      onStart: () => {
+        setProgressLoading(true);
+        setProgress(null); setXboxAchievements([]); setAchievementGroups([]);
+        setXboxError(null); setXboxSyncNote(null); setSteamProgress(null); setSteamError(null);
+        setShowAchievementDetails(false); setShowSteamAchievements(false); setShowXboxAchievements(false);
+      },
+      onSuccess: data => {
+        setProgress(data.xbox); setAchievementGroups(data.groups);
+        setXboxAchievements(data.achievements); setSteamProgress(data.steam);
+      },
+      onError: reason => {
+        const message = getApiErrorMessage(reason, "Не удалось загрузить прогресс игры");
+        if (selectedLibrary && supportsXboxProgress(selectedLibrary)) setXboxError(message);
+        else setSteamError(message);
+      },
+      onFinish: () => setProgressLoading(false),
+    });
+  }, [libraries, selectedLibraryId, progressRequests]);
+  useEffect(() => {
+    void loadProgress();
+    return () => progressRequests.invalidate();
+  }, [loadProgress, progressRequests]);
 
   const library =
     libraries.find((item) => item.id === selectedLibraryId) ??
@@ -376,52 +369,55 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
   );
 
   const synchronizeSteam = async () => {
-    if (!library || !isSteam(library) || library.steamAppId == null) return;
-    setSyncingSteam(true);
-    setSteamError(null);
-    try {
-      const synchronized = await syncSteamProgress(library.id);
-      setSteamProgress(synchronized);
-      await load();
-    } catch (reason) {
-      setSteamError(
-        reason instanceof Error
-          ? reason.message
-          : "Не удалось синхронизировать достижения Steam",
-      );
-    } finally {
-      setSyncingSteam(false);
-    }
+    if (!library || !isSteam(library) || library.steamAppId == null || progressLoading) return;
+    const libraryId = library.id;
+    await syncMutations.run('save', async () => {
+      setSyncProvider("STEAM"); setSteamError(null);
+      return syncSteamProgress(libraryId);
+    }, {
+      onSuccess: synchronized => {
+        if (selectedLibraryRef.current !== libraryId) return;
+        progressRequests.invalidate(); setProgressLoading(false);
+        setSteamProgress(synchronized);
+        void load();
+      },
+      onError: reason => {
+        if (selectedLibraryRef.current === libraryId)
+          setSteamError(getApiErrorMessage(reason, "Не удалось синхронизировать достижения Steam"));
+      },
+    });
   };
 
   const synchronizeXbox = async () => {
-    if (!library || !supportsXboxProgress(library)) return;
-    setSyncingXbox(true);
-    setXboxError(null);
-    setXboxSyncNote(null);
-    try {
-      const synchronized = await syncXboxProgress(library.id);
-      setProgress(synchronized.progress);
-      setXboxAchievements(await getXboxAchievements(library.id));
-      if (!synchronized.manualDlcGroupsPreserved) {
-        setAchievementGroups(await getXboxAchievementGroups(library.id));
-      }
-      const diagnostic = xboxAchievementDiagnostic(
-        synchronized.progress.achievementDetailsStatus,
-      );
-      setXboxSyncNote(
-        `Связано с Xbox: ${synchronized.xboxTitle}${diagnostic ? `. ${diagnostic.text}` : ""}`,
-      );
-      if (synchronized.completionRecorded) await load();
-    } catch (reason) {
-      setXboxError(
-        reason instanceof Error
-          ? reason.message
-          : "Не удалось синхронизировать достижения Xbox",
-      );
-    } finally {
-      setSyncingXbox(false);
-    }
+    if (!library || !supportsXboxProgress(library) || progressLoading) return;
+    const libraryId = library.id;
+    await syncMutations.run('save', async () => {
+      setSyncProvider("XBOX"); setXboxError(null); setXboxSyncNote(null);
+      const synchronized = await syncXboxProgress(libraryId);
+      const [achievements, groups] = await Promise.all([
+        getXboxAchievements(libraryId),
+        synchronized.manualDlcGroupsPreserved ? Promise.resolve(null) : getXboxAchievementGroups(libraryId),
+      ]);
+      return { synchronized, achievements, groups };
+    }, {
+      onSuccess: ({ synchronized, achievements, groups }) => {
+        if (selectedLibraryRef.current !== libraryId) return;
+        progressRequests.invalidate(); setProgressLoading(false);
+        setProgress(synchronized.progress); setXboxAchievements(achievements);
+        if (groups) setAchievementGroups(groups);
+        const diagnostic = xboxAchievementDiagnostic(
+          synchronized.progress.achievementDetailsStatus,
+        );
+        setXboxSyncNote(
+          `Связано с Xbox: ${synchronized.xboxTitle}${diagnostic ? `. ${diagnostic.text}` : ""}`,
+        );
+        if (synchronized.completionRecorded) void load();
+      },
+      onError: reason => {
+        if (selectedLibraryRef.current === libraryId)
+          setXboxError(getApiErrorMessage(reason, "Не удалось синхронизировать достижения Xbox"));
+      },
+    });
   };
 
   return (
@@ -510,16 +506,18 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
       </section>
 
       {xbox && (
-        <section className="xbox-detail-row">
-          <article className="detail-card xbox-progress-card">
-            <div className="steam-progress-heading">
+        <section className="game-view-progress-set" data-provider="XBOX" aria-label="Xbox">
+          <article className="game-view-progress-panel">
+            <div className="game-view-progress-heading">
               <h2>Прогресс Xbox</h2>
               <button
+                type="button"
                 className="secondary-button icon-button"
-                disabled={syncingXbox}
+                disabled={progressLoading || syncMutations.pending}
+                aria-busy={syncingXbox}
                 onClick={() => void synchronizeXbox()}
               >
-                <RefreshCw className={syncingXbox ? "spinning" : ""} />
+                <RefreshCw aria-hidden="true" className={syncingXbox ? "spinning" : ""} />
                 {syncingXbox
                   ? "Синхронизируем…"
                   : progress
@@ -528,13 +526,13 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
               </button>
             </div>
             {sharedXboxAchievementSet && (
-              <small className="steam-sync-date">
+              <small className="game-view-progress-note">
                 Общий набор достижений для PC- и Xbox-копии
               </small>
             )}
-            {xboxError && <div className="form-error">{xboxError}</div>}
-            {progress ? (
-              <div className="xbox-progress-columns">
+            {xboxError && <div className="game-view-progress-error" role="alert"><p>{xboxError}</p>{!progress && <button type="button" className="secondary-button" disabled={syncMutations.pending} onClick={() => void loadProgress()}>Повторить загрузку</button>}</div>}
+            {progressLoading ? <LoadingState message="Загружаем прогресс Xbox…" compact /> : progress ? (
+              <div className="game-view-metrics">
                 <Progress
                   label="Достижения"
                   value={`${progress.unlockedAchievements} / ${progress.totalAchievements}`}
@@ -547,120 +545,126 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
                 />
               </div>
             ) : (
-              <p className="muted">
+              <p className="game-view-progress-message">
                 Нажмите «Загрузить из Xbox» или укажите прогресс вручную в настройках игры.
               </p>
             )}
-            {xboxSyncNote && <small className="steam-sync-date">{xboxSyncNote}</small>}
+            {xboxSyncNote && <small className="game-view-progress-note">{xboxSyncNote}</small>}
           </article>
-          <article className="detail-card achievement-summary">
+          <article className="game-view-achievement-panel">
             <h2>{xboxAchievements.length ? "Достижения Xbox" : "Достижения"}</h2>
-            {xboxDiagnostic && (
-              <p
-                className={`achievement-diagnostic${xboxDiagnostic.warning ? " warning" : ""}`}
-              >
-                {xboxDiagnostic.text}
-              </p>
-            )}
-            {progress && xboxAchievements.length ? (
-              <>
-                {recentXboxAchievements.length > 0 ? (
-                  <div className="steam-recent-achievements">
-                    {recentXboxAchievements.map((achievement) => (
-                      <XboxAchievementRow
-                        achievement={achievement}
-                        compact
-                        key={achievement.achievementId}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p>Полученных достижений пока нет.</p>
-                )}
-                <strong>
-                  {completed100
-                    ? "✓ Получено 100%"
-                    : `${progress.unlockedAchievements} из ${progress.totalAchievements} получено`}
-                </strong>
-                {progress.lastUnlockedAt && (
-                  <span>
-                    Последнее достижение: {formatDate(progress.lastUnlockedAt)}
-                  </span>
-                )}
-                <button
-                  className="achievement-details-button"
-                  onClick={() => setShowXboxAchievements(true)}
+            {progressLoading ? <p className="game-view-progress-message" role="status">Загружаем достижения…</p> : <>
+              {xboxDiagnostic && (
+                <p
+                  className={`game-view-achievement-notice${xboxDiagnostic.warning ? " warning" : ""}`}
                 >
-                  Все достижения
-                </button>
-              </>
-            ) : progress ? (
-              <>
-                <div className="achievement-compact-list">
-                  {baseAchievements && (
-                    <AchievementCompact
-                      label="Основная игра"
-                      unlocked={baseAchievements.unlockedAchievements}
-                      total={baseAchievements.totalAchievements}
-                      earned={baseAchievements.earnedGamerscore}
-                      score={baseAchievements.totalGamerscore}
-                    />
+                  {xboxDiagnostic.text}
+                </p>
+              )}
+              {progress && xboxAchievements.length ? (
+                <>
+                  {recentXboxAchievements.length > 0 ? (
+                    <div className="game-view-recent">
+                      {recentXboxAchievements.map((achievement) => (
+                        <XboxAchievementRow
+                          achievement={achievement}
+                          compact
+                          key={achievement.achievementId}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p>Полученных достижений пока нет.</p>
                   )}
-                  {dlcAchievements.length > 0 && (
-                    <AchievementCompact
-                      label={`Дополнения · ${dlcAchievements.length}`}
-                      unlocked={dlcSummary.unlockedAchievements}
-                      total={dlcSummary.totalAchievements}
-                      earned={dlcSummary.earnedGamerscore}
-                      score={dlcSummary.totalGamerscore}
-                    />
-                  )}
-                </div>
-                <strong>
-                  {completed100
-                    ? "✓ Получено 100%"
-                    : `${progress.earnedGamerscore} G получено`}
-                </strong>
-                {progress.unlockedAchievements > 0 && (
-                  <span>
+                  <strong className="game-view-achievement-total">
                     {completed100
-                      ? formatDate(achievementCompletionDate)
-                      : progress.lastUnlockedAt
-                        ? formatDate(progress.lastUnlockedAt)
-                        : lastAchievement
-                        ? formatDate(lastAchievement.startedAt)
-                        : formatDate(progress.lastUpdatedAt)}
-                  </span>
-                )}
-                {!completed100 && (
-                  <p>{`Осталось ${Math.max(0, Math.round(100 - achievementPercent))}% достижений`}</p>
-                )}
-                <button
-                  className="achievement-details-button"
-                  onClick={() => setShowAchievementDetails(true)}
-                >
-                  Подробнее
-                </button>
-              </>
-            ) : (
-              <p className="muted">Нет данных</p>
-            )}
+                      ? "✓ Получено 100%"
+                      : `${progress.unlockedAchievements} из ${progress.totalAchievements} получено`}
+                  </strong>
+                  {progress.lastUnlockedAt && (
+                    <span className="game-view-achievement-date">
+                      Последнее достижение: {formatDate(progress.lastUnlockedAt)}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    className="game-view-achievement-action"
+                    onClick={() => setShowXboxAchievements(true)}
+                  >
+                    Все достижения
+                  </button>
+                </>
+              ) : progress ? (
+                <>
+                  <div className="game-view-achievement-groups">
+                    {baseAchievements && (
+                      <AchievementCompact
+                        label="Основная игра"
+                        unlocked={baseAchievements.unlockedAchievements}
+                        total={baseAchievements.totalAchievements}
+                        earned={baseAchievements.earnedGamerscore}
+                        score={baseAchievements.totalGamerscore}
+                      />
+                    )}
+                    {dlcAchievements.length > 0 && (
+                      <AchievementCompact
+                        label={`Дополнения · ${dlcAchievements.length}`}
+                        unlocked={dlcSummary.unlockedAchievements}
+                        total={dlcSummary.totalAchievements}
+                        earned={dlcSummary.earnedGamerscore}
+                        score={dlcSummary.totalGamerscore}
+                      />
+                    )}
+                  </div>
+                  <strong className="game-view-achievement-total">
+                    {completed100
+                      ? "✓ Получено 100%"
+                      : `${progress.earnedGamerscore} G получено`}
+                  </strong>
+                  {progress.unlockedAchievements > 0 && (
+                    <span className="game-view-achievement-date">
+                      {completed100
+                        ? formatDate(achievementCompletionDate)
+                        : progress.lastUnlockedAt
+                          ? formatDate(progress.lastUnlockedAt)
+                          : lastAchievement
+                          ? formatDate(lastAchievement.startedAt)
+                          : formatDate(progress.lastUpdatedAt)}
+                    </span>
+                  )}
+                  {!completed100 && (
+                    <p>{`Осталось ${Math.max(0, Math.round(100 - achievementPercent))}% достижений`}</p>
+                  )}
+                  <button
+                    type="button"
+                    className="game-view-achievement-action"
+                    onClick={() => setShowAchievementDetails(true)}
+                  >
+                    Подробнее
+                  </button>
+                </>
+              ) : (
+                <p className="game-view-progress-message">Нет данных</p>
+              )}
+            </>}
           </article>
         </section>
       )}
 
       {steam && library && (
-        <section className="steam-detail-row">
-          <article className="detail-card steam-progress-card">
-            <div className="steam-progress-heading">
+        <section className="game-view-progress-set" data-provider="STEAM" aria-label="Steam">
+          <article className="game-view-progress-panel">
+            <div className="game-view-progress-heading">
               <h2>Прогресс Steam</h2>
               {library.steamAppId != null && (
                 <button
+                  type="button"
                   className="secondary-button icon-button"
-                  disabled={syncingSteam}
+                  disabled={progressLoading || syncMutations.pending}
+                  aria-busy={syncingSteam}
                   onClick={() => void synchronizeSteam()}
                 >
-                  <RefreshCw className={syncingSteam ? "spinning" : ""} />
+                  <RefreshCw aria-hidden="true" className={syncingSteam ? "spinning" : ""} />
                   {syncingSteam
                     ? "Синхронизируем…"
                     : steamProgress
@@ -669,9 +673,9 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
                 </button>
               )}
             </div>
-            {steamError && <div className="form-error">{steamError}</div>}
-            {library.steamAppId == null ? (
-              <p className="muted">
+            {steamError && <div className="game-view-progress-error" role="alert"><p>{steamError}</p>{!steamProgress && <button type="button" className="secondary-button" disabled={syncMutations.pending} onClick={() => void loadProgress()}>Повторить загрузку</button>}</div>}
+            {progressLoading ? <LoadingState message="Загружаем прогресс Steam…" compact /> : library.steamAppId == null ? (
+              <p className="game-view-progress-message">
                 У этой копии нет Steam App ID. Добавьте её через импорт Steam.
               </p>
             ) : steamProgress ? (
@@ -682,25 +686,25 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
                   percent={steamProgress.achievementPercent}
                 />
               ) : (
-                <p className="muted">У этой игры нет достижений Steam.</p>
+                <p className="game-view-progress-message">У этой игры нет достижений Steam.</p>
               )
             ) : (
-              <p className="muted">
+              <p className="game-view-progress-message">
                 Нажмите «Загрузить из Steam», чтобы получить достижения этой копии.
               </p>
             )}
             {steamProgress && (
-              <small className="steam-sync-date">
+              <small className="game-view-progress-note">
                 Обновлено: {formatDate(steamProgress.lastSyncedAt)}
               </small>
             )}
           </article>
-          <article className="detail-card achievement-summary steam-achievement-summary">
+          <article className="game-view-achievement-panel">
             <h2>Достижения Steam</h2>
-            {steamProgress && steamProgress.totalAchievements > 0 ? (
+            {progressLoading ? <p className="game-view-progress-message" role="status">Загружаем достижения…</p> : steamProgress && steamProgress.totalAchievements > 0 ? (
               <>
                 {recentSteamAchievements.length > 0 ? (
-                  <div className="steam-recent-achievements">
+                  <div className="game-view-recent">
                     {recentSteamAchievements.map((achievement) => (
                       <SteamAchievementRow
                         achievement={achievement}
@@ -712,25 +716,26 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
                 ) : (
                   <p>Полученных достижений пока нет.</p>
                 )}
-                <strong>
+                <strong className="game-view-achievement-total">
                   {steamCompleted100
                     ? "✓ Получено 100%"
                     : `${steamProgress.unlockedAchievements} из ${steamProgress.totalAchievements} получено`}
                 </strong>
                 {steamProgress.lastUnlockedAt && (
-                  <span>
+                  <span className="game-view-achievement-date">
                     Последнее достижение: {formatDate(steamProgress.lastUnlockedAt)}
                   </span>
                 )}
                 <button
-                  className="achievement-details-button"
+                  type="button"
+                  className="game-view-achievement-action"
                   onClick={() => setShowSteamAchievements(true)}
                 >
                   Все достижения
                 </button>
               </>
             ) : (
-              <p className="muted">
+              <p className="game-view-progress-message">
                 {steamProgress ? "Достижений нет" : "Нет данных"}
               </p>
             )}
@@ -1477,6 +1482,11 @@ function XboxAchievementRow({
   achievement: XboxAchievement;
   compact?: boolean;
 }) {
+  if (compact) return <AchievementPreview
+    title={achievement.hidden && !achievement.unlocked ? "Скрытое достижение" : achievement.displayName}
+    image={achievement.iconUrl}
+    unlockedAt={achievement.unlockedAt}
+  />;
   return (
     <article
       className={`steam-achievement xbox-achievement ${achievement.unlocked ? "unlocked" : "locked"}${compact ? " compact" : ""}`}
@@ -1524,6 +1534,7 @@ function SteamAchievementRow({
   const image = achievement.unlocked
     ? achievement.iconUrl
     : achievement.lockedIconUrl;
+  if (compact) return <AchievementPreview title={achievement.displayName} image={image} unlockedAt={achievement.unlockedAt} />;
   return (
     <article
       className={`steam-achievement ${achievement.unlocked ? "unlocked" : "locked"}${compact ? " compact" : ""}`}
@@ -1554,6 +1565,13 @@ function SteamAchievementRow({
   );
 }
 
+function AchievementPreview({ title, image, unlockedAt }: { title: string; image: string | null; unlockedAt: string | null }) {
+  return <article className="game-view-achievement-row">
+    <span className="game-view-achievement-icon" aria-hidden="true">◇{image && <img src={image} alt="" loading="lazy" decoding="async" onLoad={event => { event.currentTarget.hidden = false; }} onError={event => { event.currentTarget.hidden = true; }} />}</span>
+    <div><strong>{title}</strong><time dateTime={unlockedAt ?? undefined}>{formatDate(unlockedAt)}</time></div>
+  </article>;
+}
+
 function Progress({
   label,
   value,
@@ -1563,14 +1581,15 @@ function Progress({
   value: string;
   percent: number;
 }) {
+  const clamped = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0;
   return (
-    <div className="detail-progress">
+    <div className="game-view-meter">
       <small>{label}</small>
       <strong>{value}</strong>
-      <div>
-        <span style={{ width: `${percent}%` }} />
+      <em>{Math.round(clamped)}%</em>
+      <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(clamped)} aria-valuetext={`${value} (${Math.round(clamped)}%)`}>
+        <span style={{ width: `${clamped}%` }} />
       </div>
-      <em>{Math.round(percent)}%</em>
     </div>
   );
 }
