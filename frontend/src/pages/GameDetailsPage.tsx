@@ -7,7 +7,7 @@ import {
   type FormEvent,
 } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { ArrowLeft, Heart, Pencil, RefreshCw } from "lucide-react";
+import { ArrowLeft, ChevronRight, Clock3, Heart, Pencil, Plus, RefreshCw } from "lucide-react";
 import { PlatformBadge } from "../components/PlatformBadge";
 import { ErrorState, LoadingState } from "../components/AsyncState";
 import { getApiErrorMessage } from "../api/client";
@@ -127,6 +127,10 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
   const syncMutations = useFormMutation();
   const editRef = useRef<HTMLButtonElement>(null);
   const restoreEditFocusRef = useRef(false);
+  const collectionRef = useRef<HTMLElement>(null);
+  const collectionTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const collectionFallbackRef = useRef('.game-view-library-add');
+  const restoreCollectionFocusRef = useRef(false);
   const [game, setGame] = useState<Game | null>(null);
   const [libraries, setLibraries] = useState<GameLibrary[]>([]);
   const [selectedLibraryId, setSelectedLibraryId] = useState<number | null>(
@@ -160,6 +164,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
   const [sources, setSources] = useState<Reference[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const collectionFormOpen = Boolean(editingLibrary || editingPlaythrough || addingSession);
   const selectedLibraryRef = useRef(selectedLibraryId);
   selectedLibraryRef.current = selectedLibraryId;
   const syncingXbox = syncMutations.pending && syncProvider === "XBOX";
@@ -225,6 +230,22 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
       editRef.current?.focus({ preventScroll: true });
     }
   }, [editingGame, loading]);
+  useEffect(() => {
+    if (!restoreCollectionFocusRef.current || collectionFormOpen || loading) return;
+    restoreCollectionFocusRef.current = false;
+    const previous = collectionTriggerRef.current;
+    const fallback = collectionRef.current?.querySelector<HTMLButtonElement>(collectionFallbackRef.current)
+      ?? collectionRef.current?.querySelector<HTMLButtonElement>('.game-view-library-add');
+    const target = error ? document.querySelector<HTMLButtonElement>('.game-view-page > .async-error button')
+      : previous?.isConnected && !previous.disabled ? previous : fallback;
+    target?.focus({ preventScroll: true });
+  }, [collectionFormOpen, loading, error]);
+
+  const closeCollectionForms = (refresh = false) => {
+    restoreCollectionFocusRef.current = true;
+    setEditingLibrary(null); setEditingPlaythrough(null); setAddingSession(false);
+    if (refresh) void load();
+  };
 
   const loadProgress = useCallback((preserveState = false) => {
     const selectedLibrary = libraries.find(
@@ -735,81 +756,82 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
         </section>
       )}
 
-      <section className="game-detail-grid">
-        <article className="detail-card library-copies-card">
-          <div className="library-card-heading">
+      <section ref={collectionRef} className="game-view-collection" aria-label="Библиотека и история игры" onClickCapture={event => {
+        const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>('button') : null;
+        if (button) {
+          collectionTriggerRef.current = button;
+          collectionFallbackRef.current = button.dataset.focusFallback ?? '.game-view-library-add';
+        }
+      }}>
+        <article className="game-view-library">
+          <div className="game-view-library-heading">
             <h2>Библиотека</h2>
-            <button onClick={() => setEditingLibrary("new")}>+ Добавить</button>
+            <button type="button" className="secondary-button icon-button game-view-library-add" data-focus-fallback=".game-view-library-add" onClick={() => setEditingLibrary("new")}><Plus aria-hidden="true" />Добавить</button>
           </div>
           {libraries.length ? (
-            <div className="library-copy-list">
+            <ul className="game-view-copies" aria-label="Копии игры">
               {libraries.map((entry) => (
-                <button
-                  className={entry.id === library?.id ? "active" : ""}
-                  key={entry.id}
-                  onClick={() => setSelectedLibraryId(entry.id)}
-                >
-                  <span>
+                <li className="game-view-copy" data-selected={entry.id === library?.id} key={entry.id}>
+                  <button type="button" className="game-view-copy-select" data-library-id={entry.id} aria-pressed={entry.id === library?.id}
+                    aria-label={`Выбрать копию: ${entry.platform.name} · ${entry.source.name}`}
+                    data-focus-fallback={`.game-view-copy-select[data-library-id="${entry.id}"]`} onClick={() => setSelectedLibraryId(entry.id)}>
                     <strong>{entry.source.name}</strong>
-                    <small>
+                    <span>
                       {entry.platform.name}
                       {entry.edition ? ` · ${entry.edition}` : ""}
-                    </small>
+                    </span>
                     {supportsXboxProgress(entry) && (
                       <small>
                         Xbox Play Anywhere ·{" "}
                         {game.xboxPlayAnywhere ? "Да" : "Нет"}
                       </small>
                     )}
-                  </span>
-                  <em>
-                    {entry.accessType === "SUBSCRIPTION"
-                      ? "Подписка"
-                      : "Куплено"}
-                  </em>
-                  <i
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setEditingLibrary(entry);
-                    }}
-                  >
-                    ✎
-                  </i>
-                </button>
+                    <span className="game-view-copy-access">
+                      {entry.accessType === "SUBSCRIPTION"
+                        ? "Подписка"
+                        : "Куплено"}
+                    </span>
+                  </button>
+                  <button type="button" className="game-view-copy-edit" data-library-id={entry.id}
+                    data-focus-fallback={`.game-view-copy-edit[data-library-id="${entry.id}"]`}
+                    aria-label={`Редактировать копию: ${entry.platform.name} · ${entry.source.name}`} onClick={() => setEditingLibrary(entry)}><Pencil aria-hidden="true" /></button>
+                </li>
               ))}
-            </div>
+            </ul>
           ) : (
-            <p className="muted">Игра не добавлена в библиотеку.</p>
+            <p className="game-view-collection-empty">Игра не добавлена в библиотеку.</p>
           )}
         </article>
-        <article className="detail-card total-playtime">
+        <article className="game-view-playtime">
           <h2>Время выбранной копии</h2>
-          <strong>◷ {formatMinutes(totalMinutes)}</strong>
-          <small>Последняя сессия</small>
-          <span>
+          {library && <p className="game-view-selected-copy">{library.platform.name} · {library.source.name}</p>}
+          <strong className="game-view-playtime-value"><Clock3 aria-hidden="true" /><span>{formatMinutes(totalMinutes)}</span></strong>
+          <dl><div><dt>Последняя сессия</dt><dd>
             {latestSession
               ? formatDate(latestSession.startedAt)
               : "Сессий пока нет"}
-          </span>
+          </dd></div></dl>
           <button
-            className="primary-button"
+            type="button" className="primary-button icon-button game-view-session-add" data-focus-fallback=".game-view-session-add"
             disabled={!library}
             onClick={() => setAddingSession(true)}
           >
-            + Добавить сессию
+            <Plus aria-hidden="true" />Добавить сессию
           </button>
         </article>
-        <article className="detail-card">
+        <article className="game-view-history">
           <h2>История прохождений</h2>
-          <div className="playthrough-list">
+          {playthroughs.length ? <ul className="game-view-playthroughs">
             {playthroughs.map((item) => (
-              <button
+              <li key={item.id}><button
                 type="button"
-                key={item.id}
+                className="game-view-history-item" data-playthrough-id={item.id}
+                data-focus-fallback=".game-view-history-add"
+                aria-label={`Изменить прохождение №${item.playthroughNumber} от ${formatDate(item.completedAt)}`}
                 onClick={() => setEditingPlaythrough(item)}
               >
-                <b>{item.playthroughNumber}</b>
-                <span>
+                <span className="game-view-playthrough-number" aria-hidden="true">{item.playthroughNumber}</span>
+                <span className="game-view-playthrough-copy">
                   <strong>Пройдена</strong>
                   <small>
                     {libraries.find(
@@ -820,22 +842,23 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
                       (entry) => entry.id === item.libraryEntryId,
                     )?.source.name ?? "Неизвестный источник"}
                   </small>
-                  <small>{formatDate(item.completedAt)}</small>
+                  <time dateTime={item.completedAt}>{formatDate(item.completedAt)}</time>
                   {item.completionSource === "STEAM_ACHIEVEMENTS" && (
                     <small>Автоматически · 100% достижений Steam</small>
                   )}
                   {item.completionSource === "XBOX_ACHIEVEMENTS" && (
                     <small>Автоматически · 100% достижений Xbox</small>
                   )}
-                  {item.note && <small>{item.note}</small>}
+                  {item.note && <span className="game-view-playthrough-note">{item.note}</span>}
+                  <b className="game-view-playthrough-duration"><Clock3 aria-hidden="true" />{formatMinutes(item.playtimeMinutes)}</b>
                 </span>
-                <em>{formatMinutes(item.playtimeMinutes)}</em>
-              </button>
+                <ChevronRight aria-hidden="true" />
+              </button></li>
             ))}
-          </div>
+          </ul> : <p className="game-view-collection-empty">Прохождений пока нет.</p>}
           {library && (
             <button
-              className="secondary-button playthrough-button"
+              type="button" className="secondary-button game-view-history-add" data-focus-fallback=".game-view-history-add"
               onClick={() => setEditingPlaythrough("new")}
             >
               Отметить прохождение
@@ -938,11 +961,8 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
           playthrough={
             editingPlaythrough === "new" ? undefined : editingPlaythrough
           }
-          onClose={() => setEditingPlaythrough(null)}
-          onSaved={() => {
-            setEditingPlaythrough(null);
-            void load();
-          }}
+          onClose={() => closeCollectionForms()}
+          onSaved={() => closeCollectionForms(true)}
         />
       )}
       {editingLibrary && (
@@ -951,22 +971,21 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
           entry={editingLibrary === "new" ? undefined : editingLibrary}
           platforms={platforms}
           sources={sources}
-          onClose={() => setEditingLibrary(null)}
+          onClose={() => closeCollectionForms()}
           onSaved={(id) => {
-            setEditingLibrary(null);
-            if (libraries.some((entry) => entry.id === id)) void load();
-            else setSelectedLibraryId(id);
+            if (!libraries.some((entry) => entry.id === id)) {
+              setSelectedLibraryId(id);
+              collectionFallbackRef.current = `.game-view-copy-select[data-library-id="${id}"]`;
+            }
+            closeCollectionForms(true);
           }}
         />
       )}
       {addingSession && library && (
         <GameSessionForm
           library={[library]}
-          onClose={() => setAddingSession(false)}
-          onSaved={() => {
-            setAddingSession(false);
-            void load();
-          }}
+          onClose={() => closeCollectionForms()}
+          onSaved={() => closeCollectionForms(true)}
         />
       )}
     </div>

@@ -261,22 +261,9 @@ html[data-theme="dark"] .theme-selector button.active > span { color: #fff; back
 
 /* Game details: complete dark treatment for nested surfaces and content. */
 html[data-theme="dark"] .game-details-page .detail-card { border-color: #1d2b38; background: #0f1924; box-shadow: 0 10px 30px #0004; }
-html[data-theme="dark"] .detail-card h2,
-html[data-theme="dark"] .total-playtime > strong { color: #e7edf5; }
-html[data-theme="dark"] .library-copy-list small,
-html[data-theme="dark"] .total-playtime small,
-html[data-theme="dark"] .playthrough-list small,
-html[data-theme="dark"] .playthrough-list em { color: #8f9baa; }
+html[data-theme="dark"] .detail-card h2 { color: #e7edf5; }
 html[data-theme="dark"] .library-detail-list > div,
 html[data-theme="dark"] .sessions-table > div { border-color: #1d2b38; }
-html[data-theme="dark"] .library-copy-list > button,
-html[data-theme="dark"] .playthrough-list > button { border-color: #253746; background: #111e2a; }
-html[data-theme="dark"] .library-copy-list > button:hover,
-html[data-theme="dark"] .playthrough-list > button:hover { background: #172735; }
-html[data-theme="dark"] .library-copy-list > button.active { border-color: #52718a; background: #172a39; box-shadow: inset 3px 0 #6e93ae; }
-html[data-theme="dark"] .library-copy-list em,
-html[data-theme="dark"] .library-card-heading button,
-html[data-theme="dark"] .total-playtime span { color: #b9d7ec; }
 html[data-theme="dark"] .platform-logo-badge { border-color: #294052; color: #dce5ee; background: #111e2a; }
 html[data-theme="dark"] .platform-logo-badge.xbox > svg { color: #42dc70; }
 html[data-theme="dark"] .platform-logo-badge.pc > svg { color: #76bfff; }
@@ -693,38 +680,13 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .detail-card { padding: 17px; }
 .detail-card h2 { margin: 0 0 15px; color: #293944; font-size: 15px; }
 .spinning { animation: spin .8s linear infinite; }
-.game-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr) minmax(300px, 34%); gap: 14px; }
 .library-detail-list { display: grid; gap: 0; margin: 0; }
 .library-detail-list > div { display: grid; grid-template-columns: 115px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid #edf0f2; }
 .library-detail-list > div:last-child { border: 0; }
 .library-detail-list dt { color: #7b878f; font-size: 11px; }
 .library-detail-list dd { display: flex; justify-content: flex-end; margin: 0; color: #33434d; font-size: 11px; text-align: right; }
 .library-detail-list b { color: #536b7c; }
-.library-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.library-card-heading h2 { margin: 0; }
-.library-card-heading button { border: 0; background: transparent; color: #536f83; cursor: pointer; font-weight: 700; }
-.library-copy-list { display: grid; gap: 8px; margin-top: 14px; }
-.library-copy-list > button { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; width: 100%; padding: 11px; border: 1px solid #e3e8eb; border-radius: 10px; background: #f8fafb; color: inherit; text-align: left; cursor: pointer; }
-.library-copy-list > button.active { border-color: #7893a6; background: #f0f5f8; box-shadow: inset 3px 0 #7893a6; }
-.library-copy-list span { display: grid; gap: 3px; min-width: 0; }
-.library-copy-list strong, .library-copy-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.library-copy-list small { color: #7b878f; }
-.library-copy-list em { color: #536b7c; font-size: 11px; font-style: normal; font-weight: 700; }
-.library-copy-list i { padding: 6px; color: #657985; font-style: normal; }
 .library-entry-form { width: min(620px, calc(100vw - 32px)); }
-.total-playtime { display: grid; align-content: start; gap: 8px; }
-.total-playtime > strong { color: #263640; font-size: 25px; }
-.total-playtime small { margin-top: 17px; color: #849098; }
-.total-playtime span { color: #455963; font-size: 12px; }
-.playthrough-list { display: grid; gap: 6px; }
-.playthrough-list > button { display: grid; width: 100%; grid-template-columns: 30px 1fr auto; align-items: center; gap: 11px; padding: 10px; border: 0; border-radius: 8px; color: inherit; text-align: left; background: #f6f8f9; cursor: pointer; }
-.playthrough-list > button:hover { background: #edf2f5; }
-.playthrough-list > button > b { display: grid; width: 28px; height: 28px; border-radius: 50%; color: #fff; font-size: 13px; place-items: center; background: #607f95; }
-.playthrough-list span { display: grid; gap: 2px; }
-.playthrough-list span strong { font-size: 15px; }
-.playthrough-list small { color: #7a878e; font-size: 13px; font-style: normal; }
-.playthrough-list em { color: #7a878e; font-size: 14px; font-style: normal; }
-.playthrough-button { width: 100%; margin-top: 10px; }
 .sessions-table-card { overflow: hidden; }
 .sessions-table { min-width: 780px; overflow-x: auto; }
 .sessions-table > div { display: grid; grid-template-columns: 1fr .7fr 1fr .8fr .8fr 1.8fr; gap: 10px; padding: 11px; border-bottom: 1px solid #edf0f2; color: #465761; font-size: 13px; }
@@ -741,8 +703,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
   .book-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
   .series-hero-card { grid-template-columns: 180px 1fr; }
   .movie-personal-info { grid-column: 1/-1; border-top: 1px solid #e4e9ec; border-left: 0; }
-  .game-detail-grid { grid-template-columns: 1fr 1fr; }
-  .game-detail-grid > article:last-child { grid-column: 1 / -1; }
 }
 
 @media (max-width: 1100px) {
@@ -775,8 +735,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
   .structure-forms { grid-template-columns: 1fr; }
   .compact-panel { grid-column: auto; }
   .series-hero-card { grid-template-columns: 120px 1fr; gap: 15px; }.movie-detail-poster { min-height: 180px; }.movie-personal-info { grid-column: 1/-1; border-top: 1px solid var(--line); border-left: 0; }.series-summary-grid { grid-template-columns: 1fr 1fr; }.series-summary-grid article:first-child { grid-column: 1/-1; }
-  .game-detail-grid { grid-template-columns: 1fr; }
-  .game-detail-grid > article:last-child { grid-column: auto; }
   .sessions-table-card { overflow-x: auto; }
   .steam-import-summary { grid-template-columns: repeat(3, 1fr); }
   .steam-import-controls { grid-template-columns: 1fr; }
