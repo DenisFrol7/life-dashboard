@@ -17,10 +17,8 @@ import { GameForm, GameSessionForm } from "./GamesPage";
 import {
   createGameLibrary,
   createGamePlaythrough,
-  createXboxAchievementGroup,
   deleteGameLibrary,
   deleteGamePlaythrough,
-  deleteXboxAchievementGroup,
   getGameCatalog,
   getGameLibrary,
   getGamePlaythroughs,
@@ -37,7 +35,6 @@ import {
   syncXboxProgress,
   updateGameLibrary,
   updateGamePlaythrough,
-  updateXboxAchievementGroup,
   type Game,
   type GameLibrary,
   type GameLibraryInput,
@@ -45,15 +42,14 @@ import {
   type GamePlaythroughInput,
   type GameSession,
   type Reference,
-  type SteamAchievement,
   type SteamProgress,
   type XboxAchievement,
   type XboxAchievementDetailsStatus,
   type XboxAchievementGroup,
-  type XboxAchievementGroupInput,
   type XboxProgress,
 } from "../api/games";
 import type { LibraryStatus } from "../api/movies";
+import { AchievementGroupsModal, SteamAchievementsModal, XboxAchievementsModal } from "../components/GameAchievementDialogs";
 import "./GameDetailsPage.css";
 
 const statusLabels: Record<LibraryStatus, string> = {
@@ -230,7 +226,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
     }
   }, [editingGame, loading]);
 
-  const loadProgress = useCallback(() => {
+  const loadProgress = useCallback((preserveState = false) => {
     const selectedLibrary = libraries.find(
       (item) => item.id === selectedLibraryId,
     );
@@ -248,6 +244,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
       return { xbox: null, groups: [], achievements: [], steam };
     }, {
       onStart: () => {
+        if (preserveState) { setXboxError(null); setSteamError(null); return; }
         setProgressLoading(true);
         setProgress(null); setXboxAchievements([]); setAchievementGroups([]);
         setXboxError(null); setXboxSyncNote(null); setSteamProgress(null); setSteamError(null);
@@ -566,11 +563,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
                   {recentXboxAchievements.length > 0 ? (
                     <div className="game-view-recent">
                       {recentXboxAchievements.map((achievement) => (
-                        <XboxAchievementRow
-                          achievement={achievement}
-                          compact
-                          key={achievement.achievementId}
-                        />
+                        <AchievementPreview title={achievement.hidden && !achievement.unlocked ? "??????? ??????????" : achievement.displayName} image={achievement.iconUrl} unlockedAt={achievement.unlockedAt} key={achievement.achievementId} />
                       ))}
                     </div>
                   ) : (
@@ -589,6 +582,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
                   <button
                     type="button"
                     className="game-view-achievement-action"
+                    disabled={syncMutations.pending}
                     onClick={() => setShowXboxAchievements(true)}
                   >
                     Все достижения
@@ -638,6 +632,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
                   <button
                     type="button"
                     className="game-view-achievement-action"
+                    disabled={syncMutations.pending}
                     onClick={() => setShowAchievementDetails(true)}
                   >
                     Подробнее
@@ -706,11 +701,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
                 {recentSteamAchievements.length > 0 ? (
                   <div className="game-view-recent">
                     {recentSteamAchievements.map((achievement) => (
-                      <SteamAchievementRow
-                        achievement={achievement}
-                        compact
-                        key={achievement.apiName}
-                      />
+                      <AchievementPreview title={achievement.displayName} image={achievement.iconUrl} unlockedAt={achievement.unlockedAt} key={achievement.apiName} />
                     ))}
                   </div>
                 ) : (
@@ -729,6 +720,7 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
                 <button
                   type="button"
                   className="game-view-achievement-action"
+                  disabled={syncMutations.pending}
                   onClick={() => setShowSteamAchievements(true)}
                 >
                   Все достижения
@@ -914,20 +906,23 @@ function GameDetailsContent({ contentId }: { contentId: number }) {
       )}
       {showAchievementDetails && library && (
         <AchievementGroupsModal
+          gameTitle={game.title}
           libraryId={library.id}
           groups={achievementGroups}
-          onClose={() => setShowAchievementDetails(false)}
-          onSaved={() => void load()}
+          onClose={() => { setShowAchievementDetails(false); void loadProgress(true); }}
+          onChanged={setAchievementGroups}
         />
       )}
       {showSteamAchievements && steamProgress && (
         <SteamAchievementsModal
+          gameTitle={game.title}
           progress={steamProgress}
           onClose={() => setShowSteamAchievements(false)}
         />
       )}
       {showXboxAchievements && progress && xboxAchievements.length > 0 && (
         <XboxAchievementsModal
+          gameTitle={game.title}
           achievements={xboxAchievements}
           progress={progress}
           onClose={() => setShowXboxAchievements(false)}
@@ -1384,187 +1379,6 @@ function PlaythroughModal({
   );
 }
 
-function SteamAchievementsModal({
-  progress,
-  onClose,
-}: {
-  progress: SteamProgress;
-  onClose: () => void;
-}) {
-  return (
-    <div
-      className="modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <section className="steam-achievements-modal">
-        <div className="form-heading">
-          <div>
-            <p className="eyebrow">Steam</p>
-            <h2>Достижения</h2>
-          </div>
-          <button type="button" aria-label="Закрыть" onClick={onClose}>
-            ×
-          </button>
-        </div>
-        <div className="steam-achievements-modal-summary">
-          <strong>
-            {progress.unlockedAchievements} / {progress.totalAchievements}
-          </strong>
-          <span>{Math.round(progress.achievementPercent)}% получено</span>
-        </div>
-        <div className="steam-achievement-list">
-          {progress.achievements.map((achievement) => (
-            <SteamAchievementRow
-              achievement={achievement}
-              key={achievement.apiName}
-            />
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function XboxAchievementsModal({
-  achievements,
-  progress,
-  onClose,
-}: {
-  achievements: XboxAchievement[];
-  progress: XboxProgress;
-  onClose: () => void;
-}) {
-  return (
-    <div
-      className="modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <section className="steam-achievements-modal">
-        <div className="form-heading">
-          <div>
-            <p className="eyebrow">Xbox</p>
-            <h2>Достижения</h2>
-          </div>
-          <button type="button" aria-label="Закрыть" onClick={onClose}>
-            ×
-          </button>
-        </div>
-        <div className="steam-achievements-modal-summary">
-          <strong>
-            {progress.unlockedAchievements} / {progress.totalAchievements}
-          </strong>
-          <span>
-            {Math.round(progress.achievementPercent)}% · {progress.earnedGamerscore} /{" "}
-            {progress.totalGamerscore} G
-          </span>
-        </div>
-        <div className="steam-achievement-list">
-          {achievements.map((achievement) => (
-            <XboxAchievementRow
-              achievement={achievement}
-              key={achievement.achievementId}
-            />
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function XboxAchievementRow({
-  achievement,
-  compact = false,
-}: {
-  achievement: XboxAchievement;
-  compact?: boolean;
-}) {
-  if (compact) return <AchievementPreview
-    title={achievement.hidden && !achievement.unlocked ? "Скрытое достижение" : achievement.displayName}
-    image={achievement.iconUrl}
-    unlockedAt={achievement.unlockedAt}
-  />;
-  return (
-    <article
-      className={`steam-achievement xbox-achievement ${achievement.unlocked ? "unlocked" : "locked"}${compact ? " compact" : ""}`}
-    >
-      {achievement.iconUrl ? (
-        <img src={achievement.iconUrl} alt="" loading="lazy" />
-      ) : (
-        <span className="steam-achievement-placeholder" aria-hidden="true">
-          ◇
-        </span>
-      )}
-      <div>
-        <strong>
-          {achievement.hidden && !achievement.unlocked
-            ? "Скрытое достижение"
-            : achievement.displayName}
-        </strong>
-        {!compact && (
-          <p>
-            {achievement.hidden && !achievement.unlocked
-              ? achievement.lockedDescription || "Описание скрыто"
-              : achievement.description || achievement.lockedDescription || "Без описания"}
-          </p>
-        )}
-      </div>
-      <div className="xbox-achievement-meta">
-        {!compact && <b>{achievement.gamerscore} G</b>}
-        <time>
-          {achievement.unlocked
-            ? formatDate(achievement.unlockedAt)
-            : "Не получено"}
-        </time>
-      </div>
-    </article>
-  );
-}
-
-function SteamAchievementRow({
-  achievement,
-  compact = false,
-}: {
-  achievement: SteamAchievement;
-  compact?: boolean;
-}) {
-  const image = achievement.unlocked
-    ? achievement.iconUrl
-    : achievement.lockedIconUrl;
-  if (compact) return <AchievementPreview title={achievement.displayName} image={image} unlockedAt={achievement.unlockedAt} />;
-  return (
-    <article
-      className={`steam-achievement ${achievement.unlocked ? "unlocked" : "locked"}${compact ? " compact" : ""}`}
-    >
-      {image ? (
-        <img src={image} alt="" loading="lazy" />
-      ) : (
-        <span className="steam-achievement-placeholder" aria-hidden="true">
-          ◇
-        </span>
-      )}
-      <div>
-        <strong>{achievement.displayName}</strong>
-        {!compact && (
-          <p>
-            {achievement.hidden && !achievement.unlocked
-              ? "Скрытое достижение"
-              : achievement.description || "Без описания"}
-          </p>
-        )}
-      </div>
-      <time>
-        {achievement.unlocked
-          ? formatDate(achievement.unlockedAt)
-          : "Не получено"}
-      </time>
-    </article>
-  );
-}
-
 function AchievementPreview({ title, image, unlockedAt }: { title: string; image: string | null; unlockedAt: string | null }) {
   return <article className="game-view-achievement-row">
     <span className="game-view-achievement-icon" aria-hidden="true">◇{image && <img src={image} alt="" loading="lazy" decoding="async" onLoad={event => { event.currentTarget.hidden = false; }} onError={event => { event.currentTarget.hidden = true; }} />}</span>
@@ -1617,266 +1431,5 @@ function AchievementCompact({
         {earned}/{score} G
       </em>
     </div>
-  );
-}
-
-const emptyGroup: XboxAchievementGroupInput = {
-  name: "",
-  totalAchievements: 0,
-  unlockedAchievements: 0,
-  totalGamerscore: 0,
-  earnedGamerscore: 0,
-  completedAt: null,
-};
-
-function AchievementGroupsModal({
-  libraryId,
-  groups,
-  onClose,
-  onSaved,
-}: {
-  libraryId: number;
-  groups: XboxAchievementGroup[];
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [editing, setEditing] = useState<XboxAchievementGroup | "new" | null>(
-    null,
-  );
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const remove = async (group: XboxAchievementGroup) => {
-    if (
-      group.groupType === "BASE_GAME" ||
-      !window.confirm(`Удалить дополнение «${group.name}»?`)
-    )
-      return;
-    try {
-      await deleteXboxAchievementGroup(group.id);
-      onSaved();
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Не удалось удалить дополнение",
-      );
-    }
-  };
-  return (
-    <div className="modal-backdrop">
-      <div className="achievement-groups-modal">
-        <div className="form-heading">
-          <div>
-            <p className="eyebrow">Xbox</p>
-            <h2>Достижения по разделам</h2>
-          </div>
-          <button type="button" onClick={onClose}>
-            ×
-          </button>
-        </div>
-        {error && <div className="form-error">{error}</div>}
-        <div className="achievement-group-list">
-          {groups.map((group) => (
-            <article key={group.id}>
-              <div>
-                <small>
-                  {group.groupType === "BASE_GAME" ? "Основная игра" : "DLC"}
-                </small>
-                <h3>{group.name}</h3>
-                {group.groupType === "DLC" && group.completedAt && (
-                  <span>Пройдено: {formatDate(group.completedAt)}</span>
-                )}
-              </div>
-              <div>
-                <b>
-                  {group.unlockedAchievements} / {group.totalAchievements}
-                </b>
-                <span>
-                  достижений · {Math.round(group.achievementPercent)}%
-                </span>
-              </div>
-              <div>
-                <b>
-                  {group.earnedGamerscore} / {group.totalGamerscore} G
-                </b>
-                <span>Gamerscore · {Math.round(group.gamerscorePercent)}%</span>
-              </div>
-              <button onClick={() => setEditing(group)}>Изменить</button>
-              {group.groupType === "DLC" && (
-                <button
-                  className="group-delete"
-                  onClick={() => void remove(group)}
-                >
-                  ×
-                </button>
-              )}
-            </article>
-          ))}
-        </div>
-        {editing ? (
-          <AchievementGroupForm
-            group={editing === "new" ? undefined : editing}
-            saving={saving}
-            setSaving={setSaving}
-            setError={setError}
-            libraryId={libraryId}
-            onCancel={() => setEditing(null)}
-            onSaved={() => {
-              setEditing(null);
-              onSaved();
-            }}
-          />
-        ) : (
-          <button
-            className="primary-button add-dlc-button"
-            onClick={() => setEditing("new")}
-          >
-            + Добавить DLC
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function AchievementGroupForm({
-  group,
-  libraryId,
-  saving,
-  setSaving,
-  setError,
-  onCancel,
-  onSaved,
-}: {
-  group?: XboxAchievementGroup;
-  libraryId: number;
-  saving: boolean;
-  setSaving: (value: boolean) => void;
-  setError: (value: string | null) => void;
-  onCancel: () => void;
-  onSaved: () => void;
-}) {
-  const [input, setInput] = useState<XboxAchievementGroupInput>(
-    group
-      ? {
-          name: group.name,
-          totalAchievements: group.totalAchievements,
-          unlockedAchievements: group.unlockedAchievements,
-          totalGamerscore: group.totalGamerscore,
-          earnedGamerscore: group.earnedGamerscore,
-          completedAt: group.completedAt,
-        }
-      : emptyGroup,
-  );
-  const setValue = <K extends keyof XboxAchievementGroupInput>(
-    key: K,
-    value: XboxAchievementGroupInput[K],
-  ) => setInput((current) => ({ ...current, [key]: value }));
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    setSaving(true);
-    setError(null);
-    try {
-      if (group) await updateXboxAchievementGroup(group.id, input);
-      else await createXboxAchievementGroup(libraryId, input);
-      onSaved();
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Не удалось сохранить раздел достижений",
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-  return (
-    <form
-      className="achievement-group-form"
-      onSubmit={(event) => void submit(event)}
-    >
-      <label>
-        Название
-        <input
-          required
-          disabled={group?.groupType === "BASE_GAME"}
-          value={input.name}
-          onChange={(event) => setValue("name", event.target.value)}
-        />
-      </label>
-      {group?.groupType !== "BASE_GAME" && (
-        <label>
-          Дата прохождения DLC
-          <input
-            type="date"
-            value={input.completedAt ? input.completedAt.slice(0, 10) : ""}
-            onChange={(event) =>
-              setValue(
-                "completedAt",
-                event.target.value
-                  ? new Date(`${event.target.value}T12:00:00`).toISOString()
-                  : null,
-              )
-            }
-          />
-        </label>
-      )}
-      <div>
-        <label>
-          Получено достижений
-          <input
-            min="0"
-            max={input.totalAchievements}
-            type="number"
-            value={input.unlockedAchievements}
-            onChange={(event) =>
-              setValue("unlockedAchievements", Number(event.target.value))
-            }
-          />
-        </label>
-        <label>
-          Всего достижений
-          <input
-            min="0"
-            type="number"
-            value={input.totalAchievements}
-            onChange={(event) =>
-              setValue("totalAchievements", Number(event.target.value))
-            }
-          />
-        </label>
-        <label>
-          Получено Gamerscore
-          <input
-            min="0"
-            max={input.totalGamerscore}
-            type="number"
-            value={input.earnedGamerscore}
-            onChange={(event) =>
-              setValue("earnedGamerscore", Number(event.target.value))
-            }
-          />
-        </label>
-        <label>
-          Всего Gamerscore
-          <input
-            min="0"
-            type="number"
-            value={input.totalGamerscore}
-            onChange={(event) =>
-              setValue("totalGamerscore", Number(event.target.value))
-            }
-          />
-        </label>
-      </div>
-      <div className="form-buttons">
-        <button type="button" className="secondary-button" onClick={onCancel}>
-          Отмена
-        </button>
-        <button className="primary-button" disabled={saving}>
-          {saving ? "Сохраняем…" : "Сохранить"}
-        </button>
-      </div>
-    </form>
   );
 }

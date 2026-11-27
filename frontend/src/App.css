@@ -280,22 +280,6 @@ html[data-theme="dark"] .total-playtime span { color: #b9d7ec; }
 html[data-theme="dark"] .platform-logo-badge { border-color: #294052; color: #dce5ee; background: #111e2a; }
 html[data-theme="dark"] .platform-logo-badge.xbox > svg { color: #42dc70; }
 html[data-theme="dark"] .platform-logo-badge.pc > svg { color: #76bfff; }
-html[data-theme="dark"] .achievement-groups-modal,
-html[data-theme="dark"] .steam-achievements-modal { color: var(--ink); background: #0f1924; box-shadow: 0 24px 70px #0009; }
-html[data-theme="dark"] .achievement-group-list article,
-html[data-theme="dark"] .achievement-group-form { border-color: #263746; }
-html[data-theme="dark"] .achievement-group-list b { color: #e7edf5; }
-html[data-theme="dark"] .achievement-group-list small,
-html[data-theme="dark"] .achievement-group-list span,
-html[data-theme="dark"] .achievement-group-form label { color: #8f9baa; }
-html[data-theme="dark"] .achievement-group-list button { color: #c3cfdb; background: #172532; }
-html[data-theme="dark"] .achievement-group-list .group-delete { color: #efb8b5; background: #321d20; }
-html[data-theme="dark"] .steam-achievement { border-color: #263746; background: #111e2a; }
-html[data-theme="dark"] .steam-achievement strong { color: #e7edf5; }
-html[data-theme="dark"] .steam-achievement p,
-html[data-theme="dark"] .steam-achievement time,
-html[data-theme="dark"] .steam-achievements-modal-summary span { color: #8f9baa; }
-html[data-theme="dark"] .steam-achievement-placeholder { color: #8f9baa; background: #263746; }
 html[data-theme="dark"] .sessions-table > div { color: #c3cfdb; }
 html[data-theme="dark"] .sessions-table .sessions-head { color: #8f9baa; background: #111e2a; }
 html[data-theme="dark"] .sessions-table .positive { color: #67e98e; }
@@ -708,39 +692,7 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
 .series-details-page .movie-personal-info small { font-size: 16px; font-weight: 700; }
 .detail-card { padding: 17px; }
 .detail-card h2 { margin: 0 0 15px; color: #293944; font-size: 15px; }
-.achievement-groups-modal { width: min(760px, 100%); max-height: calc(100vh - 40px); padding: 24px; overflow-y: auto; border-radius: 17px; background: #fff; }
-.achievement-group-list { display: grid; gap: 8px; margin: 18px 0; }
-.achievement-group-list article { display: grid; grid-template-columns: minmax(170px, 1.4fr) minmax(120px, 1fr) minmax(135px, 1fr) 90px 32px; align-items: center; gap: 12px; padding: 12px; border: 1px solid #e2e8eb; border-radius: 10px; }
-.achievement-group-list article > div { display: grid; gap: 3px; }
-.achievement-group-list h3 { margin: 0; font-size: 12px; }
-.achievement-group-list small, .achievement-group-list span { color: #7a878f; font-size: 9px; }
-.achievement-group-list b { color: #344750; font-size: 11px; }
-.achievement-group-list button { padding: 7px 9px; border: 0; border-radius: 7px; color: #536b7c; background: #edf2f5; cursor: pointer; }
-.achievement-group-list article > button:not(.group-delete) { width: 90px; }
-.achievement-group-list .group-delete { width: 32px; }
-.achievement-group-list .group-delete { color: #a04d4d; background: #f8ebeb; }
-.add-dlc-button { width: 100%; }
-.achievement-group-form { display: grid; gap: 12px; padding-top: 16px; border-top: 1px solid #e4e9eb; }
-.achievement-group-form label { display: grid; gap: 5px; color: #5f675f; font-size: 10px; font-weight: 700; }
-.achievement-group-form input { width: 100%; padding: 9px; border: 1px solid #d9dfe2; border-radius: 8px; font-size: 12px; }
-.achievement-group-form > div:not(.form-buttons) { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .spinning { animation: spin .8s linear infinite; }
-.steam-achievements-modal { width: min(820px, 100%); max-height: calc(100vh - 40px); padding: 24px; overflow-y: auto; border-radius: 17px; background: #fff; }
-.steam-achievements-modal-summary { display: flex; align-items: baseline; gap: 10px; margin: 16px 0; }
-.steam-achievements-modal-summary strong { color: #293944; font-size: 20px; }
-.steam-achievements-modal-summary span { color: #74818a; font-size: 12px; }
-.steam-achievement-list { display: grid; gap: 8px; }
-.steam-achievement { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px; border: 1px solid #e2e8eb; border-radius: 10px; background: #f8fafb; }
-.steam-achievement.locked { opacity: .7; }
-.steam-achievement img,
-.steam-achievement-placeholder { width: 48px; height: 48px; border-radius: 7px; }
-.steam-achievement-placeholder { display: grid; place-items: center; color: #74818a; background: #e2e8eb; font-size: 22px; }
-.steam-achievement > div { display: grid; gap: 4px; min-width: 0; }
-.steam-achievement strong { overflow: hidden; color: #293944; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.steam-achievement p { margin: 0; color: #74818a; font-size: 10px; line-height: 1.4; }
-.steam-achievement time { color: #74818a; font-size: 10px; white-space: nowrap; }
-.xbox-achievement-meta { justify-items: end; }
-.xbox-achievement-meta b { color: #578066; font-size: 11px; white-space: nowrap; }
 .game-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr) minmax(300px, 34%); gap: 14px; }
 .library-detail-list { display: grid; gap: 0; margin: 0; }
 .library-detail-list > div { display: grid; grid-template-columns: 115px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid #edf0f2; }
@@ -826,8 +778,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
   .game-detail-grid { grid-template-columns: 1fr; }
   .game-detail-grid > article:last-child { grid-column: auto; }
   .sessions-table-card { overflow-x: auto; }
-  .achievement-group-list article { grid-template-columns: 1fr 1fr; }
-  .achievement-group-list article > div:first-child { grid-column: 1 / -1; }
   .steam-import-summary { grid-template-columns: repeat(3, 1fr); }
   .steam-import-controls { grid-template-columns: 1fr; }
 }
@@ -860,7 +810,6 @@ html[data-theme="dark"] .xbox-fields label { color: #87d69f; }
   .series-structure section > div { grid-template-columns: 25px 1fr auto; }
   .series-structure section > div > small { display: none; }
   .structure-forms form { flex-wrap: wrap; }
-  .achievement-group-form > div:not(.form-buttons) { grid-template-columns: 1fr; }
   .series-hero-card { grid-template-columns: 1fr; }.movie-detail-poster { width: min(220px,100%); min-height: 300px; justify-self: center; }.movie-personal-info { grid-column: auto; }.series-summary-grid { grid-template-columns: 1fr; }.series-summary-grid article:first-child { grid-column: auto; }.episode-detail-list > div { grid-template-columns: 28px 1fr 32px; }.episode-detail-list > div > em { grid-column: 2; }.episode-detail-list > div > button:last-child { grid-column: 3; grid-row: 1/3; }
 }
 
